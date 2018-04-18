@@ -309,7 +309,7 @@ class WorldServer(server.Server):
 			levelidKeyAdj.write("levelid", allocated_length=(b"levelid".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(levelidKeyAdj[:-2])
 			LDF.write(c_ubyte(8))  # Write data format 8
-			LDF.write(c_uint64(zoneID))#s64#Write int(zoneID)
+			LDF.write(c_int64(zoneID))#s64#Write int(zoneID)
 			keyNumber = keyNumber + 1
 
 			objidKeyAdj = BitStream()
@@ -317,7 +317,7 @@ class WorldServer(server.Server):
 			objidKeyAdj.write("objid", allocated_length=(b"objid".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(objidKeyAdj[:-2])#Remove 2 unnecessary bits
 			LDF.write(c_ubyte(9))  # Write data format 9
-			LDF.write(c_uint64(int(characterData[3])))#Write int(characterData[3])
+			LDF.write(c_int64(int(characterData[3])))#Write int(characterData[3])
 			keyNumber = keyNumber + 1
 
 			reputationKeyAdj = BitStream()
@@ -325,7 +325,7 @@ class WorldServer(server.Server):
 			reputationKeyAdj.write("reputation", allocated_length=(b"reputation".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(reputationKeyAdj[:-2])
 			LDF.write(c_ubyte(8))  # Write data format 8
-			LDF.write(c_uint64(100))#s64#Write 100
+			LDF.write(c_int64(100))#s64#Write 100
 			keyNumber = keyNumber + 1
 
 			templateKeyAdj = BitStream()
@@ -403,37 +403,42 @@ class WorldServer(server.Server):
 
 			self.send(finalPacket, address, reliability=PacketReliability.ReliableOrdered)
 
+			# InfoFile = open(os.getcwd()+"\\TestPackets\\DetailedUserInfo.bin", "rb")
+			# infoPacket = BitStream()
+			# infoPacket.write(InfoFile.read())
+			# self.send(infoPacket, address)
+
 			print("[" + self.role + "]" + "Sent Detailed User Info")
 
+			#Add Base Data
 			Player = BaseData()
-			Player.objectID = c_longlong(int(characterData[3]))
+			Player.objectID = c_int64(int(characterData[3]))
 			Player.LOT = c_long(1)
 			Player.flag6 = True
 			Player.NameLength = (str(characterData[2]).__len__())
 			Player.Name = str(characterData[2])
 
+			#Add Controllable Physics
 			ControllablePhysics = ControllablePhysicsComponent()
-			pos = Component1_Position(int(characterData[17]), int(characterData[18]), int(characterData[19]))
-			rot = Component1_Rotation(0,0,0,0)
 			ControllablePhysics.flag2 = True
-			ControllablePhysics.data2 = Component1_Data2(0,0,0,0,0,0,0)
-			onGround=True
-			d4 = False
 			ControllablePhysics.flag4 = True
-			ControllablePhysics.data4 = Component1_Data4(0, False)
-			ControllablePhysics.flag5 = True
-			ControllablePhysics.flag5_1 = False
-			data6 = Component1_Data6(pos, rot, onGround, d4)
-			ControllablePhysics.flag6 = True
-			ControllablePhysics.data6 = data6
+			ControllablePhysics.vectorFlag = True
+			ControllablePhysics.xPos = c_float(int(characterData[17]))
+			ControllablePhysics.yPos = c_float(int(characterData[18]))
+			ControllablePhysics.zPos = c_float(int(characterData[19]))
+			ControllablePhysics.onGround=True
 
+
+			#Add Destructible
 			Destructible = DestructibleIndex()
 			Destructible.flag1 = False
 
+			#Add Stats
 			Stats = StatsIndex()
 			Stats.flag1 = True
 			Stats.flag2 = True
 
+			#Add Character Component
 			Character = CharacterComponent()
 			Character.hasLevel = True
 			Character.level = c_ulong(characterData[20])
@@ -448,20 +453,33 @@ class WorldServer(server.Server):
 			data11 = Component4_Data11()
 			Character.data11 = data11
 
+			#Add Inventory
 			Inventory = InventoryComponent()
 			Inventory.flag1 = True
 			Inventory.characterObjID = characterData[3]
 
+			#Add Script
+			Script = ScriptComponent()
+
+			#Add Skill
 			Skill = SkillComponent()
 
+			#Add Render
 			Render = RenderComponent()
 
+			#Add Component 107
 			Comp107 = Component107()
 			Comp107.flag1 = True
 
-			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Skill, Render, Comp107]
+			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
 			PlayerObject = ReplicaObject(PlayerComponents)
+			PlayerObject._serialize = True
 			self.RM.construct(PlayerObject, constructMsg="Sent Player", logFile="1_2002-51995_2_[24].bin")
+
+			# ConstructionFile = open(os.getcwd()+"\\TestPackets\\CharacterConstruction.bin", "rb")
+			# constructionPacket = BitStream()
+			# constructionPacket.write(ConstructionFile.read())
+			# self.send(constructionPacket, address)
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
 		elif(data[0:3] == b"\x04\x00\x05"):

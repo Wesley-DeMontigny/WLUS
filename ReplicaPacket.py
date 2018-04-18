@@ -7,90 +7,6 @@ class Writable:
 	def _isWritable(self):
 		return True
 
-###################### Component 1 Stuff ######################
-class Component1_Data1():
-	def __init__(self, d1, d2, d3):
-		self.d1 = c_ulong(d1)
-		self.d2 = c_bit(d2)
-		self.d3 = c_bit(d3)
-
-class Component1_Data2():
-	def __init__(self, d1, d2, d3, d4, d5, d6, d7):
-		self.d1 = c_ulong(d1)
-		self.d2 = c_ulong(d2)
-		self.d3 = c_ulong(d3)
-		self.d4 = c_ulong(d4)
-		self.d5 = c_ulong(d5)
-		self.d6 = c_ulong(d6)
-		self.d7 = c_ulong(d7)
-
-class Component1_Data3():
-	def __init__(self, d1, d2):
-		self.d1 = c_float(d1)
-		self.d2 = c_float(d2)
-
-class Component1_Data4():
-	def __init__(self, d1, d2):
-		self.d1 = c_ulong(d1)
-		self.d2 = c_bit(d2)
-
-class Component1_Data5():
-	def __init__(self, d1, d2):
-		self.d1 = c_ulong(d1)
-		self.d2 = c_bit(d2)
-
-class Component1_Position():
-	def __init__(self, x, y, z):
-		self.x = c_float(x)
-		self.y = c_float(y)
-		self.z = c_float(z)
-
-
-class Component1_Rotation():
-	def __init__(self, x, y, z, w):
-		self.x = c_float(x)
-		self.y = c_float(y)
-		self.z = c_float(z)
-		self.w = c_float(w)
-
-
-class Component1_Data6():
-	def __init__(self, position, rotation, onGround, d4):
-		self.position = position
-		self.rotation = rotation
-		self.onGround = c_bit(onGround)
-		self.d4 = c_bit(d4)
-
-class Component1_Velocity():
-	def __init__(self, x, y, z):
-		self.x = c_float(x)
-		self.y = c_float(y)
-		self.z = c_float(z)
-
-
-
-class Component1_Velocity_Angular():
-	def __init__(self, x, y, z):
-		self.x = c_float(x)
-		self.y = c_float(y)
-		self.z = c_float(z)
-
-
-class Component1_Data6_3():
-	def __init__(self, objid, d2, d3, d4):
-		self.objid = c_longlong(objid)
-		self.d2 = c_float(d2)
-		self.d3 = c_float(d3)
-		self.d4 = c_float(d4)
-
-
-class Component1_Data3_1():
-	def __init__(self, d1, d2, d3):
-		self.d1 = c_float(d1)
-		self.d2 = c_float(d2)
-		self.d3 = c_float(d3)
-###################### End of 1 Stuff ######################
-
 
 ##################### Comonent 4 Stuff #####################
 class Component4_Data3:
@@ -185,94 +101,130 @@ class PlayerStats():
 
 class ControllablePhysicsComponent:
 	def __init__(self):
-		self.flag1 = False #Boolean
-		self.data1 = None #Component1Data1
-		self.flag2 = False #Boolean
-		self.data2 = None #Component1Data2
-		self.flag3 = False #Boolean
-		self.data3 = None #Component1Data3
-		self.flag4 = False #Boolean
-		self.data4 = None #Component1Data4
-		self.flag5 = False #Boolean
-		self.flag5_1 = False #Boolean
-		self.data5 = None #Component1Data5
-		self.flag6 = False #Boolean
-		self.data6 = None #Component1Data6
-		self.flag6_1 = False #Boolean
-		self.data6_1 = None #Component1_Velocity
-		self.flag6_2 = False #Boolean
-		self.data6_2 = None #Component1_Velocity_Angular
-		self.flag6_3 = False #Boolean
-		self.data6_3 = None #Component1Data6_3
-		self.flag6_3_1 = False #Boolean
-		self.data6_3_1 = None #Component1_Data3_1
+		self.jetpackFlag = False
+		self.jetPackEffectID = c_ulong(0)
+		self.data1_1 = c_bit(False)
+		self.data1_2 = c_bit(False)
 
+		self.flag2 = False
+		self.data2_1 = c_ulong(0)
+		self.data2_2 = c_ulong(0)
+		self.data2_3 = c_ulong(0)
+		self.data2_4 = c_ulong(0)
+		self.data2_5 = c_ulong(0)
+		self.data2_6 = c_ulong(0)
+		self.data2_7 = c_ulong(0)
+
+		self.flag3 = False
+		self.data3_1 = c_float(0)
+		self.data3_2 = c_float(0)
+
+		self.flag4 = False
+		self.data4_1 = c_float(0)
+		self.data4_2 = c_bit(False)
+
+		self.flag5 = False
+		self.flag5_1 = False
+		self.data5_1_1 = c_ulong(0)
+		self.data5_1_2 = c_bit(False)
+
+		self.vectorFlag = False
+		self.xPos = c_float(0)
+		self.yPos = c_float(0)
+		self.zPos = c_float(0)
+		self.xRot = c_float(0)
+		self.yRot = c_float(0)
+		self.zRot = c_float(0)
+		self.wRot = c_float(0)
+		self.onGround = False
+		self.data6_1 = c_bit(False)
+
+		self.velocityFlag = False
+		self.xVel = c_float(0)
+		self.yVel = c_float(0)
+		self.zVel = c_float(0)
+
+		self.angVelocityFlag = False
+		self.xAngVel = c_float(0)
+		self.yAngVel = c_float(0)
+		self.zAngVel = c_float(0)
+
+		self.flag9 = False
+		self.platformID = c_longlong(0)
+		self.data9_2 = c_float(0)
+		self.data9_3 = c_float(0)
+		self.data9_4 = c_float(0)
+		self.flag9_1 = False
+		self.data9_1_1 = c_float(0)
+		self.data9_1_2 = c_float(0)
+		self.data9_1_3 = c_float(0)
+
+		self.serializeBit = False
 	def get_packet(self, PACKET_TYPE):
 		packet = BitStream()
-		if(PACKET_TYPE == ReplicaTypes.REPLICA_CONSTRUCTION_PACKET):#Creation only data
-			packet.write(c_bit(self.flag1))
-			if(self.flag1 == True):
-				packet.write(self.data1.d1)
-				packet.write(self.data1.d2)
-				packet.write(self.data1.d3)
+		if(PACKET_TYPE == ReplicaTypes.REPLICA_CONSTRUCTION_PACKET):
+			packet.write(c_bit(self.jetpackFlag))
+			if(self.jetpackFlag == True):
+				packet.write(self.jetPackEffectID)
+				packet.write(self.data1_1)
+				packet.write(self.data1_2)
 			packet.write(c_bit(self.flag2))
 			if(self.flag2 == True):
-				packet.write(self.data2.d1)
-				packet.write(self.data2.d2)
-				packet.write(self.data2.d3)
-				packet.write(self.data2.d4)
-				packet.write(self.data2.d5)
-				packet.write(self.data2.d6)
-				packet.write(self.data2.d7)
-		#End of creation only
+				packet.write(self.data2_1)
+				packet.write(self.data2_2)
+				packet.write(self.data2_3)
+				packet.write(self.data2_4)
+				packet.write(self.data2_5)
+				packet.write(self.data2_6)
+				packet.write(self.data2_7)
 		packet.write(c_bit(self.flag3))
-		if(self.data3 == True):
-			packet.write(self.data3.d1)
-			packet.write(self.data3.d2)
+		if(self.flag3 == True):
+			packet.write(self.data3_1)
+			packet.write(self.data3_2)
 		packet.write(c_bit(self.flag4))
-		if(self.data4 == True):
-			packet.write(self.data4.d1)
-			packet.write(self.data4.d2)
+		if(self.flag4 == True):
+			packet.write(self.data4_1)
+			packet.write(self.data4_2)
 		packet.write(c_bit(self.flag5))
 		if(self.flag5 == True):
 			packet.write(c_bit(self.flag5_1))
 			if(self.flag5_1 == True):
-				packet.write(self.data5.d1)
-				packet.write(self.data5.d2)
-		packet.write(c_bit(self.flag6))
-		if(self.flag6 == True):
-			packet.write(self.data6.position.x)#Position
-			packet.write(self.data6.position.y)
-			packet.write(self.data6.position.z)
-			packet.write(self.data6.rotation.x)#Rotation
-			packet.write(self.data6.rotation.y)
-			packet.write(self.data6.rotation.z)
-			packet.write(self.data6.rotation.w)
-			packet.write(self.data6.onGround)
-			packet.write(self.data6.d4)
-			packet.write(c_bit(self.flag6_1))
-			if(self.flag6_1 == True):#Velocity
-				packet.write(self.data6_1.x)
-				packet.write(self.data6_1.y)
-				packet.write(self.data6_1.z)
-			packet.write(c_bit(self.flag6_2))
-			if(self.flag6_2 == True):#Angular Velocity
-				packet.write(self.data6_2.x)
-				packet.write(self.data6_2.y)
-				packet.write(self.data6_2.z)
-			packet.write(c_bit(self.flag6_3))
-			if(self.flag6_3 == True):
-				packet.write(self.data6_3.objid)
-				packet.write(self.data6_3.d2)
-				packet.write(self.data6_3.d3)
-				packet.write(self.data6_3.d4)
-				packet.write(c_bit(self.flag6_3_1))
-				if(self.flag6_3_1 == True):
-					packet.write(self.data6_3_1.d1)
-					packet.write(self.data6_3_1.d2)
-					packet.write(self.data6_3_1.d3)
-		if(PACKET_TYPE == ReplicaTypes.REPLICA_SERIALIZATION_PACKET):#Serialization only
-			packet.write(c_bit(True))
+				packet.write(self.data5_1_1)
+				packet.write(self.data5_1_2)
+		packet.write(c_bit(self.vectorFlag))
+		if(self.vectorFlag == True):
+			packet.write(self.xPos)
+			packet.write(self.yPos)
+			packet.write(self.zPos)
+			packet.write(self.xRot)
+			packet.write(self.yRot)
+			packet.write(self.zRot)
+			packet.write(self.wRot)
+			packet.write(c_bit(self.onGround))
+			packet.write(self.data6_1)
+		packet.write(c_bit(self.velocityFlag))
+		if(self.velocityFlag == True):
+			packet.write(self.xVel)
+			packet.write(self.yVel)
+			packet.write(self.zVel)
+		packet.write(c_bit(self.angVelocityFlag))
+		if(self.angVelocityFlag == True):
+			packet.write(self.xAngVel)
+			packet.write(self.yAngVel)
+			packet.write(self.zAngVel)
+		packet.write(c_bit(self.flag9))
+		if(self.flag9 == True):
+			packet.write(self.platformID)
+			packet.write(self.data9_2)
+			packet.write(self.data9_3)
+			packet.write(self.data9_4)
+			packet.write(c_bit(self.flag9_1))
+			if(self.flag9_1 == True):
+				packet.write(self.data9_1_1)
+				packet.write(self.data9_1_2)
+				packet.write(self.data9_1_3)
+		if(PACKET_TYPE == ReplicaTypes.REPLICA_SERIALIZATION_PACKET):
+			packet.write(c_bit(self.serializeBit))
 		return packet
 
 
@@ -570,7 +522,6 @@ class SkillComponent():
 class InventoryComponent():
 	def __init__(self):
 		self.flag1 = False
-		self.flag2 = False
 		self.characterObjID = None
 	def get_packet(self, PacketType):
 		packet = BitStream()
@@ -591,13 +542,22 @@ class InventoryComponent():
 				packet.write(c_bit(False))
 				packet.write(c_bit(False))
 				packet.write(c_bit(True))
-		packet.write(c_bit(self.flag2))
+		packet.write(c_bit(False))
+		return packet
+
+#TODO: Actually Implement
+class ScriptComponent:
+	def __init__(self):
+		self.flag1 = False
+	def get_packet(self, PACKET_TYPE):
+		packet = BitStream()
+		packet.write(c_bit(self.flag1))
 		return packet
 
 #TODO Actually Implement
 class RenderComponent():
 	def __init__(self):
-		self.FXCount = c_long(0)
+		self.FXCount = c_ulong(0)
 	def get_packet(self, PacketType):
 		packet = BitStream()
 		packet.write(self.FXCount)

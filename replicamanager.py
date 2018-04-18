@@ -22,7 +22,7 @@ class ReplicaManager:
 	def on_disconnect_or_connection_lost(self, data, address):
 		self._participants.discard(address)
 
-	def construct(self, obj, recipients=None, new=True, constructMsg=None, logFile=None, payload=None):
+	def construct(self, obj, recipients=None, new=True, constructMsg=None, logFile=None):
 		# recipients is needed to send replicas to new participants
 		if recipients is None:
 			recipients = self._participants
@@ -35,16 +35,12 @@ class ReplicaManager:
 		out.write(c_ubyte(Message.ReplicaManagerConstruction))
 		out.write(c_bit(True))
 		out.write(c_ushort(self._network_ids[obj]))
-		if(payload == None):
-			out.write(obj.send_construction())
-		else:
-			out.write(payload)
+		out.write(obj.send_construction())
 
 		if(logFile != None):
 			log = open(logFile, "wb")
 			log.write(out)
-
-		if(constructMsg != None):
+		if (constructMsg != None):
 			print("[" + self.server.role + "]" + constructMsg)
 		else:
 			print("[" + self.server.role + "]" + "Used replica constructor")
