@@ -439,11 +439,8 @@ class StatsIndex():
 
 		self.flag2 = False
 		self.currentHealth = c_ulong(20)#Ulong
-		self.weirdFloat1 = c_float(1)
 		self.currentArmor = c_ulong(20)#Ulong
-		self.weirdFloat2 = c_float(1)
 		self.currentImagination = c_ulong(20)#Ulong
-		self.weirdFloat3 = c_float(1)
 		self.data2_1 = c_ulong(0)
 		self.data2_2 = c_bit(False)
 		self.data2_3 = c_bit(False)
@@ -480,11 +477,11 @@ class StatsIndex():
 		packet.write(c_bit(self.flag2))
 		if(self.flag2 == True):
 			packet.write(self.currentHealth)
-			packet.write(self.weirdFloat1)
+			packet.write(self.maxHealth)
 			packet.write(self.currentArmor)
-			packet.write(self.weirdFloat2)
+			packet.write(self.maxArmor)
 			packet.write(self.currentImagination)
-			packet.write(self.weirdFloat3)
+			packet.write(self.maxImagination)
 			packet.write(self.data2_1)
 			packet.write(self.data2_2)
 			packet.write(self.data2_3)

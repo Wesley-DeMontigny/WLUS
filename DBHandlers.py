@@ -51,6 +51,7 @@ def DBServerStarup():
     conn = sqlite3.connect("server.sqlite")
     c = conn.cursor()
     c.execute("DELETE FROM CurrentSessions")
+    c.execute("DELETE FROM World_Objects WHERE LOT = 1")
     c.execute("DELETE FROM Worlds")
     conn.commit()
     conn.close()
@@ -309,6 +310,21 @@ def updateSessionByUserKey(userkey, state, zoneID, charID):
 def updateSessionByAccountID(accountID, state, zoneID, charID):
     conn = sqlite3.connect("server.sqlite")
     c = conn.cursor()
-    c.execute("UPDATE CurrentSessions SET charID = "+charID+", zoneID = "+zoneID+", State = "+state+" WHERE AccountID = "+accountID)
+    c.execute("UPDATE CurrentSessions SET charID = "+str(charID)+", zoneID = "+str(zoneID)+", State = "+str(state)+" WHERE AccountID = "+str(accountID))
+    conn.commit()
+    conn.close()
+
+def registerWorldObject(Name, LOT, ObjectID, Zone, posX, posY, posZ, rotX, rotY, rotZ, rotW):
+    conn = sqlite3.connect("server.sqlite")
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO World_Objects (Name, LOT, ObjectID, Zone, posX, posY, posZ, rotX, rotY, rotZ, rotw) VALUES ('"+str(Name)+"', "+str(LOT)+", "+str(ObjectID)+", "+str(Zone)+", "+str(posX)+", "+str(posY)+", "+str(posZ)+", "+str(rotX)+", "+str(rotY)+", "+str(rotZ)+", "+str(rotW)+")")
+    conn.commit()
+    conn.close()
+
+def updateWorldObject(ObjectID, posX, posY, posZ, rotX, rotY, rotZ, rotW):
+    conn = sqlite3.connect("server.sqlite")
+    c = conn.cursor()
+    c.execute("UPDATE World_Objects SET posX = " + str(posX) + ", posY = " + str(posY) + ", posZ = " + str(posZ) + ", rotX = " + str(rotX) + ", rotY = " + str(rotY) + ", rotZ = " + str(rotZ) + ", rotW = " + str(rotW) +  " WHERE ObjectID = " + str(ObjectID))
     conn.commit()
     conn.close()
