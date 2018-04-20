@@ -410,11 +410,6 @@ class WorldServer(server.Server):
 
 			self.send(finalPacket, address, reliability=PacketReliability.ReliableOrdered)
 
-			# InfoFile = open(os.getcwd()+"\\TestPackets\\DetailedUserInfo.bin", "rb")
-			# infoPacket = BitStream()
-			# infoPacket.write(InfoFile.read())
-			# self.send(infoPacket, address)
-
 			print("[" + self.role + "]" + "Sent Detailed User Info")
 
 			#Add Base Data
@@ -480,7 +475,8 @@ class WorldServer(server.Server):
 			#Add Inventory
 			Inventory = InventoryComponent()
 			Inventory.flag1 = True
-			Inventory.characterObjID = characterData[3]
+			Inventory.characterObjID = 1152921510436607007
+			#Inventory.characterObjID = characterData[3]
 
 			#Add Script
 			Script = ScriptComponent()
@@ -498,12 +494,7 @@ class WorldServer(server.Server):
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
 			PlayerObject = ReplicaObject(PlayerComponents)
 			PlayerObject._serialize = True
-			#self.RM.construct(PlayerObject, constructMsg="Sent Player", logFile="1_2002-51995_2_[24].bin")
-
-			ConstructionFile = open(os.getcwd()+"\\TestPackets\\CharacterConstruction.bin", "rb")
-			constructionPacket = BitStream()
-			constructionPacket.write(ConstructionFile.read())
-			self.send(constructionPacket, address)
+			self.RM.construct(PlayerObject, constructMsg="Sent Player", logFile="1_2002-51995_2_[24].bin")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
 		elif(data[0:3] == b"\x04\x00\x05"):

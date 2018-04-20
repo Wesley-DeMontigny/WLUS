@@ -180,6 +180,7 @@ def getInventoryInfo(charID):
 def getLOTFromObject(objectID):
     conn = sqlite3.connect("server.sqlite")
     c = conn.cursor()
+    print("SELECT LOT FROM Objects WHERE ObjectID = "+objectID)
     c.execute("SELECT LOT FROM Objects WHERE ObjectID = "+objectID)
     item = c.fetchone()
     conn.commit()
