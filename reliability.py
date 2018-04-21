@@ -86,7 +86,7 @@ class ReliabilityLayer:
 				del self._last_received[0]
 				self._last_received.append(message_number)
 			else:
-				print("got duplicate")
+				#print("got duplicate")
 				continue
 
 			if reliability == PacketReliability.UnreliableSequenced:

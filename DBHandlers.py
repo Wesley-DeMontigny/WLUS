@@ -260,7 +260,7 @@ def addItemsToInventory(charID, LOT, Quantity, slot=None, Linked=0, Equipped=0):
 
 def createObject(LOT):
     conn = sqlite3.connect("server.sqlite")
-    objID = str(randint(1000000000, 9999999999))
+    objID = str(randint(100000000000000000, 999999999999999999))
     c = conn.cursor()
     c.execute("INSERT INTO Objects (ObjectID, LOT, SpawnID) VALUES ("+objID+", "+str(LOT)+", NULL)")
     conn.commit()
@@ -269,7 +269,7 @@ def createObject(LOT):
 
 def createMinifigure(AccountID, Name, ShirtColor, ShirtStyle, PantsColor, HairStyle, HairColor, lh, rh, Eyebrows, Eyes, Mouth):
     conn = sqlite3.connect("server.sqlite")
-    objID = str(randint(1000000000,9999999999))
+    objID = str(randint(100000000000000000,999999999999999999))
     username = Name
     if(Name == ""):
         username = objID

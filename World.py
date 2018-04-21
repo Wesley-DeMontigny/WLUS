@@ -23,8 +23,12 @@ class WorldServer(server.Server):
 		self.register_handler(Message.LegoPacket, self.handleLegoPacket)
 		self.register_handler(Message.NewIncomingConnection, self.addToParticipants)#Adds participant to replica manager
 		self.Local = True
+		self.SavedObjects = {}
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, Components):
+		registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot)
+		self.SavedObjects[ObjectID] = Components
 	def addToParticipants(self, data, address):
 		print("[" + self.role + "]" + "Just added new participant to replica manager")
 		self.RM.add_participant(address)
@@ -317,8 +321,7 @@ class WorldServer(server.Server):
 			objidKeyAdj.write("objid", allocated_length=(b"objid".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(objidKeyAdj[:-2])#Remove 2 unnecessary bits
 			LDF.write(c_ubyte(9))  # Write data format 9
-			LDF.write(c_int64(1152921510436607007))
-			#LDF.write(c_int64(int(characterData[3])))#Write int(characterData[3])
+			LDF.write(c_int64(int(characterData[3])))#Write int(characterData[3])
 			keyNumber = keyNumber + 1
 
 			reputationKeyAdj = BitStream()
@@ -371,25 +374,23 @@ class WorldServer(server.Server):
 				xml = xml + '</mis>'#If there are no missions write nothing
 			xml = xml + "<mnt/><dest/></obj>"#Idk what these three are. Should probably find that out
 
-			# xmlKeyAdj = BitStream()
-			# LDF.write(c_ubyte((b"xml".__len__() * 2)))
-			# xmlKeyAdj.write("xml", allocated_length=(b"xml".__len__()*2)+2)  # Write encoded key as bits
-			# LDF.write(xmlKeyAdj[:-2])
-			# LDF.write(c_ubyte(13))  # Write data format
-			# xmlData = xml.encode("utf-16-le")#XML has format 13
-			# LDF.write(c_ulong(len(xmlData)))  # xml length
-			# LDF.write_bits(xmlData)  # xml data
-			# keyNumber = keyNumber + 1
+			xmlKeyAdj = BitStream()
+			LDF.write(c_ubyte((b"xml".__len__() * 2)))
+			xmlKeyAdj.write("xml", allocated_length=(b"xml".__len__()*2)+2)  # Write encoded key as bits
+			LDF.write(xmlKeyAdj[:-2])
+			LDF.write(c_ubyte(13))  # Write data format
+			xmlData = xml.encode("utf-16-le")#XML has format 13
+			LDF.write(c_ulong(len(xmlData)))  # xml length
+			LDF.write_bits(xmlData)  # xml data
+			keyNumber = keyNumber + 1
 
 			nameKeyAdj = BitStream()
 			LDF.write(c_ubyte((b"name".__len__() * 2)))
 			nameKeyAdj.write("name", allocated_length=(b"name".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(nameKeyAdj[:-2])
 			LDF.write(c_ubyte(0))  # Write data format 0
-			# LDF.write(c_uint((str(characterData[2]).__len__()*2)+2))#Write String Length
-			# LDF.write(str(characterData[2]), allocated_length=(str(characterData[2]).__len__()*2)+2)  # String
-			LDF.write(c_uint((str("GruntMonkey").__len__()*2)+2))#Write String Length
-			LDF.write(str("GruntMonkey"), allocated_length=(str("GruntMonkey").__len__()*2)+2)  # String
+			LDF.write(c_uint((str(characterData[2]).__len__()*2)+2))#Write String Length
+			LDF.write(str(characterData[2]), allocated_length=(str(characterData[2]).__len__()*2)+2)  # String
 			keyNumber = keyNumber + 1
 
 			adjLDF = BitStream()#Create Final LDF Stream
@@ -404,8 +405,6 @@ class WorldServer(server.Server):
 
 			finalPacket.write(adjLDF)  # Writes all the LDF data
 
-			registerWorldObject("GruntMonkey", 1, 1152921510436607007, zoneID, -627.1862182617188,
-								613.3262329101562, -17.223167419433594, 0, 0.7334349751472473, 0, 0.6797596216201782)
 			#registerWorldObject(str(characterData[2]), 1, str(characterData[3]), zoneID, int(characterData[17]),int(characterData[18]),int(characterData[19]),0,0,0,0)
 
 			self.send(finalPacket, address, reliability=PacketReliability.ReliableOrdered)
@@ -414,30 +413,24 @@ class WorldServer(server.Server):
 
 			#Add Base Data
 			Player = BaseData()
-			Player.objectID = c_int64(1152921510436607007)
-			#Player.objectID = c_int64(int(characterData[3]))
+			Player.objectID = c_int64(int(characterData[3]))
 			Player.LOT = c_long(1)
 			Player.flag6 = True
-			Player.NameLength = (str("GruntMonkey").__len__())
-			Player.Name = "GruntMonkey"
-			#Player.NameLength = (str(characterData[2]).__len__())
-			#Player.Name = str(characterData[2])
+			Player.NameLength = (str(characterData[2]).__len__())
+			Player.Name = str(characterData[2])
 
 			#Add Controllable Physics
 			ControllablePhysics = ControllablePhysicsComponent()
 			ControllablePhysics.flag2 = True
 			ControllablePhysics.flag4 = True
 			ControllablePhysics.vectorFlag = True
-			ControllablePhysics.xPos = c_float(-627.1862182617188)
-			ControllablePhysics.yPos = c_float(613.3262329101562)
-			ControllablePhysics.zPos = c_float(-17.223167419433594)
+			ControllablePhysics.xPos = c_float(int(characterData[17]))
+			ControllablePhysics.yPos = c_float(int(characterData[18]))
+			ControllablePhysics.zPos = c_float(int(characterData[19]))
 			ControllablePhysics.xRot = c_float(0.0)
-			ControllablePhysics.yRot = c_float(0.7334349751472473)
+			ControllablePhysics.yRot = c_float(0.0)
 			ControllablePhysics.zRot = c_float(0.0)
-			ControllablePhysics.wRot = c_float(0.6797596216201782)
-			#ControllablePhysics.xPos = c_float(int(characterData[17]))
-			#ControllablePhysics.yPos = c_float(int(characterData[18]))
-			#ControllablePhysics.zPos = c_float(int(characterData[19]))
+			ControllablePhysics.wRot = c_float(0.0)
 			ControllablePhysics.onGround=True
 
 
@@ -459,8 +452,7 @@ class WorldServer(server.Server):
 			#Add Character Component
 			Character = CharacterComponent()
 			Character.hasLevel = True
-			Character.level = c_ulong(1)
-			#Character.level = c_ulong(characterData[20])
+			Character.level = c_ulong(characterData[20])
 			info = PlayerInfo()
 			info.setInfo(characterData[3])
 			Character.info = info
@@ -475,8 +467,7 @@ class WorldServer(server.Server):
 			#Add Inventory
 			Inventory = InventoryComponent()
 			Inventory.flag1 = True
-			Inventory.characterObjID = 1152921510436607007
-			#Inventory.characterObjID = characterData[3]
+			Inventory.characterObjID = characterData[3]
 
 			#Add Script
 			Script = ScriptComponent()
@@ -493,38 +484,57 @@ class WorldServer(server.Server):
 
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
 			PlayerObject = ReplicaObject(PlayerComponents)
+			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, PlayerComponents)
 			PlayerObject._serialize = True
-			self.RM.construct(PlayerObject, constructMsg="Sent Player", logFile="1_2002-51995_2_[24].bin")
+			self.RM.construct(PlayerObject, constructMsg="Sent Player")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
 		elif(data[0:3] == b"\x04\x00\x05"):
-			print("[" + self.role + "]" + "Lego Packet was Client Game Message")
-			GM = BitStream(data[7:])
-			objID = GM.read(c_longlong)
-			msgID = GM.read(c_ushort)
-			print("[" + self.role + "]" + "GM Had ObjID of " + str(objID) + " and msgID of " + str(msgID))
+			message = BitStream(data[7:])
+			objID = message.read(c_longlong)
+			msgID = message.read(c_ushort)
 			if(str(msgID) == "1485"):
 				print("[" + self.role + "]" + "Message was defined as 'Modify Ghosting Distance'")
 			elif(str(msgID) == "41"):
 				print("[" + self.role + "]" + "Message was defined as 'Play Emote'")
-				emoteID = GM.read(c_int)
-				targetID = GM.read(c_longlong)
+				emoteID = message.read(c_int)
+				targetID = message.read(c_longlong)
 				print("[" + self.role + "]" + "Emote ID:" + str(emoteID) + ", Target ID: " + str(targetID))
 			elif(str(msgID) == "505"):
-				playerID = GM.read(c_longlong)
+				playerID = message.read(c_longlong)
 				print("[" + self.role + "]" + "Player with ID: " + str(playerID) + " has loaded")
 			elif(str(msgID) == "888"):
-				objectID = GM.read(c_longlong)
+				objectID = message.read(c_longlong)
 				print("[" + self.role + "]" + "Object " + str(objectID) + " needs an update")
+				Components = self.SavedObjects[objectID]
+				#If Object is a player
+				if(Components[0].LOT == c_long(1)):
+					Object = ReplicaObject(Components)
+			elif(str(msgID) == "767"):
+				#ToggleGhostReferenceOveride
+				bit = message.read(c_bit)
+				print("[" + self.role + "]" + "Ghost Reference Overide Gave Bit: " + str(bit))
+			elif(str(msgID) == "768"):
+				#SetGhostReferencePosition
+				xPos = message.read(c_float)
+				yPos = message.read(c_float)
+				zPos = message.read(c_float)
+			elif(str(msgID) == "124"):
+				#SelectSkill
+				fromSkillSet = message.read(c_bit)
+				skillID = message.read(c_long)
+				print("[" + self.role + "]" + "Select Skill " + str(skillID))
+			elif(str(msgID) == "1202"):
+				print("[" + self.role + "]" + "Player Was Smashed")
 			else:
-				print("[" + self.role + "]" + "Message currently has no handler and is not defined!")
+				print("[" + self.role + "]" + "Message id of "+ str(msgID) +" currently has no handler and is not defined!")
 		elif(data[0:3] == b"\x04\x00\x15"):
 			#This needs to be figured out how to implement
 			print("[" + self.role + "]" + "Lego Packet was 'Some Kind of Indicator This Packet Should Be Routed'????")
 			#print(data[11:])
 		elif(data[0:3] == b"\x04\x00\x16"):
 			#print("[" + self.role + "]" + "Lego Packet was Position/Rotation Update")
-			session = getSessionByAddress(address)
+			session = getSessionByAddress(address[0])
 			info = BitStream(data[7:])
 			posX = info.read(c_float)
 			posY = info.read(c_float)
@@ -533,8 +543,17 @@ class WorldServer(server.Server):
 			rotY = info.read(c_float)
 			rotZ = info.read(c_float)
 			rotW = info.read(c_float)
-			updateWorldObject(session[0][4], posX, posY, posZ, rotX, rotY, rotZ, rotW)
-			#Not going to even print this to console because it updates so much
+			updateWorldObject(session[4], posX, posY, posZ, rotX, rotY, rotZ, rotW)
+			if(self.SavedObjects[session[4]] != None):
+				Components = self.SavedObjects[session[4]]
+				Components[1].xPos = posX
+				Components[1].yPos = posY
+				Components[1].zPos = posZ
+				Components[1].xRot = rotX
+				Components[1].yRot = rotY
+				Components[1].zRot = rotZ
+				Components[1].wRot = rotW
+
 		else:
 			print("[" + self.role + "]" + "Received Unknown Packet:")
 			print(data)
