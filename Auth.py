@@ -29,7 +29,7 @@ class AuthServer(server.Server):
 		for _ in range(33 - len(serverIP)):
 			serverIP = serverIP + b"\x00"
 		if(data[0:3] == bytearray(b'\x00\x00\x00')):
-			print("["+self.role+"]"+"Lego Packet was Connection Init")
+			self.log("Lego Packet was Connection Init")
 			handshake = BitStream()
 			# START OF HEADER
 			handshake.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
@@ -45,13 +45,13 @@ class AuthServer(server.Server):
 			handshake.write(str(socket.gethostbyname(socket.gethostname())))  # Local IP addr of server
 			self.send(handshake, address, reliability=PacketReliability.ReliableOrdered)
 		elif(data[0:3] == bytearray(b'\x01\x00\x00')):
-			print("["+self.role+"]"+"Lego Packet was Login Info")
+			self.log("Lego Packet was Login Info")
 			userRead = BitStream(data[7:])#Displace the 7 bit header
 			passwordRead = BitStream(data[73:])#Add 66 bits to the already 7 bit displacement
 			username = (userRead.read(str)).replace(" ", "")
 			password = passwordRead.read(str, allocated_length=41)
-			print("["+self.role+"]"+"Login Username:" + username)#Length is 66 so divide it by 2 becuase its a wstring
-			print("["+self.role+"]"+"Login Password:" + password)#Length is 82 so divide it by 2 becuase its a wstring
+			self.log("Login Username:" + username)#Length is 66 so divide it by 2 becuase its a wstring
+			self.log("Login Password:" + password)#Length is 82 so divide it by 2 becuase its a wstring
 			loginResponse = getLoginResponse(username, password)
 			loginData = BitStream()
 			# START OF HEADER

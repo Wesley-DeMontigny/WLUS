@@ -30,11 +30,11 @@ class WorldServer(server.Server):
 		registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot)
 		self.SavedObjects[ObjectID] = Components
 	def addToParticipants(self, data, address):
-		print("[" + self.role + "]" + "Just added new participant to replica manager")
+		self.log("Just added new participant to replica manager")
 		self.RM.add_participant(address)
 	def handleLegoPacket(self, data, address):
 		if(data[0:3] == bytearray(b'\x00\x00\x00')):#Handshake
-			print("["+self.role+"]"+"Lego Packet was Connection Init")
+			self.log("Lego Packet was Connection Init")
 			handshake = BitStream()
 			# START OF HEADER
 			handshake.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
@@ -50,25 +50,25 @@ class WorldServer(server.Server):
 			handshake.write(str(socket.gethostbyname(socket.gethostname())))  # Local IP addr of server
 			self.send(handshake, address, reliability=PacketReliability.ReliableOrdered)
 		elif(data[0:3] == b"\x04\x00\x01"):
-			print("["+self.role+"]"+"Lego Packet was User Session Info")
+			self.log("Lego Packet was User Session Info")
 			sessionInfo = getSessionByAddress(address[0])
 			userRead = BitStream(data[7:])
 			userIDRead = BitStream(data[73:])
 			username = userRead.read(str)
 			userID = userIDRead.read(str)
-			print("["+self.role+"]"+"Session Info - Username : " + str(username) + " UserKey : " + str(userID))
+			self.log("Session Info - Username : " + str(username) + " UserKey : " + str(userID))
 			if(sessionInfo[1] == getAccountByUsername(username)[0]):
 				updateSessionByUserKey(userID, str(1), "NULL", "NULL")
 		elif(data[0:3] == b"\x04\x00\x02"):
 			sleep(.5)
 			session = getSessionByAddress(address[0])
-			print("[" + self.role + "]" + "Lego Packet was Minifigure List Request")
+			self.log("Lego Packet was Minifigure List Request")
 			if(session[6] == 1):
-				print("[" + self.role + "]" +"Client's Session is valid")
+				self.log("Client's Session is valid")
 				rows, characterData = getCharacterData(str(session[1]))
 				if(rows > 4):
 					rows = 4
-				print("[" + self.role + "] Account " + str(session[1]) + " has " + str(rows) + " character(s)")
+				self.log("Account " + str(session[1]) + " has " + str(rows) + " character(s)")
 				characterList = BitStream()
 				# START OF HEADER
 				characterList.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
@@ -106,11 +106,11 @@ class WorldServer(server.Server):
 					characterList.write(c_ushort(len(items)))#Equipped Item Lots
 					for item in items:
 						LOT = getLOTFromObject(str(item[0]))
-						print("[" + self.role + "]" +"Found item in inventory with LOT " + str(LOT[0]))
+						self.log("Found item in inventory with LOT " + str(LOT[0]))
 						characterList.write_bits(c_ulong(int(LOT[0])))
 				self.send(characterList, address, reliability=PacketReliability.ReliableOrdered)
 			else:
-				print("Client's Session is Invalid. Disconnecting...")
+				self.log("Client's Session is Invalid. Disconnecting...")
 				DisconnectionNotify = BitStream()
 				# START OF HEADER
 				DisconnectionNotify.write(bytes(Message.LegoPacket))  # MSG ID
@@ -122,9 +122,9 @@ class WorldServer(server.Server):
 				self.send(DisconnectionNotify, address)
 				destroySessionWithAddress(address[0])
 		elif(data[0:3] == b"\x04\x00\x03"):#When you create a minifigure you have to add a minfigure list packet
-			print("Lego Packet was Minifigure Creation Request")
+			self.log("Lego Packet was Minifigure Creation Request")
 			session = getSessionByAddress(address[0])
-			print("[" + self.role + "]" + "Lego Packet was Minifigure List Request")
+			self.log("Lego Packet was Minifigure List Request")
 			if(session[6] == 1):
 				nameData = BitStream(data[7:])
 				name = nameData.read(str)
@@ -159,11 +159,11 @@ class WorldServer(server.Server):
 				###END OF HEADER
 				response.write(c_ubyte(0x00))  # 0x00 is success
 				self.send(response, address,reliability=PacketReliability.ReliableOrdered)  # Inform client character was created
-				print("[" + self.role + "]" +"Client's Session is valid")
+				self.log("Client's Session is valid")
 				rows, characterData = getCharacterData(str(session[1]))
 				if(rows > 4):
 					rows = 4
-				print("[" + self.role + "] Account " + str(session[1]) + " now has " + str(rows) + " characters")
+				self.log("Account " + str(session[1]) + " now has " + str(rows) + " characters")
 				characterList = BitStream()
 				# START OF HEADER
 				characterList.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
@@ -201,17 +201,17 @@ class WorldServer(server.Server):
 					characterList.write(c_ushort(len(items)))#Equipped Item Lots
 					for item in items:
 						LOT = getLOTFromObject(str(item[0]))
-						print("[" + self.role + "]" +"Found item in inventory with LOT " + str(LOT[0]))
+						self.log("Found item in inventory with LOT " + str(LOT[0]))
 						characterList.write_bits(c_ulong(int(LOT[0])))
 				self.send(characterList, address, reliability=PacketReliability.ReliableOrdered)
 		elif(data[0:3] == b"\x04\x00\x06"):#Delete minifigure
-			print("[" + self.role + "]" + "Lego Packet was Minifigure Deletion")
+			self.log("Lego Packet was Minifigure Deletion")
 			objIdData = BitStream(data[7:])
 			objId = objIdData.read(c_longlong)#Get objectID
-			print("Deleting Minifigure with ID : " + str(objId))
+			self.log("Deleting Minifigure with ID : " + str(objId))
 			deleteCharacter(str(objId))#Delete It with the objID
 		elif(data[0:3] == b"\x04\x00\x04"):#Character wants to enter world
-			print("[" + self.role + "]" + "Lego Packet was World Enter Request")
+			self.log("Lego Packet was World Enter Request")
 			objectIDData = BitStream(data[7:])
 			objectID = objectIDData.read(c_longlong)
 			session = getSessionByAddress(address[0])#Get session
@@ -250,7 +250,7 @@ class WorldServer(server.Server):
 			worldLoad.write(c_ulong(0x00))#0 if normal world. 4 if activity
 			self.send(worldLoad, address, reliability=PacketReliability.ReliableOrdered)
 		elif(data[0:3] == b"\x04\x00\x13"):#Load character
-			print("[" + self.role + "]" + "Lego Packet was Client Loading Complete")
+			self.log("Lego Packet was Client Loading Complete")
 			session = getSessionByAddress(address[0])
 			characterData = getCharacterDataByID(str(session[4]))
 			zoneData = BitStream(data[7:])
@@ -341,12 +341,12 @@ class WorldServer(server.Server):
 			keyNumber = keyNumber + 1 #Update key number
 
 
-			xml = '<?xml version="1.0"?><obj v="1"><buff/><skil/>'#Basic start of xml
+			xml = '<?xml version="1.0"?><obj v="1"><buff/><skill/>'#Basic start of xml
 			xml = xml + '<inv><bag><b t="0" m="'+str(characterData[24])+'"/></bag>'#Inventory bag space
 			xml = xml + '<items><in>'#Items in inventory setup
 			LOT, OBJECT, QUANTITY, LINKED, SPAWNERID, SLOT = getInventoryInfo(str(characterData[3]))
 			for i in range(len(LOT)):#Add all the items in inventory
-				baseItem = '<i l="'+str(LOT[i])+'" id ="'+str(OBJECT[i])+'" s="'+str(SLOT[i])+'"'
+				baseItem = '<i l="'+str(LOT[i][0])+'" id ="'+str(OBJECT[i])+'" s="'+str(SLOT[i])+'"'
 				if(QUANTITY[i] > 1):
 					baseItem =  baseItem + ' c="'+str(QUANTITY[i])+'"'
 				if(SPAWNERID[i] != None):
@@ -357,7 +357,7 @@ class WorldServer(server.Server):
 				if(SPAWNERID[i] != None):
 					if(SPAWNERID > -1):
 						#Do rocket stuff here
-						print("Spawner ids are not implemented yet")#A simple implementation can probably be found in the LUNI file WorldConnection.cpp
+						self.log("Spawner ids are not implemented yet")#A simple implementation can probably be found in the LUNI file WorldConnection.cpp
 				baseItem = baseItem + '/>'
 				xml = xml + baseItem
 			xml = xml + '</in></items></inv>'#Close inventory
@@ -367,7 +367,7 @@ class WorldServer(server.Server):
 			if(completedMissions != None):#If there are completed missions write them to the xml
 				missionData = '<mis><done>'
 				for mission in completedMissions:
-					missionData = missionData + '<m id="'+str(mission)+'" cts="0", cct="1"/>'
+					missionData = missionData + '<m id="'+str(mission[0])+'" cts="0" cct="1"/>'
 				missionData = missionData + "</done></mis>"
 				xml = xml + missionData
 			else:
@@ -379,9 +379,8 @@ class WorldServer(server.Server):
 			xmlKeyAdj.write("xml", allocated_length=(b"xml".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(xmlKeyAdj[:-2])
 			LDF.write(c_ubyte(13))  # Write data format
-			xmlData = xml.encode("utf-16-le")#XML has format 13
-			LDF.write(c_ulong(len(xmlData)))  # xml length
-			LDF.write_bits(xmlData)  # xml data
+			LDF.write(c_ulong((xml.__len__()*2)+2)) # xml length
+			LDF.write(xml, allocated_length=(len(xml)*2)+2)  # xml data
 			keyNumber = keyNumber + 1
 
 			nameKeyAdj = BitStream()
@@ -405,11 +404,9 @@ class WorldServer(server.Server):
 
 			finalPacket.write(adjLDF)  # Writes all the LDF data
 
-			#registerWorldObject(str(characterData[2]), 1, str(characterData[3]), zoneID, int(characterData[17]),int(characterData[18]),int(characterData[19]),0,0,0,0)
-
 			self.send(finalPacket, address, reliability=PacketReliability.ReliableOrdered)
 
-			print("[" + self.role + "]" + "Sent Detailed User Info")
+			self.log("Sent Detailed User Info")
 
 			#Add Base Data
 			Player = BaseData()
@@ -485,7 +482,6 @@ class WorldServer(server.Server):
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
 			PlayerObject = ReplicaObject(PlayerComponents)
 			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, PlayerComponents)
-			PlayerObject._serialize = True
 			self.RM.construct(PlayerObject, constructMsg="Sent Player")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
@@ -494,18 +490,18 @@ class WorldServer(server.Server):
 			objID = message.read(c_longlong)
 			msgID = message.read(c_ushort)
 			if(str(msgID) == "1485"):
-				print("[" + self.role + "]" + "Message was defined as 'Modify Ghosting Distance'")
+				self.log("Message was defined as 'Modify Ghosting Distance'")
 			elif(str(msgID) == "41"):
-				print("[" + self.role + "]" + "Message was defined as 'Play Emote'")
+				self.log("Message was defined as 'Play Emote'")
 				emoteID = message.read(c_int)
 				targetID = message.read(c_longlong)
-				print("[" + self.role + "]" + "Emote ID:" + str(emoteID) + ", Target ID: " + str(targetID))
+				self.log("Emote ID:" + str(emoteID) + ", Target ID: " + str(targetID))
 			elif(str(msgID) == "505"):
 				playerID = message.read(c_longlong)
-				print("[" + self.role + "]" + "Player with ID: " + str(playerID) + " has loaded")
+				self.log("Player with ID: " + str(playerID) + " has loaded")
 			elif(str(msgID) == "888"):
 				objectID = message.read(c_longlong)
-				print("[" + self.role + "]" + "Object " + str(objectID) + " needs an update")
+				self.log("Object " + str(objectID) + " needs an update")
 				Components = self.SavedObjects[objectID]
 				#If Object is a player
 				if(Components[0].LOT == c_long(1)):
@@ -513,7 +509,7 @@ class WorldServer(server.Server):
 			elif(str(msgID) == "767"):
 				#ToggleGhostReferenceOveride
 				bit = message.read(c_bit)
-				print("[" + self.role + "]" + "Ghost Reference Overide Gave Bit: " + str(bit))
+				self.log("Ghost Reference Overide Gave Bit: " + str(bit))
 			elif(str(msgID) == "768"):
 				#SetGhostReferencePosition
 				xPos = message.read(c_float)
@@ -523,17 +519,17 @@ class WorldServer(server.Server):
 				#SelectSkill
 				fromSkillSet = message.read(c_bit)
 				skillID = message.read(c_long)
-				print("[" + self.role + "]" + "Select Skill " + str(skillID))
+				self.log("Select Skill " + str(skillID))
 			elif(str(msgID) == "1202"):
-				print("[" + self.role + "]" + "Player Was Smashed")
+				self.log("Player Was Smashed")
 			else:
-				print("[" + self.role + "]" + "Message id of "+ str(msgID) +" currently has no handler and is not defined!")
+				self.log("Message id of "+ str(msgID) +" currently has no handler and is not defined!")
 		elif(data[0:3] == b"\x04\x00\x15"):
 			#This needs to be figured out how to implement
-			print("[" + self.role + "]" + "Lego Packet was 'Some Kind of Indicator This Packet Should Be Routed'????")
-			#print(data[11:])
+			self.log("Lego Packet was 'Some Kind of Indicator This Packet Should Be Routed'????")
+			#self.log(data[11:])
 		elif(data[0:3] == b"\x04\x00\x16"):
-			#print("[" + self.role + "]" + "Lego Packet was Position/Rotation Update")
+			#self.log("[" + self.role + "]" + "Lego Packet was Position/Rotation Update")
 			session = getSessionByAddress(address[0])
 			info = BitStream(data[7:])
 			posX = info.read(c_float)
@@ -555,5 +551,5 @@ class WorldServer(server.Server):
 				Components[1].wRot = rotW
 
 		else:
-			print("[" + self.role + "]" + "Received Unknown Packet:")
-			print(data)
+			self.log("Received Unknown Packet:")
+			self.log(data)

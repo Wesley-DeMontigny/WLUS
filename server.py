@@ -12,12 +12,15 @@ from messages import Message
 from Packet import LegoPackets
 
 class Server:
-	def __init__(self, address, max_connections, incoming_password, role="SERVER"):
+	def __init__(self, address, console, max_connections, incoming_password, role="SERVER"):
 		host, port = address
 		if host == "localhost":
 			host = "127.0.0.1"
 		self._address = host, port
 		self.role = role
+		self.consoleMessage = ""
+		self.updateConsole = False
+		self.console = console
 		self.max_connections = max_connections
 		self.incoming_password = incoming_password
 		self._connected = {}
@@ -33,7 +36,7 @@ class Server:
 		self.register_handler(Message.InternalPing, self.on_internal_ping)
 		self.register_handler(Message.DisconnectionNotification, self.on_disconnect_or_connection_lost)
 		self.register_handler(Message.ConnectionLost, self.on_disconnect_or_connection_lost)
-		print("["+self.role+"]"+"Started up")
+		self.log("Started up")
 
 	@asyncio.coroutine
 	def init_network(self):
@@ -46,6 +49,10 @@ class Server:
 	@staticmethod
 	def connection_lost(exc):
 		print(exc)
+
+	def log(self, msg):
+		self.consoleMessage = msg
+		self.updateConsole = True
 
 	@staticmethod
 	def error_received(exc):
@@ -94,7 +101,7 @@ class Server:
 			self.send(DisconnectionNotify)
 			self.on_packet(bytes((Message.DisconnectionNotification,)), address)
 		else:
-			print("["+self.role+"]"+"Tried closing connection to someone we are not connected to! (Todo: Implement the router)")
+			self.log("Tried closing connection to someone we are not connected to! (Todo: Implement the router)")
 
 	def send(self, data, address=None, broadcast=False, reliability=PacketReliability.ReliableOrdered, ignoreConnection=False):
 		assert reliability != PacketReliability.ReliableSequenced # If you need this one, tell me
@@ -108,7 +115,7 @@ class Server:
 		if address is None:
 			raise ValueError
 		if address not in self._connected:
-			print("["+self.role+"]"+"Sending to someone we are not connected to!")
+			self.log("Sending to someone we are not connected to!")
 			return
 		#if(self.packetname(data) not in self.not_console_logged_packets):
 			#print("["+self.role+"]"+"Sending data: ")
@@ -150,7 +157,7 @@ class Server:
 		handlers = self.handlers.get(self.packet_id(data), ())
 		origin_handlers = [i for i in handlers if i[1] is None or i[1] == address]
 		if not origin_handlers:
-			print("["+self.role+"]"+"No handlers for the previously received message")
+			self.log("No handlers for the previously received message")
 
 		data = self.handler_data(data)
 		for handler_tuple in origin_handlers:
@@ -186,7 +193,7 @@ class Server:
 			raise NotImplementedError
 
 	def on_new_connection(self, data, address):
-		print("["+self.role+"]"+"New Connection from", address)
+		self.log("New Connection from " + str(address))
 
 	def on_internal_ping(self, data, address):
 		ping_send_time = data[:4]
@@ -207,7 +214,7 @@ class Server:
 		###END OF HEADER
 		DisconnectionNotify.write(c_ulong(0x00))  # Unknown Server Error
 		self.send(DisconnectionNotify, address)
-		print("["+self.role+"]"+"Disconnect/Connection lost to %s" % str(address))
+		self.log("Disconnect/Connection lost to %s" % str(address))
 		self._connected[address].stop = True
 		del self._connected[address]
 		# Remove any registered handlers associated with the disconnected address

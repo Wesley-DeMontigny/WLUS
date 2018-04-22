@@ -73,7 +73,6 @@ class ReplicaManager:
 		while True:
 			for obj in self._network_ids:
 				if obj._serialize:
-					print("Serialized")
 					self.serialize(obj)
 					obj._serialize = False
 			yield from asyncio.sleep(0.03)
