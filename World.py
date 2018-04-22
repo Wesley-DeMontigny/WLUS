@@ -24,11 +24,50 @@ class WorldServer(server.Server):
 		self.register_handler(Message.NewIncomingConnection, self.addToParticipants)#Adds participant to replica manager
 		self.Local = True
 		self.SavedObjects = {}
+		self.unhandledGMs = []
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
-	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, Components):
-		registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot)
-		self.SavedObjects[ObjectID] = Components
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, Components, message=None):
+		registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+		self.SavedObjects[ObjectID] = (self.RM._current_network_id, Components)
+		object = ReplicaObject(Components)
+		if(message == None):
+			self.RM.construct(object)
+		else:
+			self.RM.construct(object, constructMsg=message)
+	def loadWorld(self, objectID, worldID, loadAtDefaultSpawn=False):
+		characterData = getCharacterDataByID(str(objectID))  # Get character data
+		deleteWorldObject(objectID)
+		updateCharacterZone(worldID, objectID)  # Update session if needed
+		session = getSessionByCharacter(str(objectID))  # Reload session
+		characterData = getCharacterDataByID(str(objectID))  # Reload character data
+		registerOrJoinWorld(str(worldID))  # Register the world if there isn't one
+		worldLoad = BitStream()
+		# START OF HEADER
+		worldLoad.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
+		worldLoad.write(c_ushort(0x05))  # Connection Type (UShort)
+		worldLoad.write(c_ulong(0x02))  # Internal Packet ID (ULong)
+		worldLoad.write(c_ubyte(0x00))  # Internal Packet ID (Uchar)
+		###END OF HEADER
+		worldLoad.write(c_ushort(int(worldID)))  # Write the last zone ID of the character
+		worldLoad.write(c_ushort(0x00))  # Map instance
+		worldLoad.write(c_ulong(0x00))  # Map clone
+		checksum = Zones.zoneChecksums[(int(worldID))]
+		for i in range(len(checksum)):
+			worldLoad.write(c_ubyte(checksum[i]))  # Write special world checksum
+		worldLoad.write(c_ushort(0x00))  # Unknown
+		if (characterData[17] == None or characterData[18] == None or characterData[19] == None or loadAtDefaultSpawn == True):
+			defaultSpawn = Zones.defaultZoneSpawns[(int(characterData[14]))]
+			worldLoad.write(c_float(int(defaultSpawn[0])))  # Posx
+			worldLoad.write(c_float(int(defaultSpawn[1])))  # Posy
+			worldLoad.write(c_float(int(defaultSpawn[2])))  # Posz
+			setCharacterPos(objectID, defaultSpawn[0], defaultSpawn[1], defaultSpawn[2])
+		else:
+			worldLoad.write(c_float(int(characterData[17])))  # Posx
+			worldLoad.write(c_float(int(characterData[18])))  # Posy
+			worldLoad.write(c_float(int(characterData[19])))  # Posz
+		worldLoad.write(c_ulong(0x00))  # 0 if normal world. 4 if activity
+		self.send(worldLoad, (session[2], 62599), reliability=PacketReliability.ReliableOrdered)
 	def addToParticipants(self, data, address):
 		self.log("Just added new participant to replica manager")
 		self.RM.add_participant(address)
@@ -214,41 +253,11 @@ class WorldServer(server.Server):
 			self.log("Lego Packet was World Enter Request")
 			objectIDData = BitStream(data[7:])
 			objectID = objectIDData.read(c_longlong)
-			session = getSessionByAddress(address[0])#Get session
 			characterData = getCharacterDataByID(str(objectID))#Get character data
 			if(characterData[14] == Zones.NO_ZONE):#If the character has no zone place him in venture explorer
-				updateCharacterZone(Zones.VENTURE_EXPLORER, objectID,session[1])
-			else:
-				updateCharacterZone(characterData[14], objectID, session[1])#IUpdate session if needed
-			session = getSessionByAddress(str(address[0]))#Reload session
-			characterData = getCharacterDataByID(str(objectID))#Reload character data
-			registerOrJoinWorld(str(characterData[14]))#Register the world if there isn't one
-			worldLoad = BitStream()
-			# START OF HEADER
-			worldLoad.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
-			worldLoad.write(c_ushort(0x05))  # Connection Type (UShort)
-			worldLoad.write(c_ulong(0x02))  # Internal Packet ID (ULong)
-			worldLoad.write(c_ubyte(0x00))  # Internal Packet ID (Uchar)
-			###END OF HEADER
-			worldLoad.write(c_ushort(int(characterData[14])))#Write the last zone ID of the character
-			worldLoad.write(c_ushort(0x00))#Map instance
-			worldLoad.write(c_ulong(0x00))#Map clone
-			checksum = Zones.zoneChecksums[(int(characterData[14]))]
-			for i in range(len(checksum)):
-				worldLoad.write(c_ubyte(checksum[i]))#Write special world checksum
-			worldLoad.write(c_ushort(0x00))#Unknown
-			if(characterData[17] == None or characterData[18] == None or characterData[19] == None):
-				defaultSpawn = Zones.defaultZoneSpawns[(int(characterData[14]))]
-				worldLoad.write(c_float(int(defaultSpawn[0])))#Posx
-				worldLoad.write(c_float(int(defaultSpawn[1])))#Posy
-				worldLoad.write(c_float(int(defaultSpawn[2])))#Posz
-				setCharacterPos(objectID, defaultSpawn[0], defaultSpawn[1], defaultSpawn[2])
-			else:
-				worldLoad.write(c_float(int(characterData[17])))#Posx
-				worldLoad.write(c_float(int(characterData[18])))#Posy
-				worldLoad.write(c_float(int(characterData[19])))#Posz
-			worldLoad.write(c_ulong(0x00))#0 if normal world. 4 if activity
-			self.send(worldLoad, address, reliability=PacketReliability.ReliableOrdered)
+				updateCharacterZone(Zones.VENTURE_EXPLORER, objectID)
+			characterData = getCharacterDataByID(str(objectID))
+			self.loadWorld(objectID, int(characterData[14]))
 		elif(data[0:3] == b"\x04\x00\x13"):#Load character
 			self.log("Lego Packet was Client Loading Complete")
 			session = getSessionByAddress(address[0])
@@ -305,7 +314,7 @@ class WorldServer(server.Server):
 			gmlevelKeyAdj.write("gmlevel", allocated_length=(b"gmlevel".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(gmlevelKeyAdj[:-2])
 			LDF.write(c_ubyte(1))  # Write data format 1
-			LDF.write(c_int(int(accountData[4])))#Write int(accountData[4])
+			LDF.write(c_int(int(0)))#Write int(accountData[4])
 			keyNumber = keyNumber + 1
 
 			levelidKeyAdj = BitStream()
@@ -375,12 +384,12 @@ class WorldServer(server.Server):
 			xml = xml + "<mnt/><dest/></obj>"#Idk what these three are. Should probably find that out
 
 			xmlKeyAdj = BitStream()
-			LDF.write(c_ubyte((b"xml".__len__() * 2)))
-			xmlKeyAdj.write("xml", allocated_length=(b"xml".__len__()*2)+2)  # Write encoded key as bits
+			LDF.write(c_ubyte((b"xmlData".__len__() * 2)))
+			xmlKeyAdj.write("xmlData", allocated_length=(b"xmlData".__len__()*2)+2)  # Write encoded key as bits
 			LDF.write(xmlKeyAdj[:-2])
 			LDF.write(c_ubyte(13))  # Write data format
-			LDF.write(c_ulong((xml.__len__()*2)+2)) # xml length
-			LDF.write(xml, allocated_length=(len(xml)*2)+2)  # xml data
+			LDF.write(c_ulong((xml.__len__()+1))) # xml length
+			LDF.write(xml, allocated_length=(len(xml)+1), char_size=1)  # xml data
 			keyNumber = keyNumber + 1
 
 			nameKeyAdj = BitStream()
@@ -480,11 +489,11 @@ class WorldServer(server.Server):
 			Comp107.flag1 = True
 
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
-			PlayerObject = ReplicaObject(PlayerComponents)
-			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, PlayerComponents)
-			self.RM.construct(PlayerObject, constructMsg="Sent Player")
+			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, PlayerComponents, message="Sent Player Construction")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
+			self.GM.SendGameMessage(509, int(characterData[3]), address)  # Player ready?
+
 		elif(data[0:3] == b"\x04\x00\x05"):
 			message = BitStream(data[7:])
 			objID = message.read(c_longlong)
@@ -502,7 +511,7 @@ class WorldServer(server.Server):
 			elif(str(msgID) == "888"):
 				objectID = message.read(c_longlong)
 				self.log("Object " + str(objectID) + " needs an update")
-				Components = self.SavedObjects[objectID]
+				Components = self.SavedObjects[objectID][1]
 				#If Object is a player
 				if(Components[0].LOT == c_long(1)):
 					Object = ReplicaObject(Components)
@@ -524,6 +533,7 @@ class WorldServer(server.Server):
 				self.log("Player Was Smashed")
 			else:
 				self.log("Message id of "+ str(msgID) +" currently has no handler and is not defined!")
+				self.unhandledGMs.append((msgID, objID))
 		elif(data[0:3] == b"\x04\x00\x15"):
 			#This needs to be figured out how to implement
 			self.log("Lego Packet was 'Some Kind of Indicator This Packet Should Be Routed'????")
@@ -541,7 +551,7 @@ class WorldServer(server.Server):
 			rotW = info.read(c_float)
 			updateWorldObject(session[4], posX, posY, posZ, rotX, rotY, rotZ, rotW)
 			if(self.SavedObjects[session[4]] != None):
-				Components = self.SavedObjects[session[4]]
+				Components = self.SavedObjects[session[4]][1]
 				Components[1].xPos = posX
 				Components[1].yPos = posY
 				Components[1].zPos = posZ

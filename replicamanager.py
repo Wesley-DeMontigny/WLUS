@@ -41,9 +41,7 @@ class ReplicaManager:
 			log = open(logFile, "wb")
 			log.write(out)
 		if (constructMsg != None):
-			print("[" + self.server.role + "]" + constructMsg)
-		else:
-			print("[" + self.server.role + "]" + "Used replica constructor")
+			self.server.log(constructMsg)
 
 		for recipient in recipients:
 			self.server.send(out, recipient)
@@ -56,12 +54,15 @@ class ReplicaManager:
 		for participant in self._participants:
 			self.server.send(out, participant)
 
-	def destruct(self, obj):
+	def destruct(self, obj, manualID=None):
 		print("destructing", obj)
 		obj.on_destruction()
 		out = BitStream()
 		out.write(c_ubyte(Message.ReplicaManagerDestruction))
-		out.write(c_ushort(self._network_ids[obj]))
+		if(manualID == None):
+			out.write(c_ushort(self._network_ids[obj]))
+		else:
+			out.write(c_ushort(manualID))
 
 		for participant in self._participants:
 			self.server.send(out, participant)

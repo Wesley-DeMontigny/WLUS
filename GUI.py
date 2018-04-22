@@ -6,11 +6,56 @@ from DBHandlers import *
 from time import sleep
 from GameMessage import *
 from LDFReader import *
+import os
 from __main__ import *
 import sys
 from World import WorldServer
 from Auth import AuthServer
 import tkinter as tk
+from tkinter import simpledialog
+
+
+class sendToWorldDialog(simpledialog.Dialog):
+	def __init__(self, parent):
+		super().__init__(parent=parent)
+
+	def body(self, master):
+		self.title("Send to World")
+
+		tk.Label(master, text="Player:").grid(row=0)
+		tk.Label(master, text="World:").grid(row=1)
+
+		self.tkvar1 = tk.StringVar(master)
+		self.tkvar2 = tk.StringVar(master)
+		self.players = getCharactersInGame()
+		self.playerChoices = []
+		self.worldChoices = []
+		for i in range(self.players.__len__()):
+			self.playerChoices.append(self.players[i][0])
+		for i in range(Zones.zoneList.__len__()):
+			self.worldChoices.append(Zones.zoneList[i][0])
+		self.tkvar1.set("None")
+		self.tkvar2.set("None")
+
+		if(self.playerChoices != []):
+			self.e1 = tk.OptionMenu(master, self.tkvar1, *self.playerChoices)
+		else:
+			self.e1 = tk.OptionMenu(master, self.tkvar1, "None")
+		self.e2 = tk.OptionMenu(master, self.tkvar2, *self.worldChoices)
+
+		self.e1.grid(row=0, column=1)
+		self.e2.grid(row=1, column=1)
+
+
+	def apply(self):
+		player = self.tkvar1.get()
+		world = self.tkvar2.get()
+		if(player != "None" and world != "None"):
+			worldIndex = self.worldChoices.index(world)
+			self.worldID = Zones.zoneList[worldIndex][1]
+			playerIndex = self.playerChoices.index(player)
+			self.playerID = self.players[playerIndex][1]
+
 
 
 class Application(tk.Frame):
@@ -26,6 +71,7 @@ class Application(tk.Frame):
 
 		self.menubar = tk.Menu(self.master)
 		self.master.config(menu=self.menubar)
+		self.master.iconbitmap("icon.ico")
 		self.create_widgets()
 		self.pack()
 
@@ -43,11 +89,13 @@ class Application(tk.Frame):
 					self.Auth.updateConsole = False
 					self.authPane.insert(tk.END, "[" + self.Auth.role + "]", "role")
 					self.authPane.insert(tk.END, self.Auth.consoleMessage + "\n")
+					self.authPane.see(tk.END)
 			if(self.World != None):
 				if(self.World.updateConsole == True):
 					self.World.updateConsole = False
 					self.worldPane.insert(tk.END, "["+self.World.role+"]", "role")
-					self.worldPane.insert(tk.END, self.World.consoleMessage + "\n")
+					self.worldPane.insert(tk.END, str(self.World.consoleMessage) + "\n")
+					self.worldPane.see(tk.END)
 
 	def runServer(self):
 		self.World = WorldServer(("127.0.0.1", 2002), self, max_connections=10, incoming_password=b"3.25 ND1", role="WORLD")
@@ -59,15 +107,31 @@ class Application(tk.Frame):
 
 		self.menubar.entryconfig("Start Server", state="disabled")
 
+	def logGMs(self):
+		file = open(os.getcwd()+"\\Logged\\unhandledGMs.txt", "a")
+		file.truncate()
+		GMs = self.World.unhandledGMs
+		for gm in GMs:
+			file.write("Message: " + str(gm[0]) + ", Object: " + str(gm[1]) + "\n")
+
+	def sendToWorld(self):
+		win = sendToWorldDialog(parent=self.master)
+		try:
+			self.World.loadWorld(win.playerID, win.worldID, loadAtDefaultSpawn=True)
+		except:
+			print("Error while sending to world")
 
 	def create_widgets(self):
 		#Create menu items
 		self.menubar.add_command(label="Start Server", command=self.runServer)
 
-		toolMenu = tk.Menu(self.menubar, tearoff=0)
-		toolMenu.add_command(label="Nothing")
-		toolMenu.add_command(label="Also Nothing")
-		self.menubar.add_cascade(label="Tools", menu=toolMenu)
+		devMenu = tk.Menu(self.menubar, tearoff=0)
+		devMenu.add_command(label="Log Unhandled GMs", command=self.logGMs)
+		self.menubar.add_cascade(label="Development", menu=devMenu)
+
+		gameMenu = tk.Menu(self.menubar, tearoff=0)
+		gameMenu.add_command(label="Send to World", command=self.sendToWorld)
+		self.menubar.add_cascade(label="Game", menu=gameMenu)
 
 		#Create Frame for auth
 		authFrame = tk.Frame(self.master, width=800, height=300)
@@ -87,7 +151,7 @@ class Application(tk.Frame):
 		self.authPane = tk.Text(authFrame, borderwidth=3, relief="sunken")
 		self.authPane.config(font=("ariel", 12), undo=True, wrap='word', state="normal")
 		self.authPane.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
-		self.authPane.tag_configure("role", foreground="blue", font='ariel 12 bold')
+		self.authPane.tag_configure("role", foreground="purple", font='ariel 12 bold')
 
 		self.worldPane = tk.Text(worldFrame, borderwidth=3, relief="sunken")
 		self.worldPane.config(font=("ariel", 12), undo=True, wrap='word', state="normal")

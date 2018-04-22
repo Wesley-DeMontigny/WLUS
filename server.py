@@ -17,10 +17,11 @@ class Server:
 		if host == "localhost":
 			host = "127.0.0.1"
 		self._address = host, port
+
 		self.role = role
 		self.consoleMessage = ""
 		self.updateConsole = False
-		self.console = console
+
 		self.max_connections = max_connections
 		self.incoming_password = incoming_password
 		self._connected = {}
@@ -51,6 +52,7 @@ class Server:
 		print(exc)
 
 	def log(self, msg):
+		time.sleep(.1)
 		self.consoleMessage = msg
 		self.updateConsole = True
 
