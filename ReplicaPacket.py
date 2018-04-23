@@ -571,6 +571,55 @@ class Component107():
 			packet.write(self.data1_1)
 		return packet
 
+class SimplePhysicsComponent():
+	def __init__(self):
+		self.flag1 = False
+		self.data1 = c_float(0)
+		self.flag2 = False
+		self.data2_1 = c_float(0)
+		self.data2_2 = c_float(0)
+		self.data2_3 = c_float(0)
+		self.data2_4 = c_float(0)
+		self.data2_5 = c_float(0)
+		self.data2_6 = c_float(0)
+		self.flag3 = False
+		self.data3_1 = c_ulong(0)
+		self.vectorFlag = True
+		self.xPos = c_float(0)
+		self.yPos = c_float(0)
+		self.zPos = c_float(0)
+		self.xRot = c_float(0)
+		self.yRot = c_float(0)
+		self.zRot = c_float(0)
+		self.wRot = c_float(0)
+	def get_packet(self, PacketType):
+		packet = BitStream()
+		if(PacketType == ReplicaTypes.REPLICA_CONSTRUCTION_PACKET):
+			packet.write(c_bit(self.flag1))
+			packet.write(self.data1)
+		packet.write(c_bit(self.flag2))
+		if(self.flag2 == True):
+			packet.write(self.data2_1)
+			packet.write(self.data2_3)
+			packet.write(self.data2_3)
+			packet.write(self.data2_4)
+			packet.write(self.data2_5)
+			packet.write(self.data2_6)
+		packet.write(c_bit(self.flag3))
+		if(self.flag3 == True):
+			packet.write(self.data3_1)
+		packet.write(c_bit(self.vectorFlag))
+		if(self.vectorFlag == True):
+			packet.write(self.xPos)
+			packet.write(self.yPos)
+			packet.write(self.zPos)
+			packet.write(self.xRot)
+			packet.write(self.yRot)
+			packet.write(self.zRot)
+			packet.write(self.wRot)
+		packet.write(c_bit(False))
+		return packet
+
 class ReplicaObject():
 	def __init__(self, components):
 		self.components = components

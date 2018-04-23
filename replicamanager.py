@@ -46,11 +46,12 @@ class ReplicaManager:
 		for recipient in recipients:
 			self.server.send(out, recipient)
 
-	def serialize(self, obj):
+	def serialize(self, obj, message="Serialized"):
 		out = BitStream()
 		out.write(c_ubyte(Message.ReplicaManagerSerialize))
 		out.write(c_ushort(self._network_ids[obj]))
 		out.write(obj.serialize())
+		print(message)
 		for participant in self._participants:
 			self.server.send(out, participant)
 

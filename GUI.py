@@ -6,13 +6,16 @@ from DBHandlers import *
 from time import sleep
 from GameMessage import *
 from LDFReader import *
-import os
+from os import listdir
 from __main__ import *
 import sys
+import os
+from os.path import isfile, join
 from World import WorldServer
 from Auth import AuthServer
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, filedialog
+
 
 
 class sendToWorldDialog(simpledialog.Dialog):
@@ -21,7 +24,7 @@ class sendToWorldDialog(simpledialog.Dialog):
 
 	def body(self, master):
 		self.title("Send to World")
-
+		self.iconbitmap("icon.ico")
 		tk.Label(master, text="Player:").grid(row=0)
 		tk.Label(master, text="World:").grid(row=1)
 
@@ -114,12 +117,21 @@ class Application(tk.Frame):
 		for gm in GMs:
 			file.write("Message: " + str(gm[0]) + ", Object: " + str(gm[1]) + "\n")
 
+	def testWorldFunction(self):
+		self.World.test()
+
 	def sendToWorld(self):
 		win = sendToWorldDialog(parent=self.master)
 		try:
 			self.World.loadWorld(win.playerID, win.worldID, loadAtDefaultSpawn=True)
-		except:
-			print("Error while sending to world")
+		except Exception as e:
+			print("Error While Sending to World: " + str(e))
+
+	def sendPacketFromFile(self):
+		packet = BitStream()
+		f = filedialog.askopenfile("rb", filetypes=(("Binary Files", "*.bin"), ("All files", "*.*") ))
+		packet.write(f.read())
+		self.World.send(packet, ("127.0.0.1", 62599))
 
 	def create_widgets(self):
 		#Create menu items
@@ -127,6 +139,8 @@ class Application(tk.Frame):
 
 		devMenu = tk.Menu(self.menubar, tearoff=0)
 		devMenu.add_command(label="Log Unhandled GMs", command=self.logGMs)
+		devMenu.add_command(label="Send Packet From File", command=self.sendPacketFromFile)
+		devMenu.add_command(label="Test Function", command=self.testWorldFunction)
 		self.menubar.add_cascade(label="Development", menu=devMenu)
 
 		gameMenu = tk.Menu(self.menubar, tearoff=0)
