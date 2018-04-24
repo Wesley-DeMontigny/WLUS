@@ -69,6 +69,33 @@ def getPlayerNameFromConnection(ip, port):
 	conn.close()
 	return name
 
+def getZoneOfObject(objectID):
+	conn = sqlite3.connect("server.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT Zone FROM World_Objects WHERE ObjectID = "+str(objectID))
+	zone = c.fetchone()
+	conn.commit()
+	conn.close()
+	return zone
+
+def getObjectIDFromName(Name):
+	conn = sqlite3.connect("server.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT ObjectID FROM Characters WHERE Name = '"+str(Name)+"'")
+	q = c.fetchone()
+	conn.commit()
+	conn.close()
+	return q
+
+def getConnectionsInZone(zoneID):
+	conn = sqlite3.connect("server.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT IPAddress, Port FROM CurrentSessions WHERE ZoneID = "+str(zoneID))
+	connections = c.fetchall()
+	conn.commit()
+	conn.close()
+	return connections
+
 def registerSession(address, userkey, accountID, state, Port):
 	conn = sqlite3.connect("server.sqlite")
 	c = conn.cursor()
@@ -369,10 +396,19 @@ def deleteWorldObject(ObjectID):
 	conn.commit()
 	conn.close()
 
-def getObjectType(ObjectID):
+def getObjectsInZone(Zone):
+	conn = sqlite3.connect("server.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT * FROM World_Objects WHERE Zone = " + str(Zone))
+	objects = c.fetchall()
+	conn.commit()
+	conn.close()
+	return objects
+
+def getObjectType(LOT):
 	conn = sqlite3.connect("cdclient.sqlite")
 	c = conn.cursor()
-	c.execute("SELECT type FROM Objects WHERE id = " + str(ObjectID))
+	c.execute("SELECT type FROM Objects WHERE id = " + str(LOT))
 	q = c.fetchone()
 	conn.commit()
 	conn.close()

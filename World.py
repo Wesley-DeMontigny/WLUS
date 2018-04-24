@@ -29,14 +29,79 @@ class WorldServer(server.Server):
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
 	def test(self):
-		print("No Test Right Now")
-	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO, message=None):
-		registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
-		self.SavedObjects[ObjectID] = RO
-		if(message == None):
-			self.RM.construct(RO)
+		self.createObject("", 614, 547564808973508375, 1200, -40, 293.047, -16, 0, 0, 0, 0, Register=True)
+	def offerMission(self, objectID, missionID, offererID):
+		packet = self.GM.InitGameMessage(248, objectID)
+		packet.write(c_int(missionID))
+		packet.write(c_longlong(offererID))
+		session = getSessionByCharacter(objectID)
+		self.send(packet, (str(session[2]), int(session[7])))
+	def orientToPosition(self, objectID, xPos, yPos, zPos):
+		zone = getZoneOfObject(objectID)[0]
+		packet = self.GM.InitGameMessage(906, objectID)
+		packet.write(c_float(xPos))
+		packet.write(c_float(yPos))
+		packet.write(c_float(zPos))
+		self.brodcastPacket(packet, int(zone))
+	def orientToAngle(self, objectID, relativeToCurrent, angle):
+		zone = getZoneOfObject(objectID)[0]
+		packet = self.GM.InitGameMessage(906, objectID)
+		packet.write(c_bit(relativeToCurrent))
+		packet.write(c_float(angle))
+		self.brodcastPacket(packet, int(zone))
+	def brodcastPacket(self, packet, zoneID):
+		connections = getConnectionsInZone(zoneID)
+		for connection in connections:
+			self.send(packet, (str(connection[0]), int(connection[1])))
+	def SetJetPackMode(self, objectID, bypassChecks=False, doHover=False, Use=True, effectID=-1, airSpeed=10, maxAirSpeed=15, vertVel=1, warningEffectID=-1):
+		zone = getZoneOfObject(objectID)[0]
+		packet = self.GM.InitGameMessage(561, objectID)
+		packet.write(c_bit(bypassChecks))
+		packet.write(c_bit(doHover))
+		packet.write(c_bit(Use))
+		packet.write(c_int(effectID))
+		packet.write(c_float(airSpeed))
+		packet.write(c_float(maxAirSpeed))
+		packet.write(c_float(vertVel))
+		packet.write(c_int(warningEffectID))
+		self.brodcastPacket(packet, int(zone))
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True):
+		if(RO != None):
+			if(Register == True):
+				registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+			self.SavedObjects[ObjectID] = RO
+			if(message == None):
+				self.RM.construct(RO)
+			else:
+				self.RM.construct(RO, constructMsg=message)
 		else:
-			self.RM.construct(RO, constructMsg=message)
+			type = str(getObjectType(LOT)[0])
+			if(type == "LEGO brick"):
+				obj = BaseData()
+				obj.objectID = c_longlong(ObjectID)
+				obj.LOT = c_long(LOT)
+				obj.NameLength = 0
+
+				Physics = SimplePhysicsComponent()
+				Physics.vectorFlag = True
+				Physics.xPos = c_float(xPos)
+				Physics.yPos = c_float(yPos)
+				Physics.zPos = c_float(zPos)
+				Physics.xRot = c_float(xRot)
+				Physics.yRot = c_float(yRot)
+				Physics.zRot = c_float(zRot)
+				Physics.wRot = c_float(wRot)
+
+				Render = RenderComponent()
+
+				Object = ReplicaObject([obj, Physics, Render])
+				if (Register == True):
+					registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+				self.SavedObjects[ObjectID] = Object
+				if(message == None):
+					self.RM.construct(Object)
+				else:
+					self.RM.construct(Object, constructMsg=message)
 	def loadWorld(self, objectID, worldID, address, loadAtDefaultSpawn=False):
 		deleteWorldObject(objectID)
 		updateCharacterZone(worldID, objectID)  # Update session if needed
@@ -418,6 +483,10 @@ class WorldServer(server.Server):
 
 			self.log("Sent Detailed User Info")
 
+			objects = getObjectsInZone(zoneID)
+			for obj in objects:
+				self.createObject(obj[1], obj[2], obj[3], obj[4], obj[5], obj[6], obj[7], obj[8], obj[9], obj[10], obj[11], Register=False, message="Sent World Object " + str(obj[3]))
+
 			#Add Base Data
 			Player = BaseData()
 			Player.objectID = c_int64(int(characterData[3]))
@@ -491,7 +560,7 @@ class WorldServer(server.Server):
 
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
 			player = ReplicaObject(PlayerComponents)
-			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, player, message="Sent Player Construction")
+			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, RO=player, message="Sent Player Construction")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
 			self.GM.SendGameMessage(509, int(characterData[3]), address)  # Player ready?

@@ -163,6 +163,16 @@ class Application(tk.Frame):
 		packet.write(f.read())
 		self.World.send(packet, (str(session[2]), int(session[7])))
 
+	def giveFlight(self):
+		connections = self.World._connected
+		names = []
+		for key, value in connections.items():
+			names.append(str(getPlayerNameFromConnection(key[0], key[1])[0]))
+		nameChoice = choiceDialog(self.master, "Player", names)
+		playerName = nameChoice.value
+		objectID = int(getObjectIDFromName(playerName)[0])
+		self.World.SetJetPackMode(objectID, bypassChecks=True)
+
 	def create_widgets(self):
 		#Create menu items
 		self.menubar.add_command(label="Start Server", command=self.runServer)
@@ -175,6 +185,7 @@ class Application(tk.Frame):
 
 		gameMenu = tk.Menu(self.menubar, tearoff=0)
 		gameMenu.add_command(label="Send to World", command=self.sendToWorld)
+		gameMenu.add_command(label="Fly", command=self.giveFlight)
 		self.menubar.add_cascade(label="Game", menu=gameMenu)
 
 		#Create Frame for auth
