@@ -17,6 +17,28 @@ import tkinter as tk
 from tkinter import simpledialog, filedialog
 
 
+class choiceDialog(simpledialog.Dialog):
+	def __init__(self, parent, label, choices):
+		self.label = label
+		self.choices = choices
+		super().__init__(parent=parent)
+
+	def body(self, master):
+		self.title("WLUS")
+		self.iconbitmap("icon.ico")
+		tk.Label(master, text=self.label).grid(row=0)
+
+		self.tkvar1 = tk.StringVar(master)
+		self.tkvar1.set("None")
+
+		self.e1 = tk.OptionMenu(master, self.tkvar1, *self.choices)
+
+		self.e1.grid(row=0, column=1)
+
+
+	def apply(self):
+		self.value = self.tkvar1.get()
+
 
 class sendToWorldDialog(simpledialog.Dialog):
 	def __init__(self, parent):
@@ -122,16 +144,24 @@ class Application(tk.Frame):
 
 	def sendToWorld(self):
 		win = sendToWorldDialog(parent=self.master)
+		session = getSessionByCharacter(win.playerID)
 		try:
-			self.World.loadWorld(win.playerID, win.worldID, loadAtDefaultSpawn=True)
+			self.World.loadWorld(win.playerID, win.worldID, (str(session[2]), int(session[7])), loadAtDefaultSpawn=True)
 		except Exception as e:
 			print("Error While Sending to World: " + str(e))
 
 	def sendPacketFromFile(self):
 		packet = BitStream()
+		connections = self.World._connected
+		names = []
+		for key, value in connections.items():
+			names.append(str(getPlayerNameFromConnection(key[0], key[1])[0]))
+		nameChoice = choiceDialog(self.master, "Player", names)
+		playerName = nameChoice.value
+		session = getSessionByPlayerName(playerName)
 		f = filedialog.askopenfile("rb", filetypes=(("Binary Files", "*.bin"), ("All files", "*.*") ))
 		packet.write(f.read())
-		self.World.send(packet, ("127.0.0.1", 62599))
+		self.World.send(packet, (str(session[2]), int(session[7])))
 
 	def create_widgets(self):
 		#Create menu items

@@ -37,10 +37,9 @@ class WorldServer(server.Server):
 			self.RM.construct(RO)
 		else:
 			self.RM.construct(RO, constructMsg=message)
-	def loadWorld(self, objectID, worldID, loadAtDefaultSpawn=False):
+	def loadWorld(self, objectID, worldID, address, loadAtDefaultSpawn=False):
 		deleteWorldObject(objectID)
 		updateCharacterZone(worldID, objectID)  # Update session if needed
-		session = getSessionByCharacter(objectID)  # Reload session
 		characterData = getCharacterDataByID(objectID)  # Reload character data
 		registerOrJoinWorld(worldID)
 		# Register the world if there isn't one
@@ -69,7 +68,7 @@ class WorldServer(server.Server):
 			worldLoad.write(c_float(int(characterData[18])))  # Posy
 			worldLoad.write(c_float(int(characterData[19])))  # Posz
 		worldLoad.write(c_ulong(0x00))  # 0 if normal world. 4 if activity
-		self.send(worldLoad, (session[2], 62599), reliability=PacketReliability.ReliableOrdered)
+		self.send(worldLoad, address, reliability=PacketReliability.ReliableOrdered)
 	def addToParticipants(self, data, address):
 		self.log("Just added new participant to replica manager")
 		self.RM.add_participant(address)
@@ -259,7 +258,7 @@ class WorldServer(server.Server):
 			if(characterData[14] == Zones.NO_ZONE):#If the character has no zone place him in venture explorer
 				updateCharacterZone(Zones.VENTURE_EXPLORER, objectID)
 			characterData = getCharacterDataByID(objectID)
-			self.loadWorld(objectID, int(characterData[14]))
+			self.loadWorld(objectID, int(characterData[14]), address)
 		elif(data[0:3] == b"\x04\x00\x13"):#Load character
 			self.log("Lego Packet was Client Loading Complete")
 			session = getSessionByAddress(address[0])

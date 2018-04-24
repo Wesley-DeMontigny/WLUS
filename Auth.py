@@ -118,7 +118,7 @@ class AuthServer(server.Server):
 			#Register session
 			if(loginResponse == LegoPackets.LOGIN_SUCCESS):
 				info = getAccountByUsername(username)
-				registerSession(str(address[0]), userkey, str(info[0]), str(0))
+				registerSession(str(address[0]), userkey, str(info[0]), str(0), address[1])
 
 
 	def CreateExtraPacketData(self, stampID, bracketNum, afterNum, bitStream):

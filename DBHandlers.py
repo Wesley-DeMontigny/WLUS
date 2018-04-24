@@ -58,11 +58,22 @@ def DBServerStarup():
 
 #State is either 0 (Still Loading In), 1 (In character selection) or 2 (In game)
 
-def registerSession(address, userkey, accountID, state):
+def getPlayerNameFromConnection(ip, port):
+	conn = sqlite3.connect("server.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT CharID FROM CurrentSessions WHERE IPAddress = '"+str(ip)+"' AND Port = " + str(port))
+	id = c.fetchone()
+	c.execute("SELECT Name FROM Characters WHERE ObjectID = " + str(id[0]))
+	name = c.fetchone()
+	conn.commit()
+	conn.close()
+	return name
+
+def registerSession(address, userkey, accountID, state, Port):
 	conn = sqlite3.connect("server.sqlite")
 	c = conn.cursor()
 	if(getSessionByAccountID(accountID) == None):
-		c.execute("INSERT INTO CurrentSessions (AccountID, IPAddress, UserKey, charID, zoneID, State) VALUES ("+str(accountID)+", '"+str(address)+"', '"+str(userkey)+"', NULL, NULL, "+str(state)+")")
+		c.execute("INSERT INTO CurrentSessions (AccountID, IPAddress, UserKey, charID, zoneID, State, Port) VALUES ("+str(accountID)+", '"+str(address)+"', '"+str(userkey)+"', NULL, NULL, "+str(state)+", "+str(Port)+")")
 	conn.commit()
 	conn.close()
 	print("Registered Session")
@@ -310,6 +321,15 @@ def getSessionByCharacter(objectID):
 	conn.commit()
 	conn.close()
 	return q
+
+def getSessionByPlayerName(name):
+	conn = sqlite3.connect("server.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT ObjectID FROM Characters WHERE Name = '"+str(name)+"'")
+	id = c.fetchone()
+	conn.commit()
+	conn.close()
+	return getSessionByCharacter(id[0])
 
 def updateSessionByUserKey(userkey, state, zoneID, charID):
 	conn = sqlite3.connect("server.sqlite")
