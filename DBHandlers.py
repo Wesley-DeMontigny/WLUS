@@ -87,6 +87,15 @@ def getObjectIDFromName(Name):
 	conn.close()
 	return q
 
+def getComponentsForLOT(LOT):
+	conn = sqlite3.connect("cdclient.sqlite")
+	c = conn.cursor()
+	c.execute("SELECT component_type FROM ComponentsRegistry WHERE id = " + str(LOT))
+	q = c.fetchall()
+	conn.commit()
+	conn.close()
+	return q
+
 def getConnectionsInZone(zoneID):
 	conn = sqlite3.connect("server.sqlite")
 	c = conn.cursor()

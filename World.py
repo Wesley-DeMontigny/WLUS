@@ -29,7 +29,13 @@ class WorldServer(server.Server):
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
 	def test(self):
-		self.createObject("", 614, 547564808973508375, 1200, -40, 293.047, -16, 0, 0, 0, 0, Register=True)
+		print("No Test Right Now")
+	def getZoneRecipients(self, zone):
+		connections = getConnectionsInZone(zone)
+		recipients = []
+		for conn in connections:
+			recipients.append((str(conn[0]), int(conn[1])))
+		return recipients
 	def offerMission(self, objectID, missionID, offererID):
 		packet = self.GM.InitGameMessage(248, objectID)
 		packet.write(c_int(missionID))
@@ -65,23 +71,50 @@ class WorldServer(server.Server):
 		packet.write(c_float(vertVel))
 		packet.write(c_int(warningEffectID))
 		self.brodcastPacket(packet, int(zone))
-	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True):
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False):
 		if(RO != None):
 			if(Register == True):
 				registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			self.SavedObjects[ObjectID] = RO
 			if(message == None):
-				self.RM.construct(RO)
+				self.RM.construct(RO, recipients=self.getZoneRecipients(zone))
 			else:
-				self.RM.construct(RO, constructMsg=message)
+				self.RM.construct(RO, constructMsg=message, recipients=self.getZoneRecipients(zone))
 		else:
-			type = str(getObjectType(LOT)[0])
-			if(type == "LEGO brick"):
-				obj = BaseData()
-				obj.objectID = c_longlong(ObjectID)
-				obj.LOT = c_long(LOT)
-				obj.NameLength = 0
+			Components = []
 
+			compList = getComponentsForLOT(LOT)
+
+			obj = BaseData()
+			obj.objectID = c_longlong(ObjectID)
+			obj.LOT = c_long(LOT)
+			obj.Name = Name
+			obj.NameLength = Name.__len__()
+			obj.Scale = c_float(Scale)
+			adjCompList = []
+			Components.append(obj)
+			for comp in compList:
+				adjCompList.append(comp[0])
+
+			if(108 in adjCompList):
+				print("Component108 is not implemented")
+				return
+			if(61 in adjCompList):
+				print("ModuleAssembly is not implemented")
+				return
+			if (1 in adjCompList):
+				ControllablePhysics = ControllablePhysicsComponent()
+				ControllablePhysics.vectorFlag = True
+				ControllablePhysics.xPos = c_float(xPos)
+				ControllablePhysics.yPos = c_float(yPos)
+				ControllablePhysics.zPos = c_float(zPos)
+				ControllablePhysics.xRot = c_float(xRot)
+				ControllablePhysics.yRot = c_float(yRot)
+				ControllablePhysics.zRot = c_float(zRot)
+				ControllablePhysics.wRot = c_float(wRot)
+				ControllablePhysics.onGround = True
+				Components.append(ControllablePhysics)
+			if(3 in adjCompList):
 				Physics = SimplePhysicsComponent()
 				Physics.vectorFlag = True
 				Physics.xPos = c_float(xPos)
@@ -91,17 +124,102 @@ class WorldServer(server.Server):
 				Physics.yRot = c_float(yRot)
 				Physics.zRot = c_float(zRot)
 				Physics.wRot = c_float(wRot)
+				Components.append(Physics)
+			if(20 in adjCompList):
+				print("RigidBodyPhantomPhysics is not implemented")
+				return
+			if(30 in adjCompList):
+				print("VehiclePhysics is not implemented")
+				return
+			if(40 in adjCompList):
+				print("PhantomPhysics is not implemented")
+				return
+			if(7 in adjCompList):
+				Destructible = DestructibleIndex()
+				Destructible.flag1 = False
 
+				Stats = StatsIndex()
+				Stats.flag1 = True
+				Stats.currentHealth = c_ulong(currentHealth)
+				Stats.maxHealth = c_float(maxHealth)
+				Stats.currentArmor = c_ulong(currentArmor)
+				Stats.maxArmor = c_float(maxArmor)
+				Stats.currentImagination = c_ulong(currentImagination)
+				Stats.maxImagination = c_float(maxImagination)
+				Stats.flag2 = True
+				Stats.isSmashable = smashable
+				Components.append(Destructible)
+				Components.append(Stats)
+			if(23 in adjCompList):
+				print("Collectible is not implemented")
+				return
+			if(26 in adjCompList):
+				print("Pet is not implemented")
+				return
+			if(4 in adjCompList):
+				print("Character is implemented but not through this method right now")
+				return
+			if(17 in adjCompList):
+				Inventory = InventoryComponent()
+				Inventory.flag1 = True
+				Inventory.characterObjID = ObjectID
+				Components.append(Inventory)
+			if (5 in adjCompList):
+				Script = ScriptComponent()
+				print("WARNING: Script component is not fully implemented")
+				Components.append(Script)
+			if (9 in adjCompList):
+				Skill = SkillComponent()
+				print("WARNING: Skill component is not fully implemented")
+				Components.append(Skill)
+			if(60 in adjCompList):
+				print("BaseComponentAI is not implemented")
+				return
+			if(48 in adjCompList):
+				print("Rebuild is not implemented")
+				return
+			if(25 in adjCompList):
+				print("MovingPlatform is not implemented")
+				return
+			if(49 in adjCompList):
+				print("Switch is not implemented")
+				return
+			if(16 in adjCompList):
+				print("Vendor is not implemented")
+				return
+			if(6 in adjCompList):
+				print("Bouncer is not implemented")
+				return
+			if(39 in adjCompList):
+				print("ScriptedActivity is not implemented")
+				return
+			if(71 in adjCompList):
+				print("RacingControl is not implemented")
+				return
+			if(75 in adjCompList):
+				print("Exhibit is not implemented")
+				return
+			if(42 in adjCompList):
+				print("Model is not implemented")
+				return
+			if(2 in adjCompList):
 				Render = RenderComponent()
-
-				Object = ReplicaObject([obj, Physics, Render])
-				if (Register == True):
-					registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
-				self.SavedObjects[ObjectID] = Object
-				if(message == None):
-					self.RM.construct(Object)
-				else:
-					self.RM.construct(Object, constructMsg=message)
+				Components.append(Render)
+			if(107 in adjCompList):
+				print("Component107 is not implemented")
+				return
+			if(69 in adjCompList):
+				print("Tigger is not implemented")
+				return
+			print(Components)
+			Object = ReplicaObject(Components)
+			if (Register == True):
+				registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+			self.SavedObjects[ObjectID] = Object
+			if(message == None):
+				self.RM.construct(Object, recipients=self.getZoneRecipients(zone))
+			else:
+				self.RM.construct(Object, constructMsg=message, recipients=self.getZoneRecipients(zone))
 	def loadWorld(self, objectID, worldID, address, loadAtDefaultSpawn=False):
 		deleteWorldObject(objectID)
 		updateCharacterZone(worldID, objectID)  # Update session if needed
