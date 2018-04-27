@@ -41,7 +41,8 @@ class choiceDialog(simpledialog.Dialog):
 
 
 class sendToWorldDialog(simpledialog.Dialog):
-	def __init__(self, parent):
+	def __init__(self, parent, players):
+		self.players = players
 		super().__init__(parent=parent)
 
 	def body(self, master):
@@ -52,7 +53,6 @@ class sendToWorldDialog(simpledialog.Dialog):
 
 		self.tkvar1 = tk.StringVar(master)
 		self.tkvar2 = tk.StringVar(master)
-		self.players = getCharactersInGame()
 		self.playerChoices = []
 		self.worldChoices = []
 		for i in range(self.players.__len__()):
@@ -94,6 +94,8 @@ class Application(tk.Frame):
 		self.worldPane = None
 		self.authPane = None
 
+		self.DB_Manager = databaseManager()
+
 		self.menubar = tk.Menu(self.master)
 		self.master.config(menu=self.menubar)
 		self.master.iconbitmap("icon.ico")
@@ -108,23 +110,31 @@ class Application(tk.Frame):
 		loop.run_forever()
 
 	def updateConsole(self):
+		atCountWorld = 0
+		atCountAuth = 0
 		while True:
 			if(self.Auth != None):
-				if(self.Auth.updateConsole == True):
-					self.Auth.updateConsole = False
+				try:
+					message = str(self.Auth.consoleMessage[atCountAuth])
 					self.authPane.insert(tk.END, "[" + self.Auth.role + "]", "role")
-					self.authPane.insert(tk.END, self.Auth.consoleMessage + "\n")
+					self.authPane.insert(tk.END, message + "\n")
 					self.authPane.see(tk.END)
+					atCountAuth = atCountAuth+1
+				except:
+					pass
 			if(self.World != None):
-				if(self.World.updateConsole == True):
-					self.World.updateConsole = False
+				try:
+					message = str(self.World.consoleMessage[atCountWorld])
 					self.worldPane.insert(tk.END, "["+self.World.role+"]", "role")
-					self.worldPane.insert(tk.END, str(self.World.consoleMessage) + "\n")
+					self.worldPane.insert(tk.END, message + "\n")
 					self.worldPane.see(tk.END)
+					atCountWorld = atCountWorld+1
+				except:
+					pass
 
 	def runServer(self):
-		self.World = WorldServer(("127.0.0.1", 2002), self, max_connections=10, incoming_password=b"3.25 ND1", role="WORLD")
-		self.Auth = AuthServer(("127.0.0.1", 1001), self, max_connections=10, incoming_password=b"3.25 ND1", role="AUTH")
+		self.World = WorldServer(("127.0.0.1", 2002), self.DB_Manager, max_connections=10, incoming_password=b"3.25 ND1", role="WORLD")
+		self.Auth = AuthServer(("127.0.0.1", 1001), self.DB_Manager, max_connections=10, incoming_password=b"3.25 ND1", role="AUTH")
 
 		loop = asyncio.get_event_loop()
 		t = Thread(target=self.serverLoop, args=(loop,))
@@ -140,11 +150,12 @@ class Application(tk.Frame):
 			file.write("Message: " + str(gm[0]) + ", Object: " + str(gm[1]) + "\n")
 
 	def testWorldFunction(self):
-		self.World.test()
+		t = Thread(target=self.World.test)
+		t.start()
 
 	def sendToWorld(self):
-		win = sendToWorldDialog(parent=self.master)
-		session = getSessionByCharacter(win.playerID)
+		win = sendToWorldDialog(parent=self.master, players=self.DB_Manager.getCharactersInGame())
+		session = self.DB_Manager.getSessionByCharacter(win.playerID)
 		try:
 			self.World.loadWorld(win.playerID, win.worldID, (str(session[2]), int(session[7])), loadAtDefaultSpawn=True)
 		except Exception as e:
@@ -155,10 +166,10 @@ class Application(tk.Frame):
 		connections = self.World._connected
 		names = []
 		for key, value in connections.items():
-			names.append(str(getPlayerNameFromConnection(key[0], key[1])[0]))
+			names.append(str(self.DB_Manager.getPlayerNameFromConnection(key[0], key[1])[0]))
 		nameChoice = choiceDialog(self.master, "Player", names)
 		playerName = nameChoice.value
-		session = getSessionByPlayerName(playerName)
+		session = self.DB_Manager.getSessionByPlayerName(playerName)
 		f = filedialog.askopenfile("rb", filetypes=(("Binary Files", "*.bin"), ("All files", "*.*") ))
 		packet.write(f.read())
 		self.World.send(packet, (str(session[2]), int(session[7])))
@@ -167,10 +178,10 @@ class Application(tk.Frame):
 		connections = self.World._connected
 		names = []
 		for key, value in connections.items():
-			names.append(str(getPlayerNameFromConnection(key[0], key[1])[0]))
+			names.append(str(self.DB_Manager.getPlayerNameFromConnection(key[0], key[1])[0]))
 		nameChoice = choiceDialog(self.master, "Player", names)
 		playerName = nameChoice.value
-		objectID = int(getObjectIDFromName(playerName)[0])
+		objectID = int(self.DB_Manager.getObjectIDFromName(playerName)[0])
 		self.World.SetJetPackMode(objectID, bypassChecks=True)
 
 	def create_widgets(self):

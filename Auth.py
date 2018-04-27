@@ -52,7 +52,7 @@ class AuthServer(server.Server):
 			password = passwordRead.read(str, allocated_length=41)
 			self.log("Login Username:" + username)#Length is 66 so divide it by 2 becuase its a wstring
 			self.log("Login Password:" + password)#Length is 82 so divide it by 2 becuase its a wstring
-			loginResponse = getLoginResponse(username, password)
+			loginResponse = self.DB.getLoginResponse(username, password)
 			loginData = BitStream()
 			# START OF HEADER
 			loginData.write(c_ubyte(Message.LegoPacket))  # MSG ID ()
@@ -117,8 +117,8 @@ class AuthServer(server.Server):
 			self.send(loginData, address, reliability=PacketReliability.ReliableOrdered)#Send packet
 			#Register session
 			if(loginResponse == LegoPackets.LOGIN_SUCCESS):
-				info = getAccountByUsername(username)
-				registerSession(str(address[0]), userkey, str(info[0]), str(0), address[1])
+				info = self.DB.getAccountByUsername(username)
+				self.DB.registerSession(str(address[0]), userkey, str(info[0]), str(0), address[1])
 
 
 	def CreateExtraPacketData(self, stampID, bracketNum, afterNum, bitStream):

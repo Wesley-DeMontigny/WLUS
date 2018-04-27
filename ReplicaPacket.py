@@ -44,8 +44,8 @@ class PlayerStyle():
 		self.h = c_ulong(0)#eyebrowsStyle
 		self.i = c_ulong(0)#eyesStyle
 		self.j = c_ulong(0)#mouthStyle
-	def setStyle(self, playerID):
-		data = getCharacterDataByID(str(playerID))
+	def setStyle(self, DB, playerID):
+		data = DB.getCharacterDataByID(str(playerID))
 		self.a = c_ulong(data[7])
 		self.b = c_ulong(data[8])
 		self.c = c_ulong(0)
@@ -64,8 +64,8 @@ class PlayerInfo():
 		self.c = c_ulonglong(0)
 		self.d = None
 		self.e = c_bit(False)
-	def setInfo(self, playerID):
-		data = getCharacterDataByID(str(playerID))
+	def setInfo(self, DB, playerID):
+		data = DB.getCharacterDataByID(str(playerID))
 		self.a = c_ulonglong(int(data[1]))
 		self.d = c_ulonglong(int(data[23]))
 
@@ -517,18 +517,19 @@ class SkillComponent():
 
 
 class InventoryComponent():
-	def __init__(self):
+	def __init__(self, DB):
 		self.flag1 = False
+		self.DB = DB
 		self.characterObjID = None
 	def get_packet(self, PacketType):
 		packet = BitStream()
 		packet.write(c_bit(self.flag1))
 		if(self.flag1 == True):
-			items = getEquippedItems(str(self.characterObjID))
+			items = self.DB.getEquippedItems(str(self.characterObjID))
 			packet.write(c_ulong(len(items)))
 			for item in items:
-				LOT = getLOTFromObject(str(item[0]))
-				info = getItemInfo(str(item[0]))
+				LOT = self.DB.getLOTFromObject(str(item[0]))
+				info = self.DB.getItemInfo(str(item[0]))
 				packet.write(c_longlong(item[0]))#ObjectID
 				packet.write(c_long(int(LOT[0])))
 				packet.write(c_bit(False))
@@ -634,6 +635,3 @@ class ReplicaObject():
 		for component in self.components:
 			packet.write(component.get_packet(ReplicaTypes.REPLICA_SERIALIZATION_PACKET))
 		return packet
-
-
-

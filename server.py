@@ -12,15 +12,15 @@ from messages import Message
 from Packet import LegoPackets
 
 class Server:
-	def __init__(self, address, console, max_connections, incoming_password, role="SERVER"):
+	def __init__(self, address, DB, max_connections, incoming_password, role="SERVER"):
 		host, port = address
 		if host == "localhost":
 			host = "127.0.0.1"
 		self._address = host, port
 
 		self.role = role
-		self.consoleMessage = ""
-		self.updateConsole = False
+		self.consoleMessage = []
+		self.DB = DB
 
 		self.max_connections = max_connections
 		self.incoming_password = incoming_password
@@ -52,9 +52,7 @@ class Server:
 		print(exc)
 
 	def log(self, msg):
-		time.sleep(.1)
-		self.consoleMessage = msg
-		self.updateConsole = True
+		self.consoleMessage.append(msg)
 
 	@staticmethod
 	def error_received(exc):
@@ -115,7 +113,8 @@ class Server:
 				self.send(data, recipient, False, reliability)
 			return
 		if address is None:
-			raise ValueError
+			print("No address was given!")
+			return
 		if address not in self._connected:
 			self.log("Sending to someone we are not connected to!")
 			return

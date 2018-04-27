@@ -28,39 +28,83 @@ class WorldServer(server.Server):
 		self.unhandledGMs = []
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
+
+		t = Thread(target=self.updateDBLoop)
+		t.start()
+
+	def addSkill(self, objectID, skillID, AICombatWeight=0, fromSkillSet=False, castType=0, timeSecs=-1, timesCanCast=-1, slotID=-1, temporary=True):
+		packet = self.GM.InitGameMessage(124, objectID)
+		packet.write(c_int(AICombatWeight))
+		packet.write(c_bit(fromSkillSet))
+		packet.write(c_int(castType))
+		packet.write(c_float(timeSecs))
+		packet.write(c_int(timesCanCast))
+		packet.write(c_ulong(skillID))
+		packet.write(c_int(slotID))
+		packet.write(c_bit(temporary))
+
 	def test(self):
 		print("No Test Right Now")
+
+	def updateDBLoop(self):
+		while True:
+			for id in self.SavedObjects:
+				obj = self.SavedObjects[id]
+				if(obj.components[0].LOT == 1):#If obj is a player
+					self.DB.setCharacterPos(obj.components[0].ObjectID, obj.components[1].xPos, obj.components[1].yPos, obj.components[1].zPos)
+					self.DB.updateWorldObject(obj.components[0].ObjectID, obj.components[1].xPos, obj.components[1].yPos, obj.components[1].zPos, obj.components[1].xRot, obj.components[1].yRot,
+											  obj.components[1].zRot, obj.components[1].wRot)
+			sleep(1)
+
+	def updatePlayerLoc(self, objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot):
+		try:
+			obj = self.SavedObjects[objectID]
+			obj.components[1].xPos = c_float(xPos)
+			obj.components[1].yPos = c_float(yPos)
+			obj.components[1].zPos = c_float(zPos)
+			obj.components[1].xRot = c_float(xRot)
+			obj.components[1].yRot = c_float(yRot)
+			obj.components[1].zRot = c_float(zRot)
+			obj.components[1].wRot = c_float(wRot)
+		except:
+			pass
+
 	def getZoneRecipients(self, zone):
-		connections = getConnectionsInZone(zone)
+		connections = self.DB.getConnectionsInZone(zone)
 		recipients = []
 		for conn in connections:
 			recipients.append((str(conn[0]), int(conn[1])))
 		return recipients
+
 	def offerMission(self, objectID, missionID, offererID):
 		packet = self.GM.InitGameMessage(248, objectID)
 		packet.write(c_int(missionID))
 		packet.write(c_longlong(offererID))
-		session = getSessionByCharacter(objectID)
+		session = self.DB.getSessionByCharacter(objectID)
 		self.send(packet, (str(session[2]), int(session[7])))
+
 	def orientToPosition(self, objectID, xPos, yPos, zPos):
-		zone = getZoneOfObject(objectID)[0]
+		zone = self.DB.getZoneOfObject(objectID)[0]
 		packet = self.GM.InitGameMessage(906, objectID)
 		packet.write(c_float(xPos))
 		packet.write(c_float(yPos))
 		packet.write(c_float(zPos))
 		self.brodcastPacket(packet, int(zone))
+
 	def orientToAngle(self, objectID, relativeToCurrent, angle):
-		zone = getZoneOfObject(objectID)[0]
+		zone = self.DB.getZoneOfObject(objectID)[0]
 		packet = self.GM.InitGameMessage(906, objectID)
 		packet.write(c_bit(relativeToCurrent))
 		packet.write(c_float(angle))
 		self.brodcastPacket(packet, int(zone))
+
 	def brodcastPacket(self, packet, zoneID):
-		connections = getConnectionsInZone(zoneID)
+		connections = self.DB.getConnectionsInZone(zoneID)
 		for connection in connections:
 			self.send(packet, (str(connection[0]), int(connection[1])))
+
 	def SetJetPackMode(self, objectID, bypassChecks=False, doHover=False, Use=True, effectID=-1, airSpeed=10, maxAirSpeed=15, vertVel=1, warningEffectID=-1):
-		zone = getZoneOfObject(objectID)[0]
+		zone = self.DB.getZoneOfObject(objectID)[0]
 		packet = self.GM.InitGameMessage(561, objectID)
 		packet.write(c_bit(bypassChecks))
 		packet.write(c_bit(doHover))
@@ -71,10 +115,11 @@ class WorldServer(server.Server):
 		packet.write(c_float(vertVel))
 		packet.write(c_int(warningEffectID))
 		self.brodcastPacket(packet, int(zone))
-	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False):
+
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1):
 		if(RO != None):
 			if(Register == True):
-				registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			self.SavedObjects[ObjectID] = RO
 			if(message == None):
 				self.RM.construct(RO, recipients=self.getZoneRecipients(zone))
@@ -83,7 +128,7 @@ class WorldServer(server.Server):
 		else:
 			Components = []
 
-			compList = getComponentsForLOT(LOT)
+			compList = self.DB.getComponentsForLOT(LOT)
 
 			obj = BaseData()
 			obj.objectID = c_longlong(ObjectID)
@@ -157,10 +202,23 @@ class WorldServer(server.Server):
 				print("Pet is not implemented")
 				return
 			if(4 in adjCompList):
-				print("Character is implemented but not through this method right now")
+				Character = CharacterComponent()
+				Character.hasLevel = True
+				Character.level = c_ulong(level)
+				info = PlayerInfo()
+				info.setInfo(self.DB, ObjectID)
+				Character.info = info
+				style = PlayerStyle()
+				style.setStyle(self.DB, ObjectID)
+				Character.style = style
+				data9 = Component4_Data9()
+				Character.data9 = data9
+				data11 = Component4_Data11()
+				Character.data11 = data11
+				Components.append(Character)
 				return
 			if(17 in adjCompList):
-				Inventory = InventoryComponent()
+				Inventory = InventoryComponent(self.DB)
 				Inventory.flag1 = True
 				Inventory.characterObjID = ObjectID
 				Components.append(Inventory)
@@ -214,17 +272,18 @@ class WorldServer(server.Server):
 			print(Components)
 			Object = ReplicaObject(Components)
 			if (Register == True):
-				registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			self.SavedObjects[ObjectID] = Object
 			if(message == None):
 				self.RM.construct(Object, recipients=self.getZoneRecipients(zone))
 			else:
 				self.RM.construct(Object, constructMsg=message, recipients=self.getZoneRecipients(zone))
+
 	def loadWorld(self, objectID, worldID, address, loadAtDefaultSpawn=False):
-		deleteWorldObject(objectID)
-		updateCharacterZone(worldID, objectID)  # Update session if needed
-		characterData = getCharacterDataByID(objectID)  # Reload character data
-		registerOrJoinWorld(worldID)
+		self.DB.deleteWorldObject(objectID)
+		self.DB.updateCharacterZone(worldID, objectID)  # Update session if needed
+		characterData = self.DB.getCharacterDataByID(objectID)  # Reload character data
+		self.DB.registerOrJoinWorld(worldID)
 		# Register the world if there isn't one
 		worldLoad = BitStream()
 		# START OF HEADER
@@ -245,16 +304,18 @@ class WorldServer(server.Server):
 			worldLoad.write(c_float(int(defaultSpawn[0])))  # Posx
 			worldLoad.write(c_float(int(defaultSpawn[1])))  # Posy
 			worldLoad.write(c_float(int(defaultSpawn[2])))  # Posz
-			setCharacterPos(objectID, defaultSpawn[0], defaultSpawn[1], defaultSpawn[2])
+			self.DB.setCharacterPos(objectID, defaultSpawn[0], defaultSpawn[1], defaultSpawn[2])
 		else:
 			worldLoad.write(c_float(int(characterData[17])))  # Posx
 			worldLoad.write(c_float(int(characterData[18])))  # Posy
 			worldLoad.write(c_float(int(characterData[19])))  # Posz
 		worldLoad.write(c_ulong(0x00))  # 0 if normal world. 4 if activity
 		self.send(worldLoad, address, reliability=PacketReliability.ReliableOrdered)
+
 	def addToParticipants(self, data, address):
 		self.log("Just added new participant to replica manager")
 		self.RM.add_participant(address)
+
 	def handleLegoPacket(self, data, address):
 		if(data[0:3] == bytearray(b'\x00\x00\x00')):#Handshake
 			self.log("Lego Packet was Connection Init")
@@ -274,21 +335,21 @@ class WorldServer(server.Server):
 			self.send(handshake, address, reliability=PacketReliability.ReliableOrdered)
 		elif(data[0:3] == b"\x04\x00\x01"):
 			self.log("Lego Packet was User Session Info")
-			sessionInfo = getSessionByAddress(address[0])
+			sessionInfo = self.DB.getSessionByAddress(address[0])
 			userRead = BitStream(data[7:])
 			userIDRead = BitStream(data[73:])
 			username = userRead.read(str)
 			userID = userIDRead.read(str)
 			self.log("Session Info - Username : " + str(username) + " UserKey : " + str(userID))
-			if(sessionInfo[1] == getAccountByUsername(username)[0]):
-				updateSessionByUserKey(userID, 1, "NULL", "NULL")
+			if(sessionInfo[1] == self.DB.getAccountByUsername(username)[0]):
+				self.DB.updateSessionByUserKey(userID, 1, "NULL", "NULL")
 		elif(data[0:3] == b"\x04\x00\x02"):
 			sleep(.5)
-			session = getSessionByAddress(address[0])
+			session = self.DB.getSessionByAddress(address[0])
 			self.log("Lego Packet was Minifigure List Request")
 			if(session[6] == 1):
 				self.log("Client's Session is valid")
-				rows, characterData = getCharacterData(session[1])
+				rows, characterData = self.DB.getCharacterData(session[1])
 				if(rows > 4):
 					rows = 4
 				self.log("Account " + str(session[1]) + " has " + str(rows) + " character(s)")
@@ -325,10 +386,10 @@ class WorldServer(server.Server):
 					characterList.write(c_ushort(row[15]))  # map instance
 					characterList.write(c_ulong(row[16]))  # map clone
 					characterList.write(c_ulonglong(0x00))  # Last logout?
-					items = getEquippedItems(str(row[3]))
+					items = self.DB.getEquippedItems(str(row[3]))
 					characterList.write(c_ushort(len(items)))#Equipped Item Lots
 					for item in items:
-						LOT = getLOTFromObject(str(item[0]))
+						LOT = self.DB.getLOTFromObject(str(item[0]))
 						self.log("Found item in inventory with LOT " + str(LOT[0]))
 						characterList.write_bits(c_ulong(int(LOT[0])))
 				self.send(characterList, address, reliability=PacketReliability.ReliableOrdered)
@@ -343,10 +404,10 @@ class WorldServer(server.Server):
 				###END OF HEADER
 				DisconnectionNotify.write(c_ulong(0x00))  # Unknown Server Error
 				self.send(DisconnectionNotify, address)
-				destroySessionWithAddress(address[0])
+				self.DB.destroySessionWithAddress(address[0])
 		elif(data[0:3] == b"\x04\x00\x03"):#When you create a minifigure you have to add a minfigure list packet
 			self.log("Lego Packet was Minifigure Creation Request")
-			session = getSessionByAddress(address[0])
+			session = self.DB.getSessionByAddress(address[0])
 			self.log("Lego Packet was Minifigure List Request")
 			if(session[6] == 1):
 				nameData = BitStream(data[7:])
@@ -371,7 +432,7 @@ class WorldServer(server.Server):
 				eyebrows = eyebrowsData.read(c_ulong)
 				eyes = eyesData.read(c_ulong)
 				mouth = mouthData.read(c_ulong)
-				createMinifigure(session[1], name, shirtColor, shirtStyle, pantsColor,
+				self.DB.createMinifigure(session[1], name, shirtColor, shirtStyle, pantsColor,
 								 hairStyle, hairColor, lh, rh, eyebrows, eyes, mouth)
 				response = BitStream()
 				# START OF HEADER
@@ -383,7 +444,7 @@ class WorldServer(server.Server):
 				response.write(c_ubyte(0x00))  # 0x00 is success
 				self.send(response, address,reliability=PacketReliability.ReliableOrdered)  # Inform client character was created
 				self.log("Client's Session is valid")
-				rows, characterData = getCharacterData(session[1])
+				rows, characterData = self.DB.getCharacterData(session[1])
 				if(rows > 4):
 					rows = 4
 				self.log("Account " + str(session[1]) + " now has " + str(rows) + " characters")
@@ -420,10 +481,10 @@ class WorldServer(server.Server):
 					characterList.write(c_ushort(row[15]))  # map instance
 					characterList.write(c_ulong(row[16]))  # map clone
 					characterList.write(c_ulonglong(0x00))  # Last logout?
-					items = getEquippedItems(str(row[3]))
+					items = self.DB.getEquippedItems(str(row[3]))
 					characterList.write(c_ushort(len(items)))#Equipped Item Lots
 					for item in items:
-						LOT = getLOTFromObject(str(item[0]))
+						LOT = self.DB.getLOTFromObject(str(item[0]))
 						self.log("Found item in inventory with LOT " + str(LOT[0]))
 						characterList.write_bits(c_ulong(int(LOT[0])))
 				self.send(characterList, address, reliability=PacketReliability.ReliableOrdered)
@@ -432,23 +493,23 @@ class WorldServer(server.Server):
 			objIdData = BitStream(data[7:])
 			objId = objIdData.read(c_longlong)#Get objectID
 			self.log("Deleting Minifigure with ID : " + str(objId))
-			deleteCharacter(objId)#Delete It with the objID
+			self.DB.deleteCharacter(objId)#Delete It with the objID
 		elif(data[0:3] == b"\x04\x00\x04"):#Character wants to enter world
 			self.log("Lego Packet was World Enter Request")
 			objectIDData = BitStream(data[7:])
 			objectID = objectIDData.read(c_longlong)
-			characterData = getCharacterDataByID(objectID)#Get character data
+			characterData = self.DB.getCharacterDataByID(objectID)#Get character data
 			if(characterData[14] == Zones.NO_ZONE):#If the character has no zone place him in venture explorer
-				updateCharacterZone(Zones.VENTURE_EXPLORER, objectID)
-			characterData = getCharacterDataByID(objectID)
+				self.DB.updateCharacterZone(Zones.VENTURE_EXPLORER, objectID)
+			characterData = self.DB.getCharacterDataByID(objectID)
 			self.loadWorld(objectID, int(characterData[14]), address)
 		elif(data[0:3] == b"\x04\x00\x13"):#Load character
 			self.log("Lego Packet was Client Loading Complete")
-			session = getSessionByAddress(address[0])
-			characterData = getCharacterDataByID(session[4])
+			session = self.DB.getSessionByAddress(address[0])
+			characterData = self.DB.getCharacterDataByID(session[4])
 			zoneData = BitStream(data[7:])
 			zoneID = zoneData.read(c_ushort)
-			accountData = getAccountByAccountID(characterData[1])
+			accountData = self.DB.getAccountByAccountID(characterData[1])
 			#START OF HEADER
 			charHeader = BitStream()
 			charHeader.write(c_ubyte(Message.LegoPacket))  # MSG ID
@@ -537,7 +598,7 @@ class WorldServer(server.Server):
 			xml = '<?xml version="1.0"?><obj v="1"><buff/><skill/>'#Basic start of xml
 			xml = xml + '<inv><bag><b t="0" m="'+str(characterData[24])+'"/></bag>'#Inventory bag space
 			xml = xml + '<items><in>'#Items in inventory setup
-			LOT, OBJECT, QUANTITY, LINKED, SPAWNERID, SLOT = getInventoryInfo(characterData[3])
+			LOT, OBJECT, QUANTITY, LINKED, SPAWNERID, SLOT = self.DB.getInventoryInfo(characterData[3])
 			for i in range(len(LOT)):#Add all the items in inventory
 				baseItem = '<i l="'+str(LOT[i][0])+'" id ="'+str(OBJECT[i])+'" s="'+str(SLOT[i])+'"'
 				if(QUANTITY[i] > 1):
@@ -556,7 +617,7 @@ class WorldServer(server.Server):
 			xml = xml + '</in></items></inv>'#Close inventory
 			xml = xml + '<mf/><char cc="'+str(characterData[21])+'"></char>'#Currency
 			xml = xml + '<lvl l="'+str(characterData[20])+'"/><flag/><pet/>'#Level and flag and pet
-			completedMissions = getCompletedMissions(characterData[3])
+			completedMissions = self.DB.getCompletedMissions(characterData[3])
 			if(completedMissions != None):#If there are completed missions write them to the xml
 				missionData = '<mis><done>'
 				for mission in completedMissions:
@@ -601,7 +662,7 @@ class WorldServer(server.Server):
 
 			self.log("Sent Detailed User Info")
 
-			objects = getObjectsInZone(zoneID)
+			objects = self.DB.getObjectsInZone(zoneID)
 			for obj in objects:
 				self.createObject(obj[1], obj[2], obj[3], obj[4], obj[5], obj[6], obj[7], obj[8], obj[9], obj[10], obj[11], Register=False, message="Sent World Object " + str(obj[3]))
 
@@ -648,10 +709,10 @@ class WorldServer(server.Server):
 			Character.hasLevel = True
 			Character.level = c_ulong(characterData[20])
 			info = PlayerInfo()
-			info.setInfo(characterData[3])
+			info.setInfo(self.DB, characterData[3])
 			Character.info = info
 			style = PlayerStyle()
-			style.setStyle(characterData[3])
+			style.setStyle(self.DB, characterData[3])
 			Character.style = style
 			data9 = Component4_Data9()
 			Character.data9 = data9
@@ -659,7 +720,7 @@ class WorldServer(server.Server):
 			Character.data11 = data11
 
 			#Add Inventory
-			Inventory = InventoryComponent()
+			Inventory = InventoryComponent(self.DB)
 			Inventory.flag1 = True
 			Inventory.characterObjID = characterData[3]
 
@@ -729,16 +790,16 @@ class WorldServer(server.Server):
 			#self.log(data[11:])
 		elif(data[0:3] == b"\x04\x00\x16"):
 			#self.log("[" + self.role + "]" + "Lego Packet was Position/Rotation Update")
-			#session = getSessionByAddress(address[0])
+			session = self.DB.getSessionByAddress(address[0])
 			info = BitStream(data[7:])
-			posX = info.read(c_float)
-			posY = info.read(c_float)
-			posZ = info.read(c_float)
-			rotX = info.read(c_float)
-			rotY = info.read(c_float)
-			rotZ = info.read(c_float)
-			rotW = info.read(c_float)
-			#updateWorldObject(session[4], posX, posY, posZ, rotX, rotY, rotZ, rotW)
+			xPos = info.read(c_float)
+			yPos = info.read(c_float)
+			zPos = info.read(c_float)
+			xRot = info.read(c_float)
+			yRot = info.read(c_float)
+			zRot = info.read(c_float)
+			wRot = info.read(c_float)
+			self.updatePlayerLoc(session[4], xPos, yPos, zPos, xRot, yRot, zRot, wRot)
 
 		else:
 			self.log("Received Unknown Packet:")
