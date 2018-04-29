@@ -9,8 +9,9 @@ from LDFReader import *
 from os import listdir
 from __main__ import *
 import sys
-import os
+import os, signal
 from os.path import isfile, join
+from struct import *
 from World import WorldServer
 from Auth import AuthServer
 import tkinter as tk
@@ -108,6 +109,22 @@ class Application(tk.Frame):
 	def serverLoop(self, loop):
 		asyncio.set_event_loop(loop)
 		loop.run_forever()
+
+	def onClose(self):
+		print("Saving Objects to DB")
+		try:
+			for id in self.World.SavedObjects:
+				obj = self.World.SavedObjects[id]
+				components = obj.components
+				self.DB_Manager.updateWorldObject(unpack("q", components[0].objectID)[0], unpack("f", components[1].xPos)[0],
+												 unpack("f", components[1].yPos)[0], unpack("f", components[1].zPos)[0],
+												 unpack("f", components[1].xRot)[0], unpack("f", components[1].yRot)[0],
+												 unpack("f", components[1].zRot)[0], unpack("f", components[1].wRot)[0])
+				if (unpack("l", components[0].LOT)[0] == 1):
+					self.DB_Manager.setCharacterPos(unpack("q", components[0].objectID)[0], unpack("f", components[1].xPos)[0], unpack("f", components[1].yPos)[0],
+												   unpack("f", components[1].zPos)[0])
+		except Exception as e:
+			print("Error while saving objects: ", e)
 
 	def updateConsole(self):
 		atCountWorld = 0
@@ -234,5 +251,6 @@ class Application(tk.Frame):
 		self.worldPane['yscrollcommand'] = worldScroll.set
 
 	def on_closing(self):
-		print("Qutting GUI")
-		self.master.destroy()
+		print("Qutting")
+		self.onClose()
+		os.kill(os.getpid(), signal.SIGTERM)

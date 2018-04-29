@@ -558,7 +558,8 @@ class RenderComponent():
 		self.FXCount = c_ulong(0)
 	def get_packet(self, PacketType):
 		packet = BitStream()
-		packet.write(self.FXCount)
+		if(PacketType == ReplicaTypes.REPLICA_CONSTRUCTION_PACKET):
+			packet.write(self.FXCount)
 		return packet
 
 class Component107():
@@ -619,6 +620,65 @@ class SimplePhysicsComponent():
 			packet.write(self.zRot)
 			packet.write(self.wRot)
 		packet.write(c_bit(False))
+		return packet
+
+class Component108():
+	def __init__(self):
+		self.flag1 = False
+		self.flag1_1 = False
+		self.driverObjID = c_longlong(0)
+		self.flag1_2 = False
+		self.data1_2_1 = c_ulong(0)
+		self.flag1_3 = False
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(c_bit(self.flag1))
+		if(self.flag1 == True):
+			packet.write(c_bit(self.flag1_1))
+			if(self.flag1_1 == True):
+				packet.write(self.driverObjID)
+			packet.write(c_bit(self.flag1_2))
+			if(self.flag1_2 == True):
+				packet.write(self.data1_2_1)
+			packet.write(c_bit(self.flag1_3))
+		return packet
+
+class VendorComponent():
+	def __init__(self):
+		self.flag1 = False
+		self.flag1_1 = False
+		self.flag1_2 = False
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(c_bit(self.flag1))
+		if(self.flag1 == True):
+			packet.write(c_bit(self.flag1_1))
+			packet.write(c_bit(self.flag1_2))
+		return packet
+
+class VehiclePhysics():
+	def __init__(self):
+		self.data1 = c_ubyte(0)
+		self.flag1 = False
+		self.flag2 = False
+		self.flag2_1 = False
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		if(Packet_Type == ReplicaTypes.REPLICA_CONSTRUCTION_PACKET):
+			packet.write(self.data1)
+			packet.write(c_bit(self.flag1))
+		packet.write(c_bit(self.flag2))
+		if(self.flag2 == True):
+			packet.write(c_bit(self.flag2_1))
+		return packet
+
+#TODO: Actually Implement
+class ScriptedActivity():
+	def __init__(self):
+		self.flag1 = False
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(c_bit(self.flag1))
 		return packet
 
 class ReplicaObject():

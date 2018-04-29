@@ -15,8 +15,13 @@ from DBHandlers import *
 from time import sleep
 from GameMessage import *
 from LDFReader import *
+from difflib import SequenceMatcher
 from ReplicaPacket import *
 from LDFReader import *
+import atexit
+
+
+
 
 class WorldServer(server.Server):
 	def __init__(self, *args, **kwargs):
@@ -29,7 +34,7 @@ class WorldServer(server.Server):
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
 
-		t = Thread(target=self.updateDBLoop)
+		t = Thread(target=self.updateLoop)
 		t.start()
 
 	def addSkill(self, objectID, skillID, AICombatWeight=0, fromSkillSet=False, castType=0, timeSecs=-1, timesCanCast=-1, slotID=-1, temporary=True):
@@ -44,17 +49,42 @@ class WorldServer(server.Server):
 		packet.write(c_bit(temporary))
 
 	def test(self):
-		print("No Test Right Now")
+		None
 
-	def updateDBLoop(self):
+	def resurrect(self, playerID, rezImmediately=False):
+		zone = self.DB.getZoneOfObject(playerID)[0]
+		packet = self.GM.InitGameMessage(160, playerID)
+		packet.write(c_bit(rezImmediately))
+		self.SavedObjects[playerID].components[3].currentHealth = c_ulong(int(unpack("f", self.SavedObjects[playerID].components[3].maxHealth)[0]))
+		self.brodcastPacket(packet, zone)
+
+	def killPlayer(self, playerID):
+		self.SavedObjects[playerID].components[3].currentHealth = c_ulong(0)
+		zone = self.DB.getZoneOfObject(playerID)[0]
+		packet = self.GM.InitGameMessage(37, playerID)
+		self.log("Killing player with ID: " + str(playerID))
+		self.brodcastPacket(packet, zone)
+
+	def updateLoop(self):
 		while True:
 			for id in self.SavedObjects:
-				obj = self.SavedObjects[id]
-				if(obj.components[0].LOT == 1):#If obj is a player
-					self.DB.setCharacterPos(obj.components[0].ObjectID, obj.components[1].xPos, obj.components[1].yPos, obj.components[1].zPos)
-					self.DB.updateWorldObject(obj.components[0].ObjectID, obj.components[1].xPos, obj.components[1].yPos, obj.components[1].zPos, obj.components[1].xRot, obj.components[1].yRot,
-											  obj.components[1].zRot, obj.components[1].wRot)
-			sleep(1)
+				try:
+					obj = self.SavedObjects[id]
+				except Exception as e:
+					print("Error while serializing: ", e)
+				self.RM.serialize(obj)
+				if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
+					None
+			sleep(.5)
+
+	def smash(self, objectID, force, ghostOpacity, killerID, ignoreObjectVisibility = False):
+		zone = self.DB.getZoneOfObject(objectID)[0]
+		packet = self.GM.InitGameMessage(537, objectID)
+		packet.write(c_bit(ignoreObjectVisibility))
+		packet.write(c_float(force))
+		packet.write(c_float(ghostOpacity))
+		packet.write(c_longlong(killerID))
+		self.brodcastPacket(packet, zone)
 
 	def updatePlayerLoc(self, objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot):
 		try:
@@ -75,6 +105,29 @@ class WorldServer(server.Server):
 		for conn in connections:
 			recipients.append((str(conn[0]), int(conn[1])))
 		return recipients
+
+	def killZoneCheck(self, objectID, yPos):
+		zone = self.DB.getZoneOfObject(objectID)[0]
+		if((zone == Zones.VENTURE_EXPLORER or zone == Zones.VENTURE_EXPLORER_RETURN) and yPos < 555):
+			self.killPlayer(objectID)
+		if(zone == Zones.AVANT_GARDENS and yPos < 255):
+			self.killPlayer(objectID)
+		if((zone == Zones.BLOCK_YARD or zone == Zones.AVANT_GROVE or zone == Zones.NIMBUS_ROCK or zone == Zones.CHANTEY_SHANTEY or zone == Zones.RAVEN_BLUFF) and yPos < 375):
+			self.killPlayer(objectID)
+		if(zone == Zones.NIMBUS_ISLE and yPos < 445):
+			self.killPlayer(objectID)
+		if(zone == Zones.GNARLED_FOREST and yPos < 165):
+			self.killPlayer(objectID)
+		if(zone == Zones.CANYON_COVE and yPos < 210):
+			self.killPlayer(objectID)
+		if(zone == Zones.FORBIDDEN_VALLEY and yPos < 60):
+			self.killPlayer(objectID)
+		if(zone == Zones.STARBASE_3001 and yPos < 900):
+			self.killPlayer(objectID)
+		if(zone == Zones.LEGO_CLUB and yPos < 800):
+			self.killPlayer(objectID)
+		if(zone == Zones.CRUX_PRIME and yPos < -20):
+			self.killPlayer(objectID)
 
 	def offerMission(self, objectID, missionID, offererID):
 		packet = self.GM.InitGameMessage(248, objectID)
@@ -142,8 +195,8 @@ class WorldServer(server.Server):
 				adjCompList.append(comp[0])
 
 			if(108 in adjCompList):
-				print("Component108 is not implemented")
-				return
+				Comp108 = Component108()
+				Components.append(Comp108)
 			if(61 in adjCompList):
 				print("ModuleAssembly is not implemented")
 				return
@@ -174,8 +227,8 @@ class WorldServer(server.Server):
 				print("RigidBodyPhantomPhysics is not implemented")
 				return
 			if(30 in adjCompList):
-				print("VehiclePhysics is not implemented")
-				return
+				VPhysics = VehiclePhysics()
+				Components.append(VPhysics)
 			if(40 in adjCompList):
 				print("PhantomPhysics is not implemented")
 				return
@@ -243,14 +296,15 @@ class WorldServer(server.Server):
 				print("Switch is not implemented")
 				return
 			if(16 in adjCompList):
-				print("Vendor is not implemented")
-				return
+				Vendor = VendorComponent()
+				Components.append(Vendor)
 			if(6 in adjCompList):
 				print("Bouncer is not implemented")
 				return
 			if(39 in adjCompList):
-				print("ScriptedActivity is not implemented")
-				return
+				SA = ScriptedActivity()
+				print("WARNING: ScriptedActivity component is not fully implemented")
+				Components.append(SA)
 			if(71 in adjCompList):
 				print("RacingControl is not implemented")
 				return
@@ -269,7 +323,6 @@ class WorldServer(server.Server):
 			if(69 in adjCompList):
 				print("Tigger is not implemented")
 				return
-			print(Components)
 			Object = ReplicaObject(Components)
 			if (Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
@@ -749,9 +802,9 @@ class WorldServer(server.Server):
 			objID = message.read(c_longlong)
 			msgID = message.read(c_ushort)
 			if(str(msgID) == "1485"):
-				self.log("Message was defined as 'Modify Ghosting Distance'")
+				self.log("Got GM 'Modify Ghosting Distance'")
 			elif(str(msgID) == "41"):
-				self.log("Message was defined as 'Play Emote'")
+				self.log("Got GM 'Play Emote'")
 				emoteID = message.read(c_int)
 				targetID = message.read(c_longlong)
 				self.log("Emote ID:" + str(emoteID) + ", Target ID: " + str(targetID))
@@ -761,10 +814,6 @@ class WorldServer(server.Server):
 			elif(str(msgID) == "888"):
 				objectID = message.read(c_longlong)
 				self.log("Object " + str(objectID) + " needs an update")
-				# Components = self.SavedObjects[objectID].components
-				# #If Object is a player
-				# if(Components[0].LOT == c_long(1)):
-				# 	Object = ReplicaObject(Components)
 			elif(str(msgID) == "767"):
 				#ToggleGhostReferenceOveride
 				bit = message.read(c_bit)
@@ -780,7 +829,9 @@ class WorldServer(server.Server):
 				skillID = message.read(c_long)
 				self.log("Select Skill " + str(skillID))
 			elif(str(msgID) == "1202"):
-				self.log("Player Was Smashed")
+				self.killPlayer(objID)
+			elif(str(msgID) == "159"):
+				self.resurrect(objID)
 			else:
 				self.log("Message id of "+ str(msgID) +" currently has no handler and is not defined!")
 				self.unhandledGMs.append((msgID, objID))
@@ -799,6 +850,7 @@ class WorldServer(server.Server):
 			yRot = info.read(c_float)
 			zRot = info.read(c_float)
 			wRot = info.read(c_float)
+			self.killZoneCheck(session[4], yPos)
 			self.updatePlayerLoc(session[4], xPos, yPos, zPos, xRot, yRot, zRot, wRot)
 
 		else:

@@ -288,7 +288,7 @@ class databaseManager():
 		c.execute("SELECT Slot FROM Inventory WHERE Owner = "+str(charID))
 		takenSlots = c.fetchall()
 		for row in takenSlots:
-			openSlots.remove(row)
+			openSlots.remove(row[0])
 
 		if(openSlots == []):
 			return None
@@ -304,7 +304,8 @@ class databaseManager():
 			itemSlot = self.findOpenInventorySlot(charID)
 			if(itemSlot == None):
 				return "Inventory Full"
-		c.execute("INSERT INTO Inventory (Owner, Object, Quantity, Slot, Linked, Equipped) VALUES ("+str(charID)+", "+str(LOT)+", "+str(Quantity)+", "+str(itemSlot)+", "+str(Linked)+", "+str(Equipped)+")")
+		object = self.createObject(LOT)
+		c.execute("INSERT INTO Inventory (Owner, Object, Quantity, Slot, Linked, Equipped) VALUES ("+str(charID)+", "+str(object)+", "+str(Quantity)+", "+str(itemSlot)+", "+str(Linked)+", "+str(Equipped)+")")
 		try:
 			conn.commit()
 		except:
