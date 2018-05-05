@@ -4,6 +4,7 @@ import os, signal
 from struct import *
 
 
+
 if __name__ == "__main__":
 	DBServerStarup()
 

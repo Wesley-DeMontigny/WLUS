@@ -178,6 +178,22 @@ class Application(tk.Frame):
 		except Exception as e:
 			print("Error While Sending to World: " + str(e))
 
+	def spawnObjectAtPlayer(self):
+		connections = self.World._connected
+		names = []
+		for key, value in connections.items():
+			names.append(str(self.DB_Manager.getPlayerNameFromConnection(key[0], key[1])[0]))
+		nameChoice = choiceDialog(self.master, "Player", names)
+		playerName = nameChoice.value
+		playerID = int(self.DB_Manager.getObjectIDFromName(playerName)[0])
+		lot = int(simpledialog.askfloat("Input", "What is the Object LOT?", parent=self.master))
+		zone = int(self.DB_Manager.getZoneOfObject(playerID)[0])
+		objID = randint(100000000000000000, 999999999999999999)
+		self.World.createObject("", lot, objID, zone, unpack("f", self.World.SavedObjects[playerID].components[1].xPos)[0],
+								unpack("f", self.World.SavedObjects[playerID].components[1].yPos)[0],
+								unpack("f", self.World.SavedObjects[playerID].components[1].zPos)[0], 0, 0, 0, 0, Register=False)
+
+
 	def sendPacketFromFile(self):
 		packet = BitStream()
 		connections = self.World._connected
@@ -214,7 +230,9 @@ class Application(tk.Frame):
 		gameMenu = tk.Menu(self.menubar, tearoff=0)
 		gameMenu.add_command(label="Send to World", command=self.sendToWorld)
 		gameMenu.add_command(label="Fly", command=self.giveFlight)
+		gameMenu.add_command(label="Spawn Obj At Player", command=self.spawnObjectAtPlayer)
 		self.menubar.add_cascade(label="Game", menu=gameMenu)
+
 
 		#Create Frame for auth
 		authFrame = tk.Frame(self.master, width=800, height=300)

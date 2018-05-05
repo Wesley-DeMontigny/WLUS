@@ -67,14 +67,17 @@ class WorldServer(server.Server):
 
 	def updateLoop(self):
 		while True:
-			for id in self.SavedObjects:
-				try:
-					obj = self.SavedObjects[id]
-				except Exception as e:
-					print("Error while serializing: ", e)
-				self.RM.serialize(obj)
-				if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
-					None
+			try:
+				for id in self.SavedObjects:
+					try:
+						obj = self.SavedObjects[id]
+					except Exception as e:
+						print("Error while serializing: ", e)
+					self.RM.serialize(obj)
+					if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
+						None
+			except:
+				pass
 			sleep(.5)
 
 	def smash(self, objectID, force, ghostOpacity, killerID, ignoreObjectVisibility = False):
@@ -108,7 +111,7 @@ class WorldServer(server.Server):
 
 	def killZoneCheck(self, objectID, yPos):
 		zone = self.DB.getZoneOfObject(objectID)[0]
-		if((zone == Zones.VENTURE_EXPLORER or zone == Zones.VENTURE_EXPLORER_RETURN) and yPos < 555):
+		if((zone == Zones.VENTURE_EXPLORER or zone == Zones.VENTURE_EXPLORER_RETURN) and yPos < 565):
 			self.killPlayer(objectID)
 		if(zone == Zones.AVANT_GARDENS and yPos < 255):
 			self.killPlayer(objectID)
@@ -169,7 +172,8 @@ class WorldServer(server.Server):
 		packet.write(c_int(warningEffectID))
 		self.brodcastPacket(packet, int(zone))
 
-	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1):
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
+					 collectibleID=0):
 		if(RO != None):
 			if(Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
@@ -230,14 +234,21 @@ class WorldServer(server.Server):
 				VPhysics = VehiclePhysics()
 				Components.append(VPhysics)
 			if(40 in adjCompList):
-				print("PhantomPhysics is not implemented")
-				return
+				Physics = PhantomPhysics()
+				Physics.vectorFlag = True
+				Physics.xPos = c_float(xPos)
+				Physics.yPos = c_float(yPos)
+				Physics.zPos = c_float(zPos)
+				Physics.xRot = c_float(xRot)
+				Physics.yRot = c_float(yRot)
+				Physics.zRot = c_float(zRot)
+				Physics.wRot = c_float(wRot)
+				Components.append(Physics)
 			if(7 in adjCompList):
 				Destructible = DestructibleIndex()
 				Destructible.flag1 = False
 
 				Stats = StatsIndex()
-				Stats.flag1 = True
 				Stats.currentHealth = c_ulong(currentHealth)
 				Stats.maxHealth = c_float(maxHealth)
 				Stats.currentArmor = c_ulong(currentArmor)
@@ -245,12 +256,29 @@ class WorldServer(server.Server):
 				Stats.currentImagination = c_ulong(currentImagination)
 				Stats.maxImagination = c_float(maxImagination)
 				Stats.flag2 = True
-				Stats.isSmashable = smashable
+				if(str(self.DB.getObjectType(LOT)[0]) == "Smashables"):
+					Stats.isSmashable = True
+					Stats.flag3 = True
+					Stats.factionID = c_long(6)
+				else:
+					Stats.isSmashable = smashable
 				Components.append(Destructible)
 				Components.append(Stats)
 			if(23 in adjCompList):
-				print("Collectible is not implemented")
-				return
+				Stats = StatsIndex()
+				Stats.currentHealth = c_ulong(currentHealth)
+				Stats.maxHealth = c_float(maxHealth)
+				Stats.currentArmor = c_ulong(currentArmor)
+				Stats.maxArmor = c_float(maxArmor)
+				Stats.currentImagination = c_ulong(currentImagination)
+				Stats.maxImagination = c_float(maxImagination)
+				Stats.flag2 = True
+
+				Collectible = CollectibleComponent()
+				Collectible.CollectibleID = c_ushort(collectibleID)
+
+				Components.append(Stats)
+				Components.append(Collectible)
 			if(26 in adjCompList):
 				print("Pet is not implemented")
 				return
@@ -269,7 +297,6 @@ class WorldServer(server.Server):
 				data11 = Component4_Data11()
 				Character.data11 = data11
 				Components.append(Character)
-				return
 			if(17 in adjCompList):
 				Inventory = InventoryComponent(self.DB)
 				Inventory.flag1 = True
@@ -284,8 +311,8 @@ class WorldServer(server.Server):
 				print("WARNING: Skill component is not fully implemented")
 				Components.append(Skill)
 			if(60 in adjCompList):
-				print("BaseComponentAI is not implemented")
-				return
+				AI = BaseCombatAI()
+				Components.append(AI)
 			if(48 in adjCompList):
 				print("Rebuild is not implemented")
 				return
@@ -299,8 +326,8 @@ class WorldServer(server.Server):
 				Vendor = VendorComponent()
 				Components.append(Vendor)
 			if(6 in adjCompList):
-				print("Bouncer is not implemented")
-				return
+				Bouncer = BouncerComponent()
+				Components.append(Bouncer)
 			if(39 in adjCompList):
 				SA = ScriptedActivity()
 				print("WARNING: ScriptedActivity component is not fully implemented")
@@ -311,15 +338,15 @@ class WorldServer(server.Server):
 			if(75 in adjCompList):
 				print("Exhibit is not implemented")
 				return
-			if(42 in adjCompList):
-				print("Model is not implemented")
-				return
+			# if(42 in adjCompList):
+			# 	print("Model is not implemented")
+			# 	return
 			if(2 in adjCompList):
 				Render = RenderComponent()
 				Components.append(Render)
 			if(107 in adjCompList):
-				print("Component107 is not implemented")
-				return
+				Comp107 = Component107()
+				Components.append(Comp107)
 			if(69 in adjCompList):
 				print("Tigger is not implemented")
 				return
@@ -717,7 +744,10 @@ class WorldServer(server.Server):
 
 			objects = self.DB.getObjectsInZone(zoneID)
 			for obj in objects:
-				self.createObject(obj[1], obj[2], obj[3], obj[4], obj[5], obj[6], obj[7], obj[8], obj[9], obj[10], obj[11], Register=False, message="Sent World Object " + str(obj[3]))
+				if(self.SavedObjects[obj[1]] is not None):
+					self.createObject(0, 0, 0, zoneID, 0, 0, 0, 0, 0, 0, 0, RO=self.SavedObjects[obj[1]], Register=False)
+				else:
+					self.createObject(obj[1], obj[2], obj[3], obj[4], obj[5], obj[6], obj[7], obj[8], obj[9], obj[10], obj[11], Register=False, message="Sent World Object " + str(obj[3]))
 
 			#Add Base Data
 			Player = BaseData()
@@ -850,7 +880,10 @@ class WorldServer(server.Server):
 			yRot = info.read(c_float)
 			zRot = info.read(c_float)
 			wRot = info.read(c_float)
-			self.killZoneCheck(session[4], yPos)
+			try:
+				self.killZoneCheck(session[4], yPos)
+			except:
+				pass
 			self.updatePlayerLoc(session[4], xPos, yPos, zPos, xRot, yRot, zRot, wRot)
 
 		else:

@@ -456,7 +456,7 @@ class StatsIndex():
 		self.bit2 = c_bit(False)
 		self.smashable1 = c_bit(False)
 		self.smashable2 = c_bit(False)
-		self.smashable2_1 = None#Ulong
+		self.smashable2_1 = c_ulong(0)#Ulong
 
 		self.flag3 = False
 		self.data3_1 = c_bit(False)
@@ -681,10 +681,94 @@ class ScriptedActivity():
 		packet.write(c_bit(self.flag1))
 		return packet
 
+class BouncerComponent():
+	def __init__(self):
+		self.flag1 = False
+		self.petRequired = False
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(c_bit(self.flag1))
+		if(self.flag1 == True):
+			packet.write(c_bit(self.petRequired))
+		return packet
+
+class BaseCombatAI():
+	def __init__(self):
+		self.flag1 = False
+		self.state = c_ulong(0)
+		self.target = c_longlong(0)
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(c_bit(self.flag1))
+		if(self.flag1 == True):
+			packet.write(self.state)
+			packet.write(self.target)
+		return packet
+
+class PhantomPhysics():
+	def __init__(self):
+		self.vectorFlag = False
+		self.xPos = c_float(0)
+		self.yPos = c_float(0)
+		self.zPos = c_float(0)
+		self.xRot = c_float(0)
+		self.yRot = c_float(0)
+		self.zRot = c_float(0)
+		self.wRot = c_float(0)
+		self.flag1 = False
+		self.physicsEffectActive = False
+		self.PhysicsEffect = c_ulong(0)
+		self.EffectAmount = c_float(0)
+		self.flag1_1 = False
+		self.data1_1_1 = c_ulong(0)
+		self.data1_1_2 = c_ulong(0)
+		self.flag1_2 = False
+		self.dirXAmount = c_float(0)
+		self.dirYAmount = c_float(0)
+		self.dirZAmount = c_float(0)
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(c_bit(self.vectorFlag))
+		if(self.vectorFlag == True):
+			packet.write(self.xPos)
+			packet.write(self.yPos)
+			packet.write(self.zPos)
+			packet.write(self.xRot)
+			packet.write(self.yRot)
+			packet.write(self.zRot)
+			packet.write(self.wRot)
+		packet.write(c_bit(self.flag1))
+		if(self.flag1 == True):
+			packet.write(c_bit(self.physicsEffectActive))
+			if(self.physicsEffectActive == True):
+				packet.write(self.PhysicsEffect)
+				packet.write(self.EffectAmount)
+				packet.write(c_bit(self.flag1_1))
+				if(self.flag1_1 == True):
+					packet.write(self.data1_1_1)
+					packet.write(self.data1_1_2)
+				packet.write(c_bit(self.flag1_2))
+				if(self.flag1_2 == True):
+					packet.write(self.dirXAmount)
+					packet.write(self.dirYAmount)
+					packet.write(self.dirZAmount)
+		return packet
+
+class CollectibleComponent():
+	def __init__(self):
+		self.CollectibleID = c_ushort(0)
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		packet.write(self.CollectibleID)
+		return packet
+
+
+
 class ReplicaObject():
 	def __init__(self, components):
 		self.components = components
 		self._serialize = False
+		self.tag = ""
 	def send_construction(self):
 		packet = BitStream()
 		for component in self.components:
