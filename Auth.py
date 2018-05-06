@@ -8,13 +8,14 @@ from bitstream import *
 from socket import *
 from Packet import *
 from reliability import PacketReliability
-import uuid
 from replicamanager import *
 from DBHandlers import *
 from time import sleep
 from GameMessage import *
 from LDFReader import *
 from ReplicaPacket import *
+import uuid
+from passlib.hash import sha256_crypt
 
 class AuthServer(server.Server):
 	def __init__(self, *args, **kwargs):

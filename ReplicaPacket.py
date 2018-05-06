@@ -1,5 +1,6 @@
 from bitstream import *
 from Packet import *
+from struct import *
 from DBHandlers import *
 
 
@@ -756,7 +757,7 @@ class PhantomPhysics():
 
 class CollectibleComponent():
 	def __init__(self):
-		self.CollectibleID = c_ushort(0)
+		self.CollectibleID = c_uint16(0)
 	def get_packet(self, Packet_Type):
 		packet = BitStream()
 		packet.write(self.CollectibleID)
@@ -769,6 +770,8 @@ class ReplicaObject():
 		self.components = components
 		self._serialize = False
 		self.tag = ""
+	def getLOT(self):
+		return unpack("l", self.components[0].LOT)[0]
 	def send_construction(self):
 		packet = BitStream()
 		for component in self.components:

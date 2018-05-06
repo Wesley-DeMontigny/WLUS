@@ -51,6 +51,12 @@ class WorldServer(server.Server):
 	def test(self):
 		None
 
+	def handleInteraction(self, multiInteractionUse, multiInteractionID, multiInteractionType, object, secondary, player):
+		LOT = int(self.SavedObjects[object].getLOT())
+		mission = self.DB.getApplicableMission(player, LOT)
+		if(mission is not None):
+			self.offerMission(player, mission, object)
+
 	def resurrect(self, playerID, rezImmediately=False):
 		zone = self.DB.getZoneOfObject(playerID)[0]
 		packet = self.GM.InitGameMessage(160, playerID)
@@ -75,7 +81,8 @@ class WorldServer(server.Server):
 						print("Error while serializing: ", e)
 					self.RM.serialize(obj)
 					if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
-						None
+						if(obj.components[3].currentHealth == c_ulong(0)):
+							self.killPlayer(id)
 			except:
 				pass
 			sleep(.5)
@@ -173,7 +180,7 @@ class WorldServer(server.Server):
 		self.brodcastPacket(packet, int(zone))
 
 	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
-					 collectibleID=0):
+					 collectibleID=2210):
 		if(RO != None):
 			if(Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
@@ -262,6 +269,8 @@ class WorldServer(server.Server):
 					Stats.factionID = c_long(6)
 				else:
 					Stats.isSmashable = smashable
+				if (23 in adjCompList):
+					Stats.factionID = c_long(25)
 				Components.append(Destructible)
 				Components.append(Stats)
 			if(23 in adjCompList):
@@ -270,6 +279,7 @@ class WorldServer(server.Server):
 				Stats.maxHealth = c_float(maxHealth)
 				Stats.currentArmor = c_ulong(currentArmor)
 				Stats.maxArmor = c_float(maxArmor)
+				Stats.factionID = c_long(25)
 				Stats.currentImagination = c_ulong(currentImagination)
 				Stats.maxImagination = c_float(maxImagination)
 				Stats.flag2 = True
@@ -779,12 +789,12 @@ class WorldServer(server.Server):
 			#Add Stats
 			Stats = StatsIndex()
 			Stats.flag1 = True
-			Stats.currentHealth = c_ulong(4)
-			Stats.maxHealth = c_float(4)
-			Stats.currentArmor = c_ulong(0)
-			Stats.maxArmor = c_float(0)
-			Stats.currentImagination = c_ulong(0)
-			Stats.maxImagination = c_float(0)
+			Stats.currentHealth = c_ulong(characterData[26])
+			Stats.maxHealth = c_float(characterData[25])
+			Stats.currentArmor = c_ulong(characterData[28])
+			Stats.maxArmor = c_float(characterData[27])
+			Stats.currentImagination = c_ulong(characterData[30])
+			Stats.maxImagination = c_float(characterData[29])
 			Stats.flag2 = True
 
 			#Add Character Component
@@ -822,10 +832,11 @@ class WorldServer(server.Server):
 
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
 			player = ReplicaObject(PlayerComponents)
+			player.tag = "Player"
 			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, RO=player, message="Sent Player Construction")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
-			self.GM.SendGameMessage(509, int(characterData[3]), address)  # Player ready?
+			self.GM.SendGameMessage(509, int(characterData[3]), address)  # Player ready
 
 		elif(data[0:3] == b"\x04\x00\x05"):
 			message = BitStream(data[7:])
@@ -862,6 +873,15 @@ class WorldServer(server.Server):
 				self.killPlayer(objID)
 			elif(str(msgID) == "159"):
 				self.resurrect(objID)
+			elif(str(msgID) == "364"):#Interaction
+				multiInteractUse = message.read(c_bit)
+				multiInteractID = message.read(c_ulong)
+				multiInteractType = message.read(c_int)
+				object = message.read(c_longlong)
+				secondary = message.read(c_bit)
+				self.handleInteraction(multiInteractUse, multiInteractID, multiInteractType, object, secondary, objID)
+			elif(str(msgID) == "486"):#Something was collected
+				player = message.read(c_longlong)#TODO: Add stats to player's current stats
 			else:
 				self.log("Message id of "+ str(msgID) +" currently has no handler and is not defined!")
 				self.unhandledGMs.append((msgID, objID))

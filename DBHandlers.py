@@ -1,6 +1,7 @@
 import sqlite3
 from Packet import *
 from random import randint
+from passlib.hash import sha256_crypt
 
 
 def DBServerStarup():
@@ -21,17 +22,27 @@ class databaseManager():
 	def getLoginResponse(self, username, password):
 		conn = self.serverConn
 		c = conn.cursor()
-		c.execute("SELECT Banned FROM Accounts WHERE Username = '"+str(username)+"' AND Password = '"+str(password)+"'")
+		c.execute("SELECT Banned, Password FROM Accounts WHERE Username = '"+str(username)+"'")
 		q = c.fetchone()
-		if(q != None and q[0] != 1):
+		if(q != None and q[0] != 1 and sha256_crypt.verify(password, q[1])):
 
 			return LegoPackets.LOGIN_SUCCESS
-		elif(q == None):
+		elif(q == None and not sha256_crypt.verify(q[1], password)):
 
 			return LegoPackets.LOGIN_WRONG_INFO
 		else:
 
 			return LegoPackets.LOGIN_BANNED
+
+	def registerAccount(self, username, password):
+		crypted_pass = sha256_crypt.encrypt(password)
+		conn = self.serverConn
+		c = conn.cursor()
+		c.execute("INSERT INTO Accounts (Username, Password, Banned, IsAdmin) VALUES ('"+str(username)+"', '"+str(crypted_pass)+"', 0, 0)")
+		try:
+			conn.commit()
+		except:
+			pass
 
 	def getAccountByUsername(self, username):
 		conn = self.serverConn
@@ -123,6 +134,25 @@ class databaseManager():
 		q = c.fetchone()
 
 		return q
+
+	def getApplicableMission(self, player, offerer):
+		conn = self.cdConn
+		c = conn.cursor()
+		completed = self.getCompletedMissions(player)
+		c.execute("SELECT id, prereqMissionID FROM Missions WHERE offer_objectID = "+str(offerer))
+		missions = c.fetchall()
+		completedMissions = []
+		for mission in completed:
+			completedMissions.append(int(mission[0]))
+		for mission in missions:
+			display = True
+			required = str(mission[1]).split("|")
+			for neededMission in required:
+				if(int(neededMission) not in completedMissions):
+					display = False
+			if(display == True):
+				return int(mission[0])
+		return None
 
 	def destroySessionWithUserKey(self, userKey):
 		conn = self.serverConn
@@ -331,7 +361,7 @@ class databaseManager():
 		if(Name == ""):
 			username = objID
 		c = conn.cursor()
-		c.execute("INSERT INTO Characters (AccountID, Name, ObjectID, ShirtColor, ShirtStyle, PantsColor, HairStyle, HairColor, lh, rh, Eyebrows, Eyes, Mouth, LastZone, MapInstance, MapClone, Level, Currency, isAlive, UScore, BackpackSpace) VALUES ("+str(AccountID)+", '"+str(username)+"', "+str(objID)+", "+str(ShirtColor)+", "+str(ShirtStyle)+", "+str(PantsColor)+", "+str(HairStyle)+", "+str(HairColor)+", "+str(lh)+", "+str(rh)+", "+str(Eyebrows)+", "+str(Eyes)+", "+str(Mouth)+", 0, 0, 0, 1, 0, 1, 0, 20)")
+		c.execute("INSERT INTO Characters (AccountID, Name, ObjectID, ShirtColor, ShirtStyle, PantsColor, HairStyle, HairColor, lh, rh, Eyebrows, Eyes, Mouth, LastZone, MapInstance, MapClone, Level, Currency, isAlive, UScore, BackpackSpace, MaxHealth, Health, MaxArmor, Armor, MaxImagination, Imagination) VALUES ("+str(AccountID)+", '"+str(username)+"', "+str(objID)+", "+str(ShirtColor)+", "+str(ShirtStyle)+", "+str(PantsColor)+", "+str(HairStyle)+", "+str(HairColor)+", "+str(lh)+", "+str(rh)+", "+str(Eyebrows)+", "+str(Eyes)+", "+str(Mouth)+", 0, 0, 0, 1, 0, 1, 0, 20, 4, 4, 0, 0, 0, 0)")
 		try:
 			conn.commit()
 		except:

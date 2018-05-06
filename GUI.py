@@ -217,6 +217,15 @@ class Application(tk.Frame):
 		objectID = int(self.DB_Manager.getObjectIDFromName(playerName)[0])
 		self.World.SetJetPackMode(objectID, bypassChecks=True)
 
+	def registerAccount(self):
+		username = simpledialog.askstring("Input", "Username: ", parent=self.master)
+		password = simpledialog.askstring("Input", "Password: ", parent=self.master)
+		if(password != None and username != None):
+			try:
+				self.DB_Manager.registerAccount(username, password)
+			except:
+				pass
+
 	def create_widgets(self):
 		#Create menu items
 		self.menubar.add_command(label="Start Server", command=self.runServer)
@@ -228,9 +237,10 @@ class Application(tk.Frame):
 		self.menubar.add_cascade(label="Development", menu=devMenu)
 
 		gameMenu = tk.Menu(self.menubar, tearoff=0)
+		gameMenu.add_command(label="Register Account", command=self.registerAccount)
 		gameMenu.add_command(label="Send to World", command=self.sendToWorld)
 		gameMenu.add_command(label="Fly", command=self.giveFlight)
-		gameMenu.add_command(label="Spawn Obj At Player", command=self.spawnObjectAtPlayer)
+		gameMenu.add_command(label="Spawn Object At Player", command=self.spawnObjectAtPlayer)
 		self.menubar.add_cascade(label="Game", menu=gameMenu)
 
 
