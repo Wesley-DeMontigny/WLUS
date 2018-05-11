@@ -57,7 +57,7 @@ def from_ldf(ldf):
 				raise NotImplementedError(key, data_type_id)
 			ldf_dict[key] = data_type_id, value
 	else:
-		raise NotImplementedError
+		pass
 
 	return ldf_dict
 

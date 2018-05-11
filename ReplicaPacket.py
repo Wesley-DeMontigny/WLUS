@@ -765,13 +765,21 @@ class CollectibleComponent():
 
 
 
-class ReplicaObject():
-	def __init__(self, components):
-		self.components = components
+class GameObject():
+	def __init__(self):
+		self.components = None
 		self._serialize = False
 		self.tag = ""
+		self.dropLOT = None
+		self.dropOwner = None
+		self.Zone = 0
 	def getLOT(self):
-		return unpack("l", self.components[0].LOT)[0]
+		if(self.tag != "Drop"):
+			return unpack("l", self.components[0].LOT)[0]
+		else:
+			return self.dropLOT
+	def getDropOwner(self):
+		return self.dropOwner
 	def send_construction(self):
 		packet = BitStream()
 		for component in self.components:

@@ -19,6 +19,7 @@ from difflib import SequenceMatcher
 from ReplicaPacket import *
 from LDFReader import *
 import atexit
+from LVLParser import *
 
 
 
@@ -34,8 +35,11 @@ class WorldServer(server.Server):
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
 
-		t = Thread(target=self.updateLoop)
-		t.start()
+		updateLoop = Thread(target=self.updateLoop)
+		updateLoop.start()
+
+		initGameObjects = Thread(target=self.spawnInitWorldObjects)
+		initGameObjects.start()
 
 	def addSkill(self, objectID, skillID, AICombatWeight=0, fromSkillSet=False, castType=0, timeSecs=-1, timesCanCast=-1, slotID=-1, temporary=True):
 		packet = self.GM.InitGameMessage(124, objectID)
@@ -50,6 +54,13 @@ class WorldServer(server.Server):
 
 	def test(self):
 		None
+
+	def getSavedObjectsInZone(self, zoneID):
+		Objects = []
+		for id in self.SavedObjects:
+			if(self.SavedObjects[id].Zone == zoneID):
+				Objects.append(self.SavedObjects[id])
+		return Objects
 
 	def handleInteraction(self, multiInteractionUse, multiInteractionID, multiInteractionType, object, secondary, player):
 		LOT = int(self.SavedObjects[object].getLOT())
@@ -79,7 +90,8 @@ class WorldServer(server.Server):
 						obj = self.SavedObjects[id]
 					except Exception as e:
 						print("Error while serializing: ", e)
-					self.RM.serialize(obj)
+					if(obj.tag != "Drop" or obj.tag != "Static"):
+						self.RM.serialize(obj)
 					if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
 						if(obj.components[3].currentHealth == c_ulong(0)):
 							self.killPlayer(id)
@@ -95,6 +107,17 @@ class WorldServer(server.Server):
 		packet.write(c_float(ghostOpacity))
 		packet.write(c_longlong(killerID))
 		self.brodcastPacket(packet, zone)
+
+	def spawnInitWorldObjects(self):
+		Objects = []
+		# ventureExplorer = lvlFile(os.getcwd() + "\\LegoUniverse\\nd_space_ship.lvl", 1000)
+		# for gameObject in ventureExplorer.Objects:
+		# 	Objects.append(gameObject)
+		for Object in Objects:
+			ID = randint(100000000000000000, 999999999999999999)
+			self.log("Initialized Object With LOT " + str(Object[0]) + " In Zone " + str(Object[1]))
+			self.createObject("", Object[0], ID, Object[1], Object[2], Object[3], Object[4], Object[5], Object[6], Object[7],  Object[8], Register=False, Init=True, Tag="Static")
+		self.log("Finished Initializing Objects")
 
 	def updatePlayerLoc(self, objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot):
 		try:
@@ -179,16 +202,53 @@ class WorldServer(server.Server):
 		packet.write(c_int(warningEffectID))
 		self.brodcastPacket(packet, int(zone))
 
-	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
-					 collectibleID=2210):
+	def dropLoot(self, recipients, usePosition, finalPosition, currency, LOT, owner, sourceObj, spawnPosition):
+		packet = BitStream()
+		lootID = randint(100000000000000000, 999999999999999999)
+		packet.write(c_bit(usePosition))
+		packet.write(c_float(finalPosition[0]))
+		packet.write(c_float(finalPosition[1]))
+		packet.write(c_float(finalPosition[2]))
+		packet.write(c_int(currency))
+		packet.write(c_long(LOT))
+		packet.write(c_longlong(lootID))
+		packet.write(c_longlong(owner))
+		packet.write(c_longlong(sourceObj))
+		packet.write(c_float(spawnPosition[0]))
+		packet.write(c_float(spawnPosition[1]))
+		packet.write(c_float(spawnPosition[2]))
+		Object = GameObject()
+		Object.tag = "Drop"
+		Object.dropLOT = LOT
+		Object.dropOwner = owner
+		self.SavedObjects[lootID] = Object
+		for recipient in recipients:
+			self.send(packet, recipient)
+
+	def createObjectsForWorld(self, zoneID, address):
+		objects = self.getSavedObjectsInZone(zoneID)
+		for obj in objects:
+			self.createObject(0, 0, 0, zoneID, 0, 0, 0, 0, 0, 0, 0, RO=obj, Register=False, Address=address)
+
+	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, Init=False, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
+					 collectibleID=2210, Tag="", Address=None):
 		if(RO != None):
 			if(Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
+			RO.Zone = zone
+			RO.tag = Tag
 			self.SavedObjects[ObjectID] = RO
-			if(message == None):
-				self.RM.construct(RO, recipients=self.getZoneRecipients(zone))
-			else:
-				self.RM.construct(RO, constructMsg=message, recipients=self.getZoneRecipients(zone))
+			if(Init == False):
+				if(message == None):
+					if(Address == None):
+						self.RM.construct(RO, recipients=self.getZoneRecipients(zone))
+					else:
+						self.RM.construct(RO, recipients=[Address])
+				else:
+					if(Address == None):
+						self.RM.construct(RO, constructMsg=message, recipients=self.getZoneRecipients(zone))
+					else:
+						self.RM.construct(RO, constructMsg=message, recipients=[Address])
 		else:
 			Components = []
 
@@ -360,14 +420,24 @@ class WorldServer(server.Server):
 			if(69 in adjCompList):
 				print("Tigger is not implemented")
 				return
-			Object = ReplicaObject(Components)
+			Object = GameObject()
+			Object.Zone = zone
+			Object.tag = Tag
+			Object.components = Components
 			if (Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			self.SavedObjects[ObjectID] = Object
-			if(message == None):
-				self.RM.construct(Object, recipients=self.getZoneRecipients(zone))
-			else:
-				self.RM.construct(Object, constructMsg=message, recipients=self.getZoneRecipients(zone))
+			if (Init == False):
+				if(message == None):
+					if(Address == None):
+						self.RM.construct(Object, recipients=self.getZoneRecipients(zone))
+					else:
+						self.RM.construct(Object, recipients=[Address])
+				else:
+					if(Address == None):
+						self.RM.construct(Object, constructMsg=message, recipients=self.getZoneRecipients(zone))
+					else:
+						self.RM.construct(Object, constructMsg=message, recipients=[Address])
 
 	def loadWorld(self, objectID, worldID, address, loadAtDefaultSpawn=False):
 		self.DB.deleteWorldObject(objectID)
@@ -752,12 +822,7 @@ class WorldServer(server.Server):
 
 			self.log("Sent Detailed User Info")
 
-			objects = self.DB.getObjectsInZone(zoneID)
-			for obj in objects:
-				if(self.SavedObjects[obj[1]] is not None):
-					self.createObject(0, 0, 0, zoneID, 0, 0, 0, 0, 0, 0, 0, RO=self.SavedObjects[obj[1]], Register=False)
-				else:
-					self.createObject(obj[1], obj[2], obj[3], obj[4], obj[5], obj[6], obj[7], obj[8], obj[9], obj[10], obj[11], Register=False, message="Sent World Object " + str(obj[3]))
+			self.createObjectsForWorld(zoneID, address)
 
 			#Add Base Data
 			Player = BaseData()
@@ -831,7 +896,8 @@ class WorldServer(server.Server):
 			Comp107.flag1 = True
 
 			PlayerComponents = [Player, ControllablePhysics, Destructible, Stats, Character, Inventory, Script, Skill, Render, Comp107]
-			player = ReplicaObject(PlayerComponents)
+			player = GameObject()
+			player.components = PlayerComponents
 			player.tag = "Player"
 			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, RO=player, message="Sent Player Construction")
 
@@ -869,9 +935,9 @@ class WorldServer(server.Server):
 				fromSkillSet = message.read(c_bit)
 				skillID = message.read(c_long)
 				self.log("Select Skill " + str(skillID))
-			elif(str(msgID) == "1202"):
+			elif(str(msgID) == "1202"):#Player requested to be smashed
 				self.killPlayer(objID)
-			elif(str(msgID) == "159"):
+			elif(str(msgID) == "159"):#Resurect
 				self.resurrect(objID)
 			elif(str(msgID) == "364"):#Interaction
 				multiInteractUse = message.read(c_bit)

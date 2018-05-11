@@ -116,10 +116,10 @@ class Application(tk.Frame):
 			for id in self.World.SavedObjects:
 				obj = self.World.SavedObjects[id]
 				components = obj.components
-				self.DB_Manager.updateWorldObject(unpack("q", components[0].objectID)[0], unpack("f", components[1].xPos)[0],
-												 unpack("f", components[1].yPos)[0], unpack("f", components[1].zPos)[0],
-												 unpack("f", components[1].xRot)[0], unpack("f", components[1].yRot)[0],
-												 unpack("f", components[1].zRot)[0], unpack("f", components[1].wRot)[0])
+				# self.DB_Manager.updateWorldObject(unpack("q", components[0].objectID)[0], unpack("f", components[1].xPos)[0],
+				# 								 unpack("f", components[1].yPos)[0], unpack("f", components[1].zPos)[0],
+				# 								 unpack("f", components[1].xRot)[0], unpack("f", components[1].yRot)[0],
+				# 								 unpack("f", components[1].zRot)[0], unpack("f", components[1].wRot)[0])
 				if (unpack("l", components[0].LOT)[0] == 1):
 					self.DB_Manager.setCharacterPos(unpack("q", components[0].objectID)[0], unpack("f", components[1].xPos)[0], unpack("f", components[1].yPos)[0],
 												   unpack("f", components[1].zPos)[0])
