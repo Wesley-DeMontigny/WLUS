@@ -773,6 +773,8 @@ class GameObject():
 		self.dropLOT = None
 		self.dropOwner = None
 		self.Zone = 0
+		self.customServerScript = None
+		self.respawn = None
 	def getLOT(self):
 		if(self.tag != "Drop"):
 			return unpack("l", self.components[0].LOT)[0]

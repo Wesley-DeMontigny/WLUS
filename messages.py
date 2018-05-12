@@ -87,3 +87,4 @@ class Message(IntEnum):
 
 	DisconnectionNotification = 19
 	LegoPacket = 83
+	WorldHandShake = 1392508928

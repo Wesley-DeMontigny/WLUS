@@ -86,16 +86,21 @@ class WorldServer(server.Server):
 		while True:
 			try:
 				for id in self.SavedObjects:
+
 					try:
 						obj = self.SavedObjects[id]
 					except Exception as e:
 						print("Error while serializing: ", e)
 					if(obj.tag != "Drop" or obj.tag != "Static"):
 						self.RM.serialize(obj)
-					if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
-						if(obj.components[3].currentHealth == c_ulong(0)):
-							self.killPlayer(id)
-			except:
+						if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
+							try:
+								self.killZoneCheck(id, unpack("f", obj.components[1].yPos))
+							except:
+								pass
+							if(obj.components[3].currentHealth == c_ulong(0)):
+								self.killPlayer(id)
+			except Exception as e:
 				pass
 			sleep(.5)
 
@@ -110,13 +115,27 @@ class WorldServer(server.Server):
 
 	def spawnInitWorldObjects(self):
 		Objects = []
-		# ventureExplorer = lvlFile(os.getcwd() + "\\LegoUniverse\\nd_space_ship.lvl", 1000)
-		# for gameObject in ventureExplorer.Objects:
-		# 	Objects.append(gameObject)
+		ventureExplorer = lvlFile(os.getcwd() + "\\LegoUniverse\\nd_space_ship.lvl", 1000)
+		for gameObject in ventureExplorer.Objects:
+			Objects.append(gameObject)
 		for Object in Objects:
-			ID = randint(100000000000000000, 999999999999999999)
-			self.log("Initialized Object With LOT " + str(Object[0]) + " In Zone " + str(Object[1]))
-			self.createObject("", Object[0], ID, Object[1], Object[2], Object[3], Object[4], Object[5], Object[6], Object[7],  Object[8], Register=False, Init=True, Tag="Static")
+			objectID = randint(100000000000000000, 999999999999999999)
+			smashable = False
+			respawn = None
+			custom_server_script = None
+			LOT = Object["LOT"]
+
+			if("is_smashable" in Object["LDF"]):
+				smashable = bool(Object["LDF"]["is_smashable"])
+			if("respawn" in Object["LDF"]):
+				respawn = Object["LDF"]["respawn"]
+			if("custom_server_script" in Object["LDF"]):
+				custom_server_script = Object["LDF"]["custom_script_server"]
+			if("spawntemplate" in Object["LDF"]):
+				LOT = int(Object["LDF"]["spawntemplate"])
+			self.log("Initialized Object With LOT " + str(LOT) + " In Zone " + str(Object["Zone"]))
+			self.createObject("", LOT, objectID, Object["Zone"], Object["XPos"], Object["YPos"], Object["ZPos"], Object["XRot"], Object["YRot"], Object["ZRot"], Object["WRot"], Register=False, Init=True,
+							  smashable=smashable, Respawn=respawn, serverScript=custom_server_script, Tag="Static")
 		self.log("Finished Initializing Objects")
 
 	def updatePlayerLoc(self, objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot):
@@ -231,12 +250,14 @@ class WorldServer(server.Server):
 			self.createObject(0, 0, 0, zoneID, 0, 0, 0, 0, 0, 0, 0, RO=obj, Register=False, Address=address)
 
 	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, Init=False, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
-					 collectibleID=2210, Tag="", Address=None):
+					 collectibleID=2210, Tag="", Address=None, Respawn=None, serverScript=None):
 		if(RO != None):
 			if(Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			RO.Zone = zone
 			RO.tag = Tag
+			RO.respawn = Respawn
+			RO.customServerScript = serverScript
 			self.SavedObjects[ObjectID] = RO
 			if(Init == False):
 				if(message == None):
@@ -269,7 +290,7 @@ class WorldServer(server.Server):
 				Comp108 = Component108()
 				Components.append(Comp108)
 			if(61 in adjCompList):
-				print("ModuleAssembly is not implemented")
+				self.log("ModuleAssembly is not implemented")
 				return
 			if (1 in adjCompList):
 				ControllablePhysics = ControllablePhysicsComponent()
@@ -295,7 +316,7 @@ class WorldServer(server.Server):
 				Physics.wRot = c_float(wRot)
 				Components.append(Physics)
 			if(20 in adjCompList):
-				print("RigidBodyPhantomPhysics is not implemented")
+				self.log("RigidBodyPhantomPhysics is not implemented")
 				return
 			if(30 in adjCompList):
 				VPhysics = VehiclePhysics()
@@ -350,7 +371,7 @@ class WorldServer(server.Server):
 				Components.append(Stats)
 				Components.append(Collectible)
 			if(26 in adjCompList):
-				print("Pet is not implemented")
+				self.log("Pet is not implemented")
 				return
 			if(4 in adjCompList):
 				Character = CharacterComponent()
@@ -374,23 +395,23 @@ class WorldServer(server.Server):
 				Components.append(Inventory)
 			if (5 in adjCompList):
 				Script = ScriptComponent()
-				print("WARNING: Script component is not fully implemented")
+				self.log("WARNING: Script component is not fully implemented")
 				Components.append(Script)
 			if (9 in adjCompList):
 				Skill = SkillComponent()
-				print("WARNING: Skill component is not fully implemented")
+				self.log("WARNING: Skill component is not fully implemented")
 				Components.append(Skill)
 			if(60 in adjCompList):
 				AI = BaseCombatAI()
 				Components.append(AI)
 			if(48 in adjCompList):
-				print("Rebuild is not implemented")
+				self.log("Rebuild is not implemented")
 				return
 			if(25 in adjCompList):
-				print("MovingPlatform is not implemented")
+				self.log("MovingPlatform is not implemented")
 				return
 			if(49 in adjCompList):
-				print("Switch is not implemented")
+				self.log("Switch is not implemented")
 				return
 			if(16 in adjCompList):
 				Vendor = VendorComponent()
@@ -400,16 +421,16 @@ class WorldServer(server.Server):
 				Components.append(Bouncer)
 			if(39 in adjCompList):
 				SA = ScriptedActivity()
-				print("WARNING: ScriptedActivity component is not fully implemented")
+				self.log("WARNING: ScriptedActivity component is not fully implemented")
 				Components.append(SA)
 			if(71 in adjCompList):
-				print("RacingControl is not implemented")
+				self.log("RacingControl is not implemented")
 				return
 			if(75 in adjCompList):
-				print("Exhibit is not implemented")
+				self.log("Exhibit is not implemented")
 				return
 			# if(42 in adjCompList):
-			# 	print("Model is not implemented")
+			# 	self.log("Model is not implemented")
 			# 	return
 			if(2 in adjCompList):
 				Render = RenderComponent()
@@ -418,12 +439,14 @@ class WorldServer(server.Server):
 				Comp107 = Component107()
 				Components.append(Comp107)
 			if(69 in adjCompList):
-				print("Tigger is not implemented")
+				self.log("Tigger is not implemented")
 				return
 			Object = GameObject()
 			Object.Zone = zone
 			Object.tag = Tag
 			Object.components = Components
+			Object.respawn = Respawn
+			Object.customServerScript = serverScript
 			if (Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			self.SavedObjects[ObjectID] = Object
@@ -822,7 +845,8 @@ class WorldServer(server.Server):
 
 			self.log("Sent Detailed User Info")
 
-			self.createObjectsForWorld(zoneID, address)
+			t = Thread(target=self.createObjectsForWorld, args=(zoneID, address))
+			t.start()
 
 			#Add Base Data
 			Player = BaseData()
@@ -909,7 +933,7 @@ class WorldServer(server.Server):
 			objID = message.read(c_longlong)
 			msgID = message.read(c_ushort)
 			if(str(msgID) == "1485"):
-				self.log("Got GM 'Modify Ghosting Distance'")
+				return
 			elif(str(msgID) == "41"):
 				self.log("Got GM 'Play Emote'")
 				emoteID = message.read(c_int)
@@ -918,13 +942,10 @@ class WorldServer(server.Server):
 			elif(str(msgID) == "505"):
 				playerID = message.read(c_longlong)
 				self.log("Player with ID: " + str(playerID) + " has loaded")
-			elif(str(msgID) == "888"):
-				objectID = message.read(c_longlong)
-				self.log("Object " + str(objectID) + " needs an update")
+			elif(str(msgID) == "888"):#Object needs an update
+				return
 			elif(str(msgID) == "767"):
-				#ToggleGhostReferenceOveride
-				bit = message.read(c_bit)
-				self.log("Ghost Reference Overide Gave Bit: " + str(bit))
+				return
 			elif(str(msgID) == "768"):
 				#SetGhostReferencePosition
 				xPos = message.read(c_float)
@@ -966,10 +987,6 @@ class WorldServer(server.Server):
 			yRot = info.read(c_float)
 			zRot = info.read(c_float)
 			wRot = info.read(c_float)
-			try:
-				self.killZoneCheck(session[4], yPos)
-			except:
-				pass
 			self.updatePlayerLoc(session[4], xPos, yPos, zPos, xRot, yRot, zRot, wRot)
 
 		else:

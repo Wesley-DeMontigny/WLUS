@@ -30,7 +30,7 @@ def getFormatName(x):
 		return "XML"
 	return "???"
 
-#Most of this is from lcdr util (And by most I mean all, I literally just added a print line so I could see when the function throws an error)
+#This function is from lcdr util
 #All I really use it for is for debugging
 def from_ldf(ldf):
 	ldf_dict = {}
@@ -59,6 +59,16 @@ def from_ldf(ldf):
 	else:
 		pass
 
+	return ldf_dict
+
+#Get LDF from lvl files
+def from_lvlLDF(ldf):
+	ldf_dict = {}
+	keySets = ldf.split("\n")
+	for x in keySets:
+		key = x.split("=")[0]
+		value = x.split(":")[1]
+		ldf_dict[key] = value
 	return ldf_dict
 
 

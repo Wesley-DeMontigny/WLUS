@@ -52,7 +52,8 @@ class Server:
 		print(exc)
 
 	def log(self, msg):
-		self.consoleMessage.append(msg)
+		#self.consoleMessage.append(msg)
+		print("[" + self.role + "]" + msg)
 
 	@staticmethod
 	def error_received(exc):

@@ -35,25 +35,25 @@ class lvlFile():
 					print("Parsing Chunk Type 2001")
 					numOfObjects = stream.read(c_ulong)
 					for i in range(numOfObjects):
-						gameObj = []
-						stream.read(c_ulonglong)#ObjectID
+						gameObj = {}
+						gameObj["ObjectID"] = stream.read(c_ulonglong)
 						LOT = stream.read(c_ulong)#LOT
-						gameObj.append(LOT)
-						gameObj.append(self.zoneID)
+						gameObj["LOT"] = (LOT)
+						gameObj["Zone"] = (self.zoneID)
 						if(self.lvlVersion >= 0x26):
 							stream.read(c_ulong)
 						if(self.lvlVersion >= 0x20):
 							stream.read(c_ulong)
-						gameObj.append(stream.read(c_float))#XPos
-						gameObj.append(stream.read(c_float))#YPos
-						gameObj.append(stream.read(c_float))#ZPos
+						gameObj["XPos"] = (stream.read(c_float))#XPos
+						gameObj["YPos"] = (stream.read(c_float))#YPos
+						gameObj["ZPos"] = (stream.read(c_float))#ZPos
 						wRot = stream.read(c_float)
-						gameObj.append(stream.read(c_float))#XRot
-						gameObj.append(stream.read(c_float))#YRot
-						gameObj.append(stream.read(c_float))#ZRot
-						gameObj.append(wRot)
-						gameObj.append(stream.read(c_float))#Scale
-						LDF = stream.read(str, length_type=c_ulong)
+						gameObj["XRot"] = (stream.read(c_float))#XRot
+						gameObj["YRot"] = (stream.read(c_float))#YRot
+						gameObj["ZRot"] = (stream.read(c_float))#ZRot
+						gameObj["WRot"] = (wRot)
+						gameObj["Scale"] = (stream.read(c_float))#Scale
+						gameObj["LDF"] = from_lvlLDF(stream.read(str, length_type=c_ulong))
 						if(self.lvlVersion >= 7):
 							stream.read(c_ulong)
 						self.Objects.append(gameObj)
