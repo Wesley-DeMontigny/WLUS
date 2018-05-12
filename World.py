@@ -95,7 +95,7 @@ class WorldServer(server.Server):
 						self.RM.serialize(obj)
 						if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
 							try:
-								self.killZoneCheck(id, unpack("f", obj.components[1].yPos))
+								self.killZoneCheck(id, unpack("f", obj.components[1].yPos)[0])
 							except:
 								pass
 							if(obj.components[3].currentHealth == c_ulong(0)):
