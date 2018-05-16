@@ -147,9 +147,12 @@ class databaseManager():
 		for mission in missions:
 			display = True
 			required = str(mission[1]).split("|")
-			for neededMission in required:
-				if(int(neededMission) not in completedMissions):
-					display = False
+			try:
+				for neededMission in required:
+					if(int(neededMission) not in completedMissions):
+						display = False
+			except:
+				pass
 			if(display == True):
 				return int(mission[0])
 		return None
@@ -182,6 +185,10 @@ class databaseManager():
 		c.execute("SELECT * FROM Worlds WHERE Zone = '" + str(zoneID) + "'")
 		if(c.fetchone() == None):
 			c.execute("INSERT INTO Worlds (Zone, OwnerID, Name) VALUES ("+str(zoneID)+", NULL, NULL)")
+			try:
+				conn.commit()
+			except:
+				pass
 
 
 	def updateCharacterZone(self, zoneID, characterID):
@@ -197,15 +204,24 @@ class databaseManager():
 			pass
 
 
-	def setCharacterPos(self, charID, x, y, z):
+	def setCharacterLoc(self, charID, x, y, z, xR, yR, zR, wR):
 		conn = self.serverConn
 		c = conn.cursor()
-		c.execute("UPDATE Characters SET XPos = "+str(x)+", YPos = "+str(y)+", ZPos = "+str(z)+" WHERE ObjectID = "+str(charID))
+		c.execute("UPDATE Characters SET XPos = "+str(x)+", YPos = "+str(y)+", ZPos = "+str(z)+", XRot = "+str(xR)+", YRot = "+str(yR)+", ZRot = "+str(zR)+", WRot = "+str(wR)+" WHERE ObjectID = "+str(charID))
 		try:
 			conn.commit()
 		except:
 			pass
 
+
+	def addCurrentMission(self, charID, missionID):
+		conn = self.serverConn
+		c = conn.cursor()
+		c.execute("INSERT INTO CurrentMissions (MissionID, CharacterID, Status) Values ("+str(charID)+", "+str(missionID)+", 0)")
+		try:
+			conn.commit()
+		except:
+			pass
 
 	def getEquippedItems(self, charID):
 		conn = self.serverConn
@@ -227,6 +243,14 @@ class databaseManager():
 		conn = self.serverConn
 		c = conn.cursor()
 		c.execute("SELECT MissionID FROM CompletedMissions WHERE CharID = " + str(charID))
+		missions = c.fetchall()
+
+		return missions
+
+	def getCurrentMissions(self, charID):
+		conn = self.serverConn
+		c = conn.cursor()
+		c.execute("SELECT MissionID FROM CurrentMissions WHERE CharacterID = " + str(charID))
 		missions = c.fetchall()
 
 		return missions
@@ -307,6 +331,14 @@ class databaseManager():
 
 		return len(q), q
 
+	def getMissionTaskType(self, missionID):
+		conn = self.cdConn
+		c = conn.cursor()
+		c.execute("SELECT taskType FROM MissionTasks WHERE id = " + str(missionID))
+		q = c.fetchall()
+
+		return q
+
 	def findOpenInventorySlot(self, charID):
 		conn = self.serverConn
 		c = conn.cursor()
@@ -361,7 +393,7 @@ class databaseManager():
 		if(Name == ""):
 			username = objID
 		c = conn.cursor()
-		c.execute("INSERT INTO Characters (AccountID, Name, ObjectID, ShirtColor, ShirtStyle, PantsColor, HairStyle, HairColor, lh, rh, Eyebrows, Eyes, Mouth, LastZone, MapInstance, MapClone, Level, Currency, isAlive, UScore, BackpackSpace, MaxHealth, Health, MaxArmor, Armor, MaxImagination, Imagination) VALUES ("+str(AccountID)+", '"+str(username)+"', "+str(objID)+", "+str(ShirtColor)+", "+str(ShirtStyle)+", "+str(PantsColor)+", "+str(HairStyle)+", "+str(HairColor)+", "+str(lh)+", "+str(rh)+", "+str(Eyebrows)+", "+str(Eyes)+", "+str(Mouth)+", 0, 0, 0, 1, 0, 1, 0, 20, 4, 4, 0, 0, 0, 0)")
+		c.execute("INSERT INTO Characters (AccountID, Name, ObjectID, ShirtColor, ShirtStyle, PantsColor, HairStyle, HairColor, lh, rh, Eyebrows, Eyes, Mouth, LastZone, MapInstance, MapClone, Level, Currency, isAlive, UScore, BackpackSpace, MaxHealth, Health, MaxArmor, Armor, MaxImagination, Imagination, XRot, YRot, ZRot, WRot) VALUES ("+str(AccountID)+", '"+str(username)+"', "+str(objID)+", "+str(ShirtColor)+", "+str(ShirtStyle)+", "+str(PantsColor)+", "+str(HairStyle)+", "+str(HairColor)+", "+str(lh)+", "+str(rh)+", "+str(Eyebrows)+", "+str(Eyes)+", "+str(Mouth)+", 0, 0, 0, 1, 0, 1, 0, 20, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0 )")
 		try:
 			conn.commit()
 		except:

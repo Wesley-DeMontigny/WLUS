@@ -763,6 +763,17 @@ class CollectibleComponent():
 		packet.write(self.CollectibleID)
 		return packet
 
+class Trigger():
+	def __init__(self):
+		self.triggerID = None
+	def get_packet(self, Packet_Type):
+		packet = BitStream()
+		if(self.triggerID == None):
+			packet.write(c_bit(False))
+		else:
+			packet.write(c_bit(True))
+			packet.write(self.triggerID)
+		return packet
 
 
 class GameObject():
@@ -775,6 +786,8 @@ class GameObject():
 		self.Zone = 0
 		self.customServerScript = None
 		self.respawn = None
+		self.onInteraction = None
+		self.Loading = False
 	def getLOT(self):
 		if(self.tag != "Drop"):
 			return unpack("l", self.components[0].LOT)[0]

@@ -52,9 +52,6 @@ class WorldServer(server.Server):
 		packet.write(c_int(slotID))
 		packet.write(c_bit(temporary))
 
-	def test(self):
-		None
-
 	def getSavedObjectsInZone(self, zoneID):
 		Objects = []
 		for id in self.SavedObjects:
@@ -67,6 +64,11 @@ class WorldServer(server.Server):
 		mission = self.DB.getApplicableMission(player, LOT)
 		if(mission is not None):
 			self.offerMission(player, mission, object)
+		elif(self.SavedObjects[object].onInteraction != None):
+			tokens = self.SavedObjects[object].onInteraction.split(" ")
+			if(tokens[0] == "zoneTransfer"):
+				session = self.DB.getSessionByCharacter(player)
+				self.loadWorld(player, int(tokens[1]), (str(session[2]), int(session[7])), loadAtDefaultSpawn=True)
 
 	def resurrect(self, playerID, rezImmediately=False):
 		zone = self.DB.getZoneOfObject(playerID)[0]
@@ -91,7 +93,7 @@ class WorldServer(server.Server):
 						obj = self.SavedObjects[id]
 					except Exception as e:
 						print("Error while serializing: ", e)
-					if(obj.tag != "Drop" or obj.tag != "Static"):
+					if("Drop" not in obj.tag.split(" ") and "Static" not in obj.tag.split(" ")):
 						self.RM.serialize(obj)
 						if(unpack("l", obj.components[0].LOT)[0] == 1):#If obj is a player
 							try:
@@ -102,7 +104,7 @@ class WorldServer(server.Server):
 								self.killPlayer(id)
 			except Exception as e:
 				pass
-			sleep(.5)
+			sleep(.3)
 
 	def smash(self, objectID, force, ghostOpacity, killerID, ignoreObjectVisibility = False):
 		zone = self.DB.getZoneOfObject(objectID)[0]
@@ -124,18 +126,29 @@ class WorldServer(server.Server):
 			respawn = None
 			custom_server_script = None
 			LOT = Object["LOT"]
+			zoneTransferInteraction = None
+			Tag = ""
+			SpawnIn = False#This is just until I can figure out how to disable rendering
 
 			if("is_smashable" in Object["LDF"]):
-				smashable = bool(Object["LDF"]["is_smashable"])
+				smashable = bool(int(Object["LDF"]["is_smashable"]))
+			if("renderDisabled" in Object["LDF"] and Object["LDF"]["renderDisabled"] == '1'):
+				Tag = Tag + "RenderDisabled "
 			if("respawn" in Object["LDF"]):
 				respawn = Object["LDF"]["respawn"]
+				SpawnIn = True
+			if("transferZoneID" in Object["LDF"]):
+				zoneTransferInteraction = int(Object["LDF"]["transferZoneID"])
+				SpawnIn = True
 			if("custom_server_script" in Object["LDF"]):
 				custom_server_script = Object["LDF"]["custom_script_server"]
 			if("spawntemplate" in Object["LDF"]):
 				LOT = int(Object["LDF"]["spawntemplate"])
-			self.log("Initialized Object With LOT " + str(LOT) + " In Zone " + str(Object["Zone"]))
-			self.createObject("", LOT, objectID, Object["Zone"], Object["XPos"], Object["YPos"], Object["ZPos"], Object["XRot"], Object["YRot"], Object["ZRot"], Object["WRot"], Register=False, Init=True,
-							  smashable=smashable, Respawn=respawn, serverScript=custom_server_script, Tag="Static")
+				SpawnIn = True
+			if(SpawnIn):
+				self.log("Initialized Object With LOT " + str(LOT) + " In Zone " + str(Object["Zone"]))
+				self.createObject("", LOT, objectID, Object["Zone"], Object["XPos"], Object["YPos"], Object["ZPos"], Object["XRot"], Object["YRot"], Object["ZRot"], Object["WRot"], Register=False, Init=True,
+								  smashable=smashable, Respawn=respawn, serverScript=custom_server_script, Scale=Object["Scale"], zoneTrasnferInteraction=zoneTransferInteraction, Tag=Tag)
 		self.log("Finished Initializing Objects")
 
 	def updatePlayerLoc(self, objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot):
@@ -148,8 +161,9 @@ class WorldServer(server.Server):
 			obj.components[1].yRot = c_float(yRot)
 			obj.components[1].zRot = c_float(zRot)
 			obj.components[1].wRot = c_float(wRot)
-		except:
-			pass
+			#self.DB.setCharacterLoc(objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot)
+		except Exception as e:
+			print(e)
 
 	def getZoneRecipients(self, zone):
 		connections = self.DB.getConnectionsInZone(zone)
@@ -160,7 +174,7 @@ class WorldServer(server.Server):
 
 	def killZoneCheck(self, objectID, yPos):
 		zone = self.DB.getZoneOfObject(objectID)[0]
-		if((zone == Zones.VENTURE_EXPLORER or zone == Zones.VENTURE_EXPLORER_RETURN) and yPos < 565):
+		if((zone == Zones.VENTURE_EXPLORER or zone == Zones.VENTURE_EXPLORER_RETURN) and yPos < 575):
 			self.killPlayer(objectID)
 		if(zone == Zones.AVANT_GARDENS and yPos < 255):
 			self.killPlayer(objectID)
@@ -250,7 +264,7 @@ class WorldServer(server.Server):
 			self.createObject(0, 0, 0, zoneID, 0, 0, 0, 0, 0, 0, 0, RO=obj, Register=False, Address=address)
 
 	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, Init=False, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
-					 collectibleID=2210, Tag="", Address=None, Respawn=None, serverScript=None):
+					 collectibleID=2210, Tag="", Address=None, Respawn=None, serverScript=None, triggerID=None, zoneTrasnferInteraction=None):
 		if(RO != None):
 			if(Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
@@ -258,6 +272,8 @@ class WorldServer(server.Server):
 			RO.tag = Tag
 			RO.respawn = Respawn
 			RO.customServerScript = serverScript
+			if(zoneTrasnferInteraction != None):
+				RO.onInteraction = "zoneTransfer " + str(zoneTrasnferInteraction)
 			self.SavedObjects[ObjectID] = RO
 			if(Init == False):
 				if(message == None):
@@ -279,6 +295,8 @@ class WorldServer(server.Server):
 			obj.objectID = c_longlong(ObjectID)
 			obj.LOT = c_long(LOT)
 			obj.Name = Name
+			if(triggerID != None):
+				obj.trigger = True
 			obj.NameLength = Name.__len__()
 			obj.Scale = c_float(Scale)
 			adjCompList = []
@@ -433,20 +451,25 @@ class WorldServer(server.Server):
 			# 	self.log("Model is not implemented")
 			# 	return
 			if(2 in adjCompList):
-				Render = RenderComponent()
-				Components.append(Render)
+				if("RenderDisabled" not in Tag.split(" ")):#Don't give it a render component if disabled
+					Render = RenderComponent()
+					Components.append(Render)
 			if(107 in adjCompList):
 				Comp107 = Component107()
 				Components.append(Comp107)
 			if(69 in adjCompList):
-				self.log("Tigger is not implemented")
-				return
+				trigger = Trigger()
+				trigger.triggerID = triggerID
+				Components.append(trigger)
+
 			Object = GameObject()
 			Object.Zone = zone
 			Object.tag = Tag
 			Object.components = Components
 			Object.respawn = Respawn
 			Object.customServerScript = serverScript
+			if(zoneTrasnferInteraction != None):
+				Object.onInteraction = "zoneTransfer " + str(zoneTrasnferInteraction)
 			if (Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
 			self.SavedObjects[ObjectID] = Object
@@ -475,6 +498,8 @@ class WorldServer(server.Server):
 		worldLoad.write(c_ulong(0x02))  # Internal Packet ID (ULong)
 		worldLoad.write(c_ubyte(0x00))  # Internal Packet ID (Uchar)
 		###END OF HEADER
+		if(worldID == 0):
+			worldID = 1000
 		worldLoad.write(c_ushort(int(worldID)))  # Write the last zone ID of the character
 		worldLoad.write(c_ushort(0x00))  # Map instance
 		worldLoad.write(c_ulong(0x00))  # Map clone
@@ -801,11 +826,22 @@ class WorldServer(server.Server):
 			xml = xml + '<mf/><char cc="'+str(characterData[21])+'"></char>'#Currency
 			xml = xml + '<lvl l="'+str(characterData[20])+'"/><flag/><pet/>'#Level and flag and pet
 			completedMissions = self.DB.getCompletedMissions(characterData[3])
-			if(completedMissions != None):#If there are completed missions write them to the xml
-				missionData = '<mis><done>'
-				for mission in completedMissions:
-					missionData = missionData + '<m id="'+str(mission[0])+'" cts="0" cct="1"/>'
-				missionData = missionData + "</done></mis>"
+			currentMissions = self.DB.getCurrentMissions(characterData[3])
+			if(completedMissions != None or currentMissions != None):#If there are completed missions or current missions write them to the xml
+				missionData = '<mis>'
+				if(completedMissions != None):
+					missionData = missionData + "<done>"
+					for mission in completedMissions:
+						missionData = missionData + '<m id="'+str(mission[0])+'" cts="0" cct="1"/>'
+					missionData = missionData + "</done>"
+				if(currentMissions != None):
+					missionData = missionData + "<cur>"
+					for mission in currentMissions:
+						print("mission")
+						missionData = missionData + '<m id="'+str(mission[0])+'" />'
+					missionData = missionData + "</cur></mis>"
+				else:
+					missionData = missionData + "</mis>"
 				xml = xml + missionData
 			else:
 				xml = xml + '</mis>'#If there are no missions write nothing
@@ -845,8 +881,7 @@ class WorldServer(server.Server):
 
 			self.log("Sent Detailed User Info")
 
-			t = Thread(target=self.createObjectsForWorld, args=(zoneID, address))
-			t.start()
+			self.createObjectsForWorld(zoneID, address)
 
 			#Add Base Data
 			Player = BaseData()
@@ -864,10 +899,10 @@ class WorldServer(server.Server):
 			ControllablePhysics.xPos = c_float(int(characterData[17]))
 			ControllablePhysics.yPos = c_float(int(characterData[18]))
 			ControllablePhysics.zPos = c_float(int(characterData[19]))
-			ControllablePhysics.xRot = c_float(0.0)
-			ControllablePhysics.yRot = c_float(0.0)
-			ControllablePhysics.zRot = c_float(0.0)
-			ControllablePhysics.wRot = c_float(0.0)
+			ControllablePhysics.xRot = c_float(int(characterData[31]))
+			ControllablePhysics.yRot = c_float(int(characterData[32]))
+			ControllablePhysics.zRot = c_float(int(characterData[33]))
+			ControllablePhysics.wRot = c_float(int(characterData[34]))
 			ControllablePhysics.onGround=True
 
 
@@ -946,11 +981,50 @@ class WorldServer(server.Server):
 				return
 			elif(str(msgID) == "767"):
 				return
+			elif(str(msgID) == "1474"):
+				return
 			elif(str(msgID) == "768"):
 				#SetGhostReferencePosition
 				xPos = message.read(c_float)
 				yPos = message.read(c_float)
 				zPos = message.read(c_float)
+			elif(str(msgID) == "249"):#Respond to mission
+				missionID = message.read(c_int)
+				player = message.read(c_longlong)
+				receiver = message.read(c_longlong)
+				reward = None
+				try:
+					reward = message.read(c_long)
+				except:
+					pass
+				if(reward != None):
+					print("Reward: " + str(reward))
+					None#TODO: Give Reward
+			elif(str(msgID) == "520"):
+				complete = message.read(c_bit)
+				state = message.read(c_int)
+				missionID = message.read(c_int)
+				responder = message.read(c_longlong)
+
+
+				task = self.DB.getMissionTaskType(missionID)[0][0]
+
+				NotifyMissionTask = self.GM.InitGameMessage(255, responder)
+				NotifyMissionTask.write(c_int(missionID))
+				NotifyMissionTask.write(c_int(1 << (task + 1)))
+				NotifyMissionTask.write(c_uint8(0))
+				self.send(NotifyMissionTask, address)
+
+				NotifyMission = self.GM.InitGameMessage(254, responder)
+				NotifyMission.write(c_int(missionID))
+				if(complete == False):
+					NotifyMission.write(c_int(2))  # Mission state: Active
+				else:
+					NotifyMission.write(c_int(4)) #Mission State: Complete
+				NotifyMission.write(c_bit(False))  # Sending rewards
+				self.send(NotifyMission, address)
+
+				self.DB.addCurrentMission(responder, missionID)
 			elif(str(msgID) == "124"):
 				#SelectSkill
 				fromSkillSet = message.read(c_bit)
@@ -987,7 +1061,10 @@ class WorldServer(server.Server):
 			yRot = info.read(c_float)
 			zRot = info.read(c_float)
 			wRot = info.read(c_float)
-			self.updatePlayerLoc(session[4], xPos, yPos, zPos, xRot, yRot, zRot, wRot)
+			try:
+				self.updatePlayerLoc(session[4], xPos, yPos, zPos, xRot, yRot, zRot, wRot)
+			except:
+				pass
 
 		else:
 			self.log("Received Unknown Packet:")
