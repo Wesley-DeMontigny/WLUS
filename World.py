@@ -19,8 +19,9 @@ from difflib import SequenceMatcher
 from ReplicaPacket import *
 from LDFReader import *
 import atexit
+import copy
 from LVLParser import *
-
+from ScriptedEvents import *
 
 
 
@@ -34,12 +35,33 @@ class WorldServer(server.Server):
 		self.unhandledGMs = []
 		self.RM = ReplicaManager(self)
 		self.GM = GameMessages(self)
+		self.EM = EventManager()
+
+		self.EM.registerEvent("Unlock Imagination Pickup", "GM_486", self.UnlockImaginationHandler)
 
 		updateLoop = Thread(target=self.updateLoop)
 		updateLoop.start()
 
 		initGameObjects = Thread(target=self.spawnInitWorldObjects)
 		initGameObjects.start()
+
+	def UnlockImaginationHandler(self, Arguments):
+		objectID = Arguments[0]
+		player = Arguments[1].read(c_longlong)
+		if(664 in self.SavedObjects[player].CurrentMissions and objectID not in self.SavedObjects):
+			task = self.DB.getMissionTaskType(664)[0][0]
+
+			NotifyMissionTask = self.GM.InitGameMessage(255, player)
+			NotifyMissionTask.write(c_int(664))
+			NotifyMissionTask.write(c_int(1 << (task + 1)))
+			update = BitStream()
+			update.write(c_float(2210+(objectID<<8)))
+			NotifyMissionTask.write(c_uint8(update.__len__()))
+			NotifyMissionTask.write(update)
+
+			session = self.DB.getSessionByCharacter(player)
+			self.send(NotifyMissionTask, (str(session[2]), int(session[7])))
+
 
 	def addSkill(self, objectID, skillID, AICombatWeight=0, fromSkillSet=False, castType=0, timeSecs=-1, timesCanCast=-1, slotID=-1, temporary=True):
 		packet = self.GM.InitGameMessage(124, objectID)
@@ -61,7 +83,7 @@ class WorldServer(server.Server):
 
 	def handleInteraction(self, multiInteractionUse, multiInteractionID, multiInteractionType, object, secondary, player):
 		LOT = int(self.SavedObjects[object].getLOT())
-		mission = self.DB.getApplicableMission(player, LOT)
+		mission = self.DB.getApplicableMission(LOT, self.SavedObjects[player].CurrentMissions, self.SavedObjects[player].CompletedMissions)
 		if(mission is not None):
 			self.offerMission(player, mission, object)
 		elif(self.SavedObjects[object].onInteraction != None):
@@ -148,7 +170,8 @@ class WorldServer(server.Server):
 			if(SpawnIn):
 				self.log("Initialized Object With LOT " + str(LOT) + " In Zone " + str(Object["Zone"]))
 				self.createObject("", LOT, objectID, Object["Zone"], Object["XPos"], Object["YPos"], Object["ZPos"], Object["XRot"], Object["YRot"], Object["ZRot"], Object["WRot"], Register=False, Init=True,
-								  smashable=smashable, Respawn=respawn, serverScript=custom_server_script, Scale=Object["Scale"], zoneTrasnferInteraction=zoneTransferInteraction, Tag=Tag)
+								  smashable=smashable, Respawn=respawn, serverScript=custom_server_script, Scale=Object["Scale"], zoneTrasnferInteraction=zoneTransferInteraction, Tag=Tag,
+								  spawnerObjectID=Object["ObjectID"])
 		self.log("Finished Initializing Objects")
 
 	def updatePlayerLoc(self, objectID, xPos, yPos, zPos, xRot, yRot, zRot, wRot):
@@ -264,7 +287,7 @@ class WorldServer(server.Server):
 			self.createObject(0, 0, 0, zoneID, 0, 0, 0, 0, 0, 0, 0, RO=obj, Register=False, Address=address)
 
 	def createObject(self, Name, LOT, ObjectID, zone, xPos, yPos, zPos, xRot, yRot, zRot, wRot, RO=None, Init=False, message=None, Register=True, Scale=1, currentHealth=1, maxHealth=1, currentArmor=0, maxArmor=0, currentImagination=0, maxImagination=0, smashable=False, level=1,
-					 collectibleID=2210, Tag="", Address=None, Respawn=None, serverScript=None, triggerID=None, zoneTrasnferInteraction=None):
+					 collectibleID=2210, Tag="", Address=None, Respawn=None, serverScript=None, triggerID=None, zoneTrasnferInteraction=None, spawnerObjectID=None):
 		if(RO != None):
 			if(Register == True):
 				self.DB.registerWorldObject(Name, LOT, ObjectID, zone, xPos,yPos, zPos, xRot, yRot, zRot, wRot, self.RM._current_network_id)
@@ -297,6 +320,9 @@ class WorldServer(server.Server):
 			obj.Name = Name
 			if(triggerID != None):
 				obj.trigger = True
+			if(spawnerObjectID != None):
+				obj.SpawnerObjID = c_longlong(spawnerObjectID)
+				obj.flag3 = True
 			obj.NameLength = Name.__len__()
 			obj.Scale = c_float(Scale)
 			adjCompList = []
@@ -958,6 +984,10 @@ class WorldServer(server.Server):
 			player = GameObject()
 			player.components = PlayerComponents
 			player.tag = "Player"
+			for mission in completedMissions:
+				player.CompletedMissions.append(mission)
+			for mission in currentMissions:
+				player.CompletedMissions.append(mission)
 			self.createObject(characterData[2], 1, int(characterData[3]), zoneID, int(characterData[17]), int(characterData[18]), int(characterData[19]), 0.0, 0.0, 0.0, 0.0, RO=player, message="Sent Player Construction")
 
 			self.GM.SendGameMessage(1642, int(characterData[3]), address)#Server done loading all objects
@@ -967,6 +997,7 @@ class WorldServer(server.Server):
 			message = BitStream(data[7:])
 			objID = message.read(c_longlong)
 			msgID = message.read(c_ushort)
+			self.EM.runEvent("GM_"+str(msgID), [objID, copy.deepcopy(message)])
 			if(str(msgID) == "1485"):
 				return
 			elif(str(msgID) == "41"):
@@ -998,14 +1029,12 @@ class WorldServer(server.Server):
 				except:
 					pass
 				if(reward != None):
-					print("Reward: " + str(reward))
-					None#TODO: Give Reward
+					print("Reward: " + str(reward))#TODO: Give award?
 			elif(str(msgID) == "520"):
 				complete = message.read(c_bit)
 				state = message.read(c_int)
 				missionID = message.read(c_int)
 				responder = message.read(c_longlong)
-
 
 				task = self.DB.getMissionTaskType(missionID)[0][0]
 
@@ -1019,12 +1048,15 @@ class WorldServer(server.Server):
 				NotifyMission.write(c_int(missionID))
 				if(complete == False):
 					NotifyMission.write(c_int(2))  # Mission state: Active
-				else:
-					NotifyMission.write(c_int(4)) #Mission State: Complete
+					self.SavedObjects[responder].CurrentMissions.append(missionID)
+					self.SavedObjects[responder].CurrentMissionStates[missionID] = 0
+				else:#Mission was completed
+					self.SavedObjects[responder].CurrentMissions.remove(missionID)
+					self.SavedObjects[responder].CompletedMissions.append(missionID)
+					del self.SavedObjects[responder].CurrentMissionStates[missionID]
+					NotifyMission.write(c_int(8)) #Mission state: Completed
 				NotifyMission.write(c_bit(False))  # Sending rewards
 				self.send(NotifyMission, address)
-
-				self.DB.addCurrentMission(responder, missionID)
 			elif(str(msgID) == "124"):
 				#SelectSkill
 				fromSkillSet = message.read(c_bit)

@@ -135,15 +135,16 @@ class databaseManager():
 
 		return q
 
-	def getApplicableMission(self, player, offerer):
+	def getApplicableMission(self, offerer, currentMissions, completedMissions):
 		conn = self.cdConn
 		c = conn.cursor()
-		completed = self.getCompletedMissions(player)
+		c.execute("SELECT id FROM Missions WHERE target_objectID = "+str(offerer))
+		finishMissions = c.fetchall()
+		for mission in finishMissions:
+			if(mission[0] in currentMissions):
+				return int(mission[0])
 		c.execute("SELECT id, prereqMissionID FROM Missions WHERE offer_objectID = "+str(offerer))
 		missions = c.fetchall()
-		completedMissions = []
-		for mission in completed:
-			completedMissions.append(int(mission[0]))
 		for mission in missions:
 			display = True
 			required = str(mission[1]).split("|")

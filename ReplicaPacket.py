@@ -788,6 +788,9 @@ class GameObject():
 		self.respawn = None
 		self.onInteraction = None
 		self.Loading = False
+		self.CurrentMissions = []
+		self.CompletedMissions = []
+		self.CurrentMissionStates = {}
 	def getLOT(self):
 		if(self.tag != "Drop"):
 			return unpack("l", self.components[0].LOT)[0]
