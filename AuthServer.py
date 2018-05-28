@@ -1,16 +1,16 @@
 import pyraknet.server as Server
 from pyraknet.messages import Address
-from pyraknet.bitstream import *
 from typing import Any, Callable
 from GameManager import *
 import AuthPackets
-from PacketHeaders import PacketHeader
 import threading
 from ServerUtilities import *
+from core import GameServer
+from GameDB import GameDB
 
 class AuthServer(GameServer):
-	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager):
-		super().__init__(address, max_connections, incoming_password, GameManager)
+	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager, CDClient : GameDB):
+		super().__init__(address, max_connections, incoming_password, GameManager, CDClient)
 		self.add_handler(Server.Event.UserPacket, self.handlePacket)
 		self.AuthHandlers = {}
 

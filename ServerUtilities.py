@@ -2,50 +2,148 @@ from pyraknet.bitstream import *
 from PacketHeaders import PacketHeader
 import os
 import socket
-import pyraknet.server as Server
-from GameManager import GameManager
-from pyraknet.messages import Address
-from enum import IntEnum
+from Enum import *
 
-class GameServer(Server.Server):
-	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager):
-		super().__init__(address, max_connections, incoming_password)
-		self.GameManager = GameManager
+"""
+This entire file is really just Misc functions and classes
+"""
+
+#Returns shirt lots needed for minifigure creation
+def getShirtID(shirtColor : int, shirtStyle : int):
+	shirtID = 0
+
+	if(shirtColor == 0):
+		if(shirtStyle >= 35):
+			shirtID = 5730
+		else:
+			shirtID = ClothingLOT.SHIRT_BRIGHT_RED.value
+	elif(shirtColor == 1):
+		if(shirtStyle >= 35):
+			shirtID = 5736
+		else:
+			shirtID = ClothingLOT.SHIRT_BRIGHT_BLUE.value
+	elif (shirtColor == 3):
+		if(shirtStyle >= 35):
+			shirtID = 5808
+		else:
+			shirtID = ClothingLOT.SHIRT_DARK_GREEN.value
+	elif (shirtColor == 5):
+		if(shirtStyle >= 35):
+			shirtID = 5754
+		else:
+			shirtID = ClothingLOT.SHIRT_BRIGHT_ORANGE.value
+	elif (shirtColor == 6):
+		if(shirtStyle >= 35):
+			shirtID = 5760
+		else:
+			shirtID = ClothingLOT.SHIRT_BLACK.value
+	elif (shirtColor == 7):
+		if(shirtStyle >= 35):
+			shirtID = 5766
+		else:
+			shirtID = ClothingLOT.SHIRT_DARK_STONE_GRAY.value
+	elif (shirtColor == 8):
+		if(shirtStyle >= 35):
+			shirtID = 5772
+		else:
+			shirtID = ClothingLOT.SHIRT_MEDIUM_STONE_GRAY.value
+	elif (shirtColor == 9):
+		if(shirtStyle >= 35):
+			shirtID = 5778
+		else:
+			shirtID = ClothingLOT.SHIRT_REDDISH_BROWN.value
+	elif (shirtColor == 10):
+		if(shirtStyle >= 35):
+			shirtID = 5784
+		else:
+			shirtID = ClothingLOT.SHIRT_WHITE.value
+	elif (shirtColor == 11):
+		if(shirtStyle >= 35):
+			shirtID = 5802
+		else:
+			shirtID = ClothingLOT.SHIRT_MEDIUM_BLUE.value
+	elif (shirtColor == 13):
+		if(shirtStyle >= 35):
+			shirtID = 5796
+		else:
+			shirtID = ClothingLOT.SHIRT_DARK_RED.value
+	elif (shirtColor == 14):
+		if(shirtStyle >= 35):
+			shirtID = 5802
+		else:
+			shirtID = ClothingLOT.SHIRT_EARTH_BLUE.value
+	elif (shirtColor == 15):
+		if(shirtStyle >= 35):
+			shirtID = 5808
+		else:
+			shirtID = ClothingLOT.SHIRT_EARTH_GREEN.value
+	elif (shirtColor == 16):
+		if(shirtStyle >= 35):
+			shirtID = 5814
+		else:
+			shirtID = ClothingLOT.SHIRT_BRICK_YELLOW.value
+	elif (shirtColor == 84):
+		if(shirtStyle >= 35):
+			shirtID = 5820
+		else:
+			shirtID = ClothingLOT.SHIRT_SAND_BLUE.value
+	elif (shirtColor == 96):
+		if(shirtStyle >= 35):
+			shirtID = 5826
+		else:
+			shirtID = ClothingLOT.SHIRT_SAND_GREEN.value
+
+	editedShirtColor = shirtID
+
+	if(shirtStyle >= 35):
+		finalShirtID = editedShirtColor + (shirtStyle - 35)
+	else:
+		finalShirtID = editedShirtColor + (shirtStyle - 1)
+
+	return finalShirtID
+
+#Returns pants LOTS needed for minifigure creation
+def getPantsID(pantsColor : int):
+	if(pantsColor == 0):
+		return ClothingLOT.PANTS_BRIGHT_RED.value
+	elif(pantsColor == 1):
+		return ClothingLOT.PANTS_BRIGHT_BLUE.value
+	elif(pantsColor == 3):
+		return ClothingLOT.PANTS_DARK_GREEN.value
+	elif(pantsColor == 5):
+		return ClothingLOT.PANTS_BRIGHT_ORANGE.value
+	elif(pantsColor == 6):
+		return ClothingLOT.PANTS_BLACK.value
+	elif(pantsColor == 7):
+		return ClothingLOT.PANTS_DARK_STONE_GRAY.value
+	elif(pantsColor == 8):
+		return ClothingLOT.PANTS_MEDIUM_STONE_GRAY.value
+	elif(pantsColor == 9):
+		return ClothingLOT.PANTS_REDDISH_BROWN.value
+	elif(pantsColor == 10):
+		return ClothingLOT.PANTS_WHITE.value
+	elif(pantsColor == 11):
+		return ClothingLOT.PANTS_MEDIUM_BLUE.value
+	elif(pantsColor == 13):
+		return ClothingLOT.PANTS_DARK_RED.value
+	elif(pantsColor == 14):
+		return ClothingLOT.PANTS_EARTH_BLUE.value
+	elif(pantsColor == 15):
+		return ClothingLOT.PANTS_EARTH_GREEN.value
+	elif(pantsColor == 16):
+		return ClothingLOT.PANTS_BRICK_YELLOW.value
+	elif(pantsColor == 84):
+		return ClothingLOT.PANTS_SAND_BLUE.value
+	elif(pantsColor == 96):
+		return ClothingLOT.PANTS_SAND_GREEN.value
+	else:
+		return 2508
+
 
 #This is used to write standard packet headers
 def writeHeader(Stream : WriteStream, Header : PacketHeader):
 	Stream.write(Header.value)
 
-#Ripped this straight off of PYLUS Because I had no idea how to make the char_size of strings equal to 1. Idk why it was removed as a parameter but whatever I guess
-class CString(Serializable):
-	def __init__(self, data='', allocated_length=None, length_type=None):
-		self.data = data
-		self.allocated_length = allocated_length
-		self.length_type = length_type
-
-	def serialize(self, stream):
-		stream.write(self.data if isinstance(self.data, bytes) else bytes(self.data, 'latin1'),
-					 allocated_length=self.allocated_length, length_type=self.length_type)
-
-	def deserialize(self, stream):
-		return stream.read(bytes, allocated_length=self.allocated_length, length_type=self.length_type).decode('latin1')
-
-class DisconnectionReasons(IntEnum):
-	UnknownError = 0x00
-	DuplicateLogin = 0x04
-	ServerShutdown = 0x05
-	ServerCannotLoadMap = 0x06
-	InvalidSessionKey = 0x07
-	CharacterNotFound = 0x09
-	CharacterCorruption = 0x0a
-	Kicked = 0x0b
-
-class LoginResponseEnum(IntEnum):
-	Success = 0x01
-	Banned = 0x02
-	InvalidPerm = 0x03
-	InvalidLoginInfo = 0x06
-	AccountLocked = 0x07
 
 def getHandshake(ClientVersion : int, ConnectionType : int):
 	packet = WriteStream()

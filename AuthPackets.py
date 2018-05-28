@@ -1,10 +1,12 @@
 import pyraknet.server as Server
 from pyraknet.messages import Address
 from pyraknet.bitstream import *
+from Enum import *
 from GameManager import Session, SessionState
 from ServerUtilities import *
 import uuid
 from passlib.hash import sha256_crypt
+from core import GameServer, CString
 
 def HandleHandshake(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)
@@ -19,24 +21,22 @@ def HandleLogin(Server : GameServer, data : bytes, address : Address):
 	username = stream.read(str, allocated_length=33)
 	password = stream.read(str, allocated_length=41)
 
-	packet, response, userKey, ID = LoginResponse(Server, username, password)
+	packet, response, userKey = LoginResponse(Server, username, password)
 	Server.send(packet, address)
 	if(response == LoginResponseEnum.Success):
-		session = Session()
+		session = Session(Server.Game)
 		session.address = address
 		session.userKey = userKey
-		session.accountID = ID
 		session.State = SessionState.LoggingIn
 		session.accountUsername = username
-		Server.GameManager.activeSessions.append(session)
+		Server.Game.Sessions.append(session)
 
 def LoginResponse(Server : Server, Username : str, Password: str):
 	packet = WriteStream()
-	DB = Server.GameManager.ServerDB
-	userInfo = DB.Tables["Accounts"].select(["Banned", "Password", "ID"], "Username = '{}'".format(Username))[0]
+	userInfo = Server.Game.getAccountByUsername(Username)
 	print("Attempted login with username '{}' and password '{}'".format(Username, Password))
 	response = None
-	if (userInfo["Banned"] != 1 and sha256_crypt.verify(Password, userInfo["Password"])):#Success
+	if(userInfo is not None and userInfo.Banned != True and sha256_crypt.verify(Password, userInfo.Password)):#Success
 		response = LoginResponseEnum.Success
 		print("Login accepted!")
 	else:#Just put wrong info for now
@@ -64,4 +64,4 @@ def LoginResponse(Server : Server, Username : str, Password: str):
 	packet.write("Hello there ;D", length_type=c_uint16)#Custom error message
 	packet.write(c_uint16(0))
 	packet.write(c_ulong(4))
-	return packet, response, userKey[0:18], userInfo["ID"]
+	return packet, response, userKey[0:18]
