@@ -3,6 +3,11 @@ from GameManager import *
 from Enum import *
 import time
 from core import GameServer, CString
+from AccountManager import Account
+from xml.etree import ElementTree
+from LDF import LDF, from_ldf
+import copy
+import zlib
 
 def HandleHandshake(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)
@@ -20,7 +25,7 @@ def HandleSessionKey(Server : GameServer, data : bytes, address : Address):
 		print(address, "sent the following valid key:", userKey)
 		session.State = SessionState.CharacterScreen
 	else:
-		Server.send(getDisconnect(DisconnectionReasons.InvalidSessionKey.value))
+		Server.send(getDisconnect(DisconnectionReasons.InvalidSessionKey.value), address)
 
 def HandleMinifigListRequest(Server : GameServer, data : bytes, address : Address):
 	session = Server.Game.getSessionByAddress(address)
@@ -31,23 +36,23 @@ def HandleMinifigListRequest(Server : GameServer, data : bytes, address : Addres
 		packet.write(c_uint8(len(characters)))
 		packet.write(c_uint8(0))
 		for character in characters:
-			packet.write(c_longlong(character.ObjectID))#Object ID
+			packet.write(c_longlong(character.ObjectConfig["ObjectID"]))#Object ID
 			packet.write(c_ulong(0))
-			packet.write(character.Name, allocated_length=33)#Character Name
+			packet.write(character.ObjectConfig["Name"], allocated_length=33)#Character Name
 			packet.write("", allocated_length=33)#Name to show up in paranthesis
 			packet.write(c_bool(False))#Name rejected
 			packet.write(c_bool(False))#Free to play
 			packet.write(CString("", allocated_length=10))#Unknown
-			packet.write(c_ulong(character.ShirtColor))
-			packet.write(c_ulong(character.ShirtStyle))
-			packet.write(c_ulong(character.PantsColor))
-			packet.write(c_ulong(character.HairStyle))
-			packet.write(c_ulong(character.HairColor))
-			packet.write(c_ulong(character.lh))
-			packet.write(c_ulong(character.rh))
-			packet.write(c_ulong(character.Eyebrows))
-			packet.write(c_ulong(character.Eyes))
-			packet.write(c_ulong(character.Mouth))
+			packet.write(c_ulong(character.ObjectConfig["ShirtColor"]))
+			packet.write(c_ulong(character.ObjectConfig["ShirtStyle"]))
+			packet.write(c_ulong(character.ObjectConfig["PantsColor"]))
+			packet.write(c_ulong(character.ObjectConfig["HairStyle"]))
+			packet.write(c_ulong(character.ObjectConfig["HairColor"]))
+			packet.write(c_ulong(character.ObjectConfig["lh"]))
+			packet.write(c_ulong(character.ObjectConfig["rh"]))
+			packet.write(c_ulong(character.ObjectConfig["Eyebrows"]))
+			packet.write(c_ulong(character.ObjectConfig["Eyes"]))
+			packet.write(c_ulong(character.ObjectConfig["Mouth"]))
 			packet.write(c_ulong(0))
 			packet.write(c_uint16(character.Zone))
 			packet.write(c_uint16(0))#MapInstance
@@ -82,6 +87,127 @@ def HandleMinifigureCreation(Server : GameServer, data : bytes, address : Addres
 	time.sleep(.5)
 	SendCreationResponse(Server, address, MinifigureCreationResponse.Success)
 	HandleMinifigListRequest(Server, b"", address)
+
+def HandleMinifigureDeletion(Server : GameServer, data : bytes, address : Address):
+	stream = ReadStream(data)
+	session : Session = Server.Game.getSessionByAddress(address)
+	ObjectID = stream.read(c_longlong)
+	account : Account = Server.Game.getAccountByUsername(session.accountUsername)
+	for i in range(len(account.Characters)):
+		if(account.Characters[i].ObjectConfig["ObjectID"] == ObjectID):
+			del account.Characters[i]
+			print("Deleted Character {}".format(ObjectID))
+			return
+
+def HandleJoinWorld(Server : GameServer, data : bytes, address : Address):
+	stream = ReadStream(data)
+	ObjectID = stream.read(c_longlong)
+	player : Character = Server.Game.getCharacterByObjectID(ObjectID)
+	if(player.Zone == ZoneID.NoZone.value):
+		player.Zone = ZoneID.VentureExplorer.value
+	SpawnAtDefault = False
+	if(player.ObjectConfig["Position"] == Vector3(0,0,0)):
+		SpawnAtDefault = True
+	LoadWorld(Server, player, player.Zone, address, SpawnAtDefault=SpawnAtDefault)
+
+def LoadWorld(Server : GameServer, Player : Character, zoneID : ZoneID, address : Address, SpawnAtDefault : bool = False):
+	packet = WriteStream()
+	print("Sending Player {} to Zone {}".format(Player.ObjectConfig["ObjectID"], zoneID))
+	writeHeader(packet, PacketHeader.WorldInfo)
+	zone : Zone = Server.Game.getZoneByID(zoneID)
+	packet.write(c_uint16(zoneID))
+	packet.write(c_uint16(0))#MapInstance
+	packet.write(c_uint16(0))#MapClone
+	checksum = getZoneChecksum(zoneID)
+	for byte in checksum:
+		packet.write(c_ubyte(byte))
+	if(SpawnAtDefault):
+		packet.write(c_float(zone.SpawnLocation.X))
+		packet.write(c_float(zone.SpawnLocation.Y))
+		packet.write(c_float(zone.SpawnLocation.Z))
+	else:
+		packet.write(c_float(Player.ObjectConfig["Position"].X))
+		packet.write(c_float(Player.ObjectConfig["Position"].Y))
+		packet.write(c_float(Player.ObjectConfig["Position"].Z))
+	if(zone.ActivityWorld):
+		packet.write(c_ulong(4))
+	else:
+		packet.write(c_ulong(0))
+	session : Session = Server.Game.getSessionByAddress(address)
+	session.ObjectID = Player.ObjectConfig["ObjectID"]
+	Player.Zone = zoneID
+	Server.send(packet, address)
+
+def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
+	packet = WriteStream()
+	session : Session = Server.Game.getSessionByAddress(address)
+	player : Character = Server.Game.getCharacterByObjectID(session.ObjectID)
+	ldf = LDF()
+	ldf.registerKey("levelid", player.Zone, 1)
+	ldf.registerKey("objid", player.ObjectConfig["ObjectID"], 9)
+	ldf.registerKey("template", player.ObjectConfig["LOT"], 1)
+	ldf.registerKey("name", player.ObjectConfig["Name"], 0)
+
+	root = ElementTree.Element("obj")
+	root.set("v", "1")
+	buff = ElementTree.SubElement(root, "buff")
+	skill = ElementTree.SubElement(root, "skill")
+
+	inv = ElementTree.SubElement(root, "inv")
+	bag = ElementTree.SubElement(inv, "bag")
+	bagInfo = ElementTree.SubElement(bag, "b")
+	bagInfo.set("t", "0")
+	bagInfo.set("m", str(player.Inventory.Space))
+	items = ElementTree.SubElement(inv, "items")
+	itemIn = ElementTree.SubElement(items, "in")
+	for item in player.Inventory.InventoryList:
+		i = ElementTree.SubElement(itemIn, "i")
+		i.set("l", str(item["LOT"]))
+		i.set("id", str(item["ObjectID"]))
+		i.set("s", str(item["Slot"]))
+		i.set("c", str(item["Quantity"]))
+		i.set("b", str(int(item["Linked"])))
+		i.set("eq", str(int(item["Equipped"])))
+
+	mf = ElementTree.SubElement(root, "mf")
+	char = ElementTree.SubElement(root, "char")
+	char.set("cc", str(player.Currency))
+	char.set("ls", str(player.UniverseScore))
+	lvl = ElementTree.SubElement(root, "lvl")
+	lvl.set("l", str(player.Level))
+
+	pets = ElementTree.SubElement(root, "pet")
+
+	mis = ElementTree.SubElement(root, "mis")
+	done = ElementTree.SubElement(mis, "done")
+	for mission in player.CompletedMissionIDs:
+		m = ElementTree.SubElement(done, "m")
+		m.set("id", str(mission))
+		m.set("cct", "1")
+		m.set("cts", "0")
+	cur = ElementTree.SubElement(mis, "cur")
+	for mission in player.CurrentMissions:
+		m = ElementTree.SubElement(cur, "m")
+		m.set("id", str(mission.MissionID))
+		sv = ElementTree.SubElement(m, "sv")
+		sv.set("v", str(mission.Progress))
+
+	ldf.registerKey("xmlData", root, 13)
+
+	buffer = WriteStream()
+	ldf.writeLDF(buffer)
+	bufferLen = len(copy.deepcopy(buffer).__bytes__())
+
+	#print(from_ldf(ReadStream(copy.deepcopy(buffer).__bytes__())))
+
+	packet = WriteStream()
+	writeHeader(packet, PacketHeader.DetailedUserInfo)
+	packet.write(c_ulong(bufferLen+5))
+	packet.write(c_bool(False))
+	packet.write(buffer.__bytes__())
+
+	Server.send(packet, address)
+	print("Sent Detailed User Info to Player {}".format(player.ObjectConfig["ObjectID"]))
 
 
 def SendCreationResponse(Server : GameServer, address : Address, Response : MinifigureCreationResponse):

@@ -54,7 +54,9 @@ class LoginResponseEnum(IntEnum):
 	InvalidLoginInfo = 0x06
 	AccountLocked = 0x07
 
+
 class ZoneID(IntEnum):
+	NoZone = 0
 	VentureExplorer = 1000
 	ReturnToVentureExplorer = 1001
 	AvantGardens = 1100

@@ -9,17 +9,21 @@ import os
 import time
 import sqlite3
 from GameDB import GameDB
-import pyraknet
+from AccountManager import AccountManager
+from LDF import *
 
-def pickleGame(GM):
-	pickledFile = open(os.getcwd() + "/Game.pickle", "wb")
+def serializeObject(Object : any, Filename : str):
+	pickledFile = open(os.getcwd() + "/" + Filename, "wb")
 	pickle.dump(GM, pickledFile, pickle.HIGHEST_PROTOCOL)
 
-def saveGame(GM):
+def save(GM, Accounts):
 	while True:
-		pickleGame(GM)
-		print("Game Was Autosaved")
-		time.sleep(30)
+		serializeObject(GM, "Game.pickle")
+		#print("Game Was Autosaved")
+		serializeObject(Accounts, "Accounts.pickle")
+		#print("Accounts Were Autosaved")
+		time.sleep(15)
+
 
 if __name__ == "__main__":
 
@@ -28,17 +32,32 @@ if __name__ == "__main__":
 	if(pickledGame.exists() != True):
 		GM = GameManager()
 
-		GM.registerAccount("wesley", "play")
-
-		pickleGame(GM)
+		serializeObject(GM, "Game.pickle")
+		print("Created and Serialized Game Manager")
 	else:
-		print("Loaded Pickled Game")
+		print("Loaded Pickled Game File")
 		pickledFile = open(pickledGame, "rb")
 		GM = pickle.load(pickledFile)
 		GM.purgePlayers()
 		GM.clearSessions()
 
-	pickleThread = threading.Thread(target=saveGame, args=[GM,])
+	pickledAccounts = Path(os.getcwd() + "/Accounts.pickle")
+	Accounts = None
+	if(pickledAccounts.exists() != True):
+		Accounts = AccountManager()
+
+		Accounts.registerAccount("wesley", "play")
+
+		serializeObject(Accounts, "Accounts.pickle")
+		print("Created and Serialized Account Manager")
+	else:
+		print("Loaded Pickled Accounts File")
+		pickledFile = open(pickledAccounts, "rb")
+		Accounts = pickle.load(pickledFile)
+
+	GM.AccountManager = Accounts
+
+	pickleThread = threading.Thread(target=save, args=[GM,Accounts])
 	pickleThread.start()
 
 	CDClientDB : GameDB = GameDB(sqlite3.connect("resources/cdclient.sqlite", check_same_thread=False))
