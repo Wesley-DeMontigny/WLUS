@@ -1,13 +1,28 @@
 from pyraknet.messages import Address
 from pyraknet.bitstream import *
 import random
-from Enum import SessionState, ZoneID
+from typing import Callable
+from Enum import SessionState, ZoneID, ReplicaTypes
+from GameDB import *
+from ObjectConstructor import WriteReplica
+from structures import Vector3, Vector4
+
+def Nothing(*args):
+	pass
 
 class GameObject():
 	def __init__(self, Parent):
 		self.Parent = Parent
 		self.ObjectConfig : dict = {"LOT":0,"ObjectID":None,"Name":None}
+		self.EventHandlers : dict = {}
 		self.Tag : str = None
+	def HandleEvent(self, EventID : str, Stream : ReadStream, address : Address):
+		if(EventID in self.EventHandlers):
+			self.EventHandlers[EventID](Stream, address)
+		else:
+			print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
+	def RegisterEvent(self, EventID : str, Handler : Callable):
+		self.EventHandlers[EventID] = Handler
 
 class Zone():
 	def __init__(self, Parent):
@@ -36,54 +51,31 @@ class Zone():
 				del GameObject
 
 
-class Vector3():
-	def __init__(self, X : float, Y : float, Z : float):
-		self.X : float = X
-		self.Y : float = Y
-		self.Z : float = Z
-	def translate(self, X : float, Y : float, Z : float):
-		self.X += X
-		self.Y += Y
-		self.Z += Z
-	def set(self, X : float, Y : float, Z : float):
-		self.X = X
-		self.Y = Y
-		self.Z = Z
-
-class Vector4():
-	def __init__(self, X : float, Y : float, Z : float, W : float):
-		self.X : float = X
-		self.Y : float = Y
-		self.Z : float = Z
-		self.W : float = W
-	def translate(self, X : float, Y : float, Z : float, W : float):
-		self.X += X
-		self.Y += Y
-		self.Z += Z
-		self.W += W
-	def set(self, X : float, Y : float, Z : float, W : float):
-		self.X = X
-		self.Y = Y
-		self.Z = Z
-		self.W = W
-
 class ReplicaObject(GameObject):
 	def __init__(self, Parent):
 		super().__init__(Parent)
 		self.Components = []
 		self.ObjectConfig["Position"] = Vector3(0,0,0)
 		self.ObjectConfig["Rotation"] = Vector4(0,0,0,0)
+		self.ObjectConfig["Scale"] = 1
+		self.ObjectConfig["SpawnerID"] = None
 
 	def write_construction(self, stream: WriteStream):
-		for Component in self.Components:
-			stream.write(Component.construct(self.ObjectConfig))
+		WriteReplica(stream, self.Components, self.ObjectConfig, ReplicaTypes.Construction)
 
 	def serialize(self, stream: WriteStream):
-		for Component in self.Components:
-			stream.write(Component.serialize(self.ObjectConfig))
+		WriteReplica(stream, self.Components, self.ObjectConfig, ReplicaTypes.Serialization)
 
 	def on_destruction(self):
 		print("Destroying Object {}".format(self.ObjectConfig["ObjectID"]))
+
+	def findComponentsFromCDClient(self, CDClient : GameDB):
+		componentsRegistry : DBTable = CDClient.Tables["ComponentsRegistry"]
+		components = componentsRegistry.select(["component_type"], "id = {}".format(self.ObjectConfig["LOT"]))
+		compList = []
+		for row in components:
+			compList.append(row["component_type"])
+		return compList
 
 class Session():
 	def __init__(self, Parent):
@@ -95,6 +87,35 @@ class Session():
 		self.address : Address = None
 		self.isAdmin : bool = False
 		self.State : SessionState = None
+
+class CharacterStatistics():
+	def __init__(self):
+		self.CurrencyCollected : int = 0
+		self.BricksCollected : int = 0
+		self.SmashablesSmashed: int = 0
+		self.QuickBuildsDone: int = 0
+		self.EnemiesSmashed: int = 0
+		self.RocketsUsed : int = 0
+		self.PetsTamed : int = 0
+		self.ImaginationCollected : int = 0
+		self.HealthCollected : int = 0
+		self.ArmorCollected : int = 0
+		self.DistanceTraveled : int = 0
+		self.TimesDied : int = 0
+		self.DamageTaken : int = 0
+		self.DamageHealed : int = 0
+		self.ArmorRepaired : int = 0
+		self.ImaginationRestored : int = 0
+		self.ImaginationUsed : int = 0
+		self.DistanceDriven : int = 0
+		self.TimeAirborneInCar : int = 0
+		self.RacingImaginationCollected : int = 0
+		self.RacingImaginationCratesSmashed : int = 0
+		self.RaceCarBoosts : int = 0
+		self.RacingSmashablesSmashed : int = 0
+		self.RacesFinished : int = 0
+		self.RacesWon : int = 0
+		self.CarWrecks : int = 0
 
 class Mission():
 	def __init__(self, Parent):
@@ -108,28 +129,44 @@ class Mission():
 		self.Target : int = 0
 		self.Progress : int = 0
 	def Complete(self):
-		self.Parent.UniverseScore += self.RewardUniverseScore
-		self.Parent.Currency += self.RewardCurrency
+		self.Parent.ObjectConfig["UniverseScore"] += self.RewardUniverseScore
+		self.Parent.ObjectConfig["Currency"] += self.RewardCurrency
 		for item in self.RewardItems:
-			self.Parent.Inventory.addItem(item)
-		self.Parent.CompletedMissionIDs.append(self.MissionID)
+			self.Parent.ObjectConfig["Inventory"].addItem(item)
+		self.Parent.ObjectConfig["CompletedMissions"].append(self.MissionID)
 		try:
-			for i in range(len(self.Parent.CurrentMissions)):
-				if(self.Parent.CurrentMissions[i] == self):
-					del self.Parent.CurrentMissions[i]
+			for i in range(len(self.Parent.ObjectConfig["CurrentMissions"])):
+				if(self.Parent.ObjectConfig["CurrentMissions"][i] == self):
+					del self.Parent.ObjectConfig["CurrentMissions"][i]
 		except:
 			pass
 
+class Humanoid(ReplicaObject):
+	def __init__(self, Parent):
+		super().__init__(Parent)
+		self.ObjectConfig["Health"] = 1
+		self.ObjectConfig["MaxHealth"] = 1
+		self.ObjectConfig["Armor"] = 0
+		self.ObjectConfig["MaxArmor"] = 0
+		self.ObjectConfig["Imagination"] = 0
+		self.ObjectConfig["MaxImagination"] = 0
+		self.ObjectConfig["Faction"] = 0
+		self.ObjectConfig["isSmashable"] = True
 
-class Character(ReplicaObject):
+	def Damage(self, amount):
+		self.ObjectConfig["Health"] -= amount
+
+class Character(Humanoid):
 	def __init__(self, Parent):
 		super().__init__(Parent)
 		self.Zone : int = 0
-		self.CurrentMissions : list = []
-		self.CompletedMissionIDs : list = []
-		self.Level : int = 0
-		self.UniverseScore : int = 0
-		self.Currency : int = 0
+		self.ObjectConfig["CurrentMissions"] = []
+		self.ObjectConfig["CompletedMissions"] = []
+		self.ObjectConfig["Level"] = 0
+		self.ObjectConfig["AccountID"] = Parent.AccountID
+		self.ObjectConfig["UniverseScore"] = 0
+		self.ObjectConfig["Currency"] = 0
+		self.ObjectConfig["CharacterStatistics"] = CharacterStatistics()
 		self.ObjectConfig["LOT"] = 1
 		self.ObjectConfig["ShirtColor"] = 0
 		self.ObjectConfig["ShirtStyle"] = 0
@@ -141,7 +178,16 @@ class Character(ReplicaObject):
 		self.ObjectConfig["Eyebrows"] = 0
 		self.ObjectConfig["Eyes"] = 0
 		self.ObjectConfig["Mouth"] = 0
-		self.Inventory : Inventory = Inventory(self)
+		self.ObjectConfig["Velocity"] = Vector3(0,0,0)
+		self.ObjectConfig["AngularVelocity"] = Vector3(0,0,0)
+		self.ObjectConfig["OnGround"] = False
+		self.ObjectConfig["MaxHealth"] = 4
+		self.ObjectConfig["Health"] = 4
+		self.ObjectConfig["Faction"] = 1
+		self.ObjectConfig["isSmashable"] = False
+		self.ObjectConfig["Inventory"] = Inventory(self)
+
+		self.RegisterEvent("GM_05cd", Nothing)
 
 class Inventory():
 	def __init__(self, Parent):
@@ -175,10 +221,15 @@ class GameManager():
 		self.Zones : list = []
 
 	def purgePlayers(self):
+		purgeCount = 0
 		for Zone in self.Zones:
-			for Object in Zone.Objects:
+			for i in range(len(Zone.Objects)):
+				Object = Zone.Objects[i]
 				if(Object.ObjectConfig["ObjectID"] == 1):
-					del Object
+					del Zone.Objects[i]
+					purgeCount += 1
+		print("Purged {} Players From Game".format(purgeCount))
+
 
 	def registerSession(self, Session : Session):
 		self.Sessions.append(Session)
@@ -197,6 +248,22 @@ class GameManager():
 
 	def getCharacterByObjectID(self, ObjectID : int):
 		return self.AccountManager.getCharacterByObjectID(ObjectID)
+
+	def getObjectByID(self, ObjectID : int):
+		for Zone in self.Zones:
+			for GameObject in Zone.Objects:
+				if(GameObject.ObjectConfig["ObjectID"] == ObjectID):
+					return GameObject
+		return None
+
+	def deleteObjectByID(self, ObjectID : int):
+		for Zone in self.Zones:
+			for i in range(len(Zone.Objects)):
+				if(Zone.Objects[i].ObjectConfig["ObjectID"] == ObjectID):
+					if(Zone.Objects[i] is ReplicaObject):
+						Zone.Objects[i].on_destruction()
+					del Zone.Objects[i]
+		return None
 
 	def getSessionByCharacterID(self, characterID):
 		for session in self.Sessions:

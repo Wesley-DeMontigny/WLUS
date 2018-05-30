@@ -10,7 +10,6 @@ import time
 import sqlite3
 from GameDB import GameDB
 from AccountManager import AccountManager
-from LDF import *
 
 def serializeObject(Object : any, Filename : str):
 	pickledFile = open(os.getcwd() + "/" + Filename, "wb")
@@ -59,6 +58,7 @@ if __name__ == "__main__":
 
 	pickleThread = threading.Thread(target=save, args=[GM,Accounts])
 	pickleThread.start()
+
 
 	CDClientDB : GameDB = GameDB(sqlite3.connect("resources/cdclient.sqlite", check_same_thread=False))
 	Auth = AuthServer.AuthServer(("localhost", 1001), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB)

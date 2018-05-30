@@ -9,7 +9,7 @@ from ServerUtilities import *
 import pyraknet
 from GameManager import Zone, Vector3
 from pyraknet.replicamanager import *
-from core import GameServer
+from core import GameServer, GameReplicaManager
 
 class WorldServer(GameServer):
 	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager, CDClient : GameDB):
@@ -23,6 +23,9 @@ class WorldServer(GameServer):
 		self.registerWorldHandler(PacketHeader.ClientMinifigureCreateRequest.value, WorldPackets.HandleMinifigureCreation)
 		self.registerWorldHandler(PacketHeader.ClientDeleteMinifigureRequest.value, WorldPackets.HandleMinifigureDeletion)
 		self.registerWorldHandler(PacketHeader.ClientEnterWorld.value, WorldPackets.HandleJoinWorld)
+		self.registerWorldHandler(PacketHeader.RoutedPacket.value, WorldPackets.HandleRoutedPacket)
+		self.registerWorldHandler(PacketHeader.ClientGameMessage.value, WorldPackets.HandleGameMessage)
+		self.registerWorldHandler(PacketHeader.ClientPositionUpdate.value, WorldPackets.UpdateCharacterPositon)
 		self.registerWorldHandler(PacketHeader.ClientLoadComplete.value, WorldPackets.HandleDetailedLoad)
 		self.registerWorldHandler(PacketHeader.Handshake.value, WorldPackets.HandleHandshake)
 		print("World Server Started")
@@ -35,10 +38,10 @@ class WorldServer(GameServer):
 		else:
 			print("Header {} Has No Handler!".format(data[0:8]))
 	def registerReplicaManager(self, WorldID : int):
-		self.ReplicaManagers[WorldID] = ReplicaManager(self)
+		self.ReplicaManagers[WorldID] = GameReplicaManager(self)
 	def registerWorldHandler(self, header : PacketHeader, function : Callable):
 		self.WorldHandlers[header] = function
-	def registerZone(self, WorldID : int, lvlFiles : list = None, SpawnLocation : Vector3 = Vector3(0,0,0)):
+	def registerZone(self, WorldID : int, lvlFiles : list = None, SpawnLocation : Vector3 = Vector3(0,0,0), Checksum : list = None):
 		World = Zone(self.Game)
 		World.ZoneID = WorldID
 		World.SpawnLocation = SpawnLocation

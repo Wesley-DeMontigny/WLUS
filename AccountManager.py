@@ -11,6 +11,7 @@ class AccountManager():
 		account = Account(self)
 		account.Username = Username
 		account.Password = sha256_crypt.encrypt(Password)
+		account.AccountID = len(self.Accounts) + 1
 		account.Banned = False
 		self.Accounts.append(account)
 
@@ -35,6 +36,7 @@ class Account():
 		self.Password: str = None
 		self.Banned: bool = False
 		self.Characters: list = []
+		self.AccountID : int = 0
 
 	def CreateMinifigure(self, Name: str, ShirtColor: int, ShirtStyle: int, PantsColor: int, HairColor: int,
 						 HairStyle: int, lh: int, rh: int, Eyebrows: int, Eyes: int, Mouth: int):
@@ -53,6 +55,6 @@ class Account():
 		Minifigure.ObjectConfig["Mouth"] = Mouth
 		shirtLOT = getShirtID(ShirtColor, ShirtStyle)
 		pantsLOT = getPantsID(PantsColor)
-		Minifigure.Inventory.addItem(shirtLOT, Equipped=True)
-		Minifigure.Inventory.addItem(pantsLOT, Equipped=True)
+		Minifigure.ObjectConfig["Inventory"].addItem(shirtLOT, Equipped=True)
+		Minifigure.ObjectConfig["Inventory"].addItem(pantsLOT, Equipped=True)
 		self.Characters.append(Minifigure)

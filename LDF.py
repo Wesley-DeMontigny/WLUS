@@ -1,6 +1,6 @@
 from pyraknet.bitstream import *
 from xml.etree import ElementTree
-from core import CString
+from structures import CString
 
 class LDF():
 	def __init__(self):
@@ -14,7 +14,10 @@ class LDF():
 			name = key[0]
 			value = key[1]
 			type = key[2]
-			Stream.write(name, length_type=c_ubyte)
+			Stream.write(c_uint8(len(name) * 2))
+			for char in name:
+				Stream.write(char.encode('latin1'))
+				Stream.write(b'\0')
 			Stream.write(c_ubyte(type))
 			if(type == 0):
 				Stream.write(value, length_type=c_uint)
@@ -29,8 +32,10 @@ class LDF():
 			elif(type == 8 or type == 9):
 				Stream.write(c_int64(value))
 			elif(type == 13):
-				xmlStr = ElementTree.tostring(value)
-				Stream.write(CString(xmlStr, length_type=c_ulong))
+				xmlStr = bytes(ElementTree.tostring(value))
+				xmlStr = b'<?xml version="1.0">' + xmlStr
+				Stream.write(c_ulong(xmlStr.__len__()))
+				Stream.write(xmlStr)
 
 
 #This function is ripped straight from lcdr util
@@ -38,7 +43,9 @@ def from_ldf(ldf):
 	ldf_dict = {}
 	if isinstance(ldf, ReadStream):
 		for _ in range(ldf.read(c_uint)):
-			key = ldf.read(str, length_type=c_ubyte)
+			key_length = ldf.read(c_ubyte)
+			encoded_key = ldf.read(bytes, length=key_length)
+			key = encoded_key.decode("utf-16-le")
 			data_type_id = ldf.read(c_ubyte)
 			if data_type_id == 0:
 				value = ldf.read(str, length_type=c_uint)

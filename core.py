@@ -2,6 +2,9 @@ import pyraknet
 import GameManager
 import GameDB
 from pyraknet.bitstream import *
+from pyraknet.replicamanager import ReplicaManager
+from pyraknet.messages import Address, Message
+from typing import Any, Iterable
 
 class GameServer(pyraknet.server.Server):
 	def __init__(self, address: pyraknet.messages.Address, max_connections: int, incoming_password: bytes, GameManager : GameManager.GameManager, CDClient : GameDB.GameDB):
@@ -9,16 +12,29 @@ class GameServer(pyraknet.server.Server):
 		self.Game : GameManager = GameManager
 		self.CDClient : GameDB.GameDB = CDClient
 
-#Ripped this straight off of PYLUS Because I had no idea how to make the char_size of strings equal to 1. Idk why it was removed as a parameter but whatever I guess
-class CString(Serializable):
-	def __init__(self, data='', allocated_length=None, length_type=None):
-		self.data = data
-		self.allocated_length = allocated_length
-		self.length_type = length_type
+class GameReplicaManager(ReplicaManager):
+	def __init__(self, Server : GameServer):
+		super().__init__(Server)
+	def remove_participant(self, address : Address):
+		self._participants.discard(address)
+	def construct(self, obj: Any, new: bool=True, recipients: Iterable[Address]=None):
+		self._construct(obj, new, recipients)
+	def serialize(self, obj: Any) -> None:
 
-	def serialize(self, stream):
-		stream.write(self.data if isinstance(self.data, bytes) else bytes(self.data, 'latin1'),
-					 allocated_length=self.allocated_length, length_type=self.length_type)
+		out = WriteStream()
+		out.write(c_ubyte(Message.ReplicaManagerSerialize))
+		out.write(c_ushort(self._network_ids[obj]))
+		obj.serialize(out)
 
-	def deserialize(self, stream):
-		return stream.read(bytes, allocated_length=self.allocated_length, length_type=self.length_type).decode('latin1')
+		self._server.send(out, self._participants)
+	def destruct(self, obj: Any) -> None:
+
+		obj.on_destruction()
+		out = WriteStream()
+		out.write(c_ubyte(Message.ReplicaManagerDestruction))
+		out.write(c_ushort(self._network_ids[obj]))
+
+		for participant in self._participants:
+			self._server.send(out, participant)
+
+		del self._network_ids[obj]

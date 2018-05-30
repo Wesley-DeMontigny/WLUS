@@ -2,10 +2,11 @@ from ServerUtilities import *
 from GameManager import *
 from Enum import *
 import time
-from core import GameServer, CString
+from core import GameServer
+from structures import CString, Vector3
 from AccountManager import Account
 from xml.etree import ElementTree
-from LDF import LDF, from_ldf
+from LDF import LDF
 import copy
 import zlib
 
@@ -26,6 +27,7 @@ def HandleSessionKey(Server : GameServer, data : bytes, address : Address):
 		session.State = SessionState.CharacterScreen
 	else:
 		Server.send(getDisconnect(DisconnectionReasons.InvalidSessionKey.value), address)
+
 
 def HandleMinifigListRequest(Server : GameServer, data : bytes, address : Address):
 	session = Server.Game.getSessionByAddress(address)
@@ -58,7 +60,7 @@ def HandleMinifigListRequest(Server : GameServer, data : bytes, address : Addres
 			packet.write(c_uint16(0))#MapInstance
 			packet.write(c_ulong(0))#MapClone
 			packet.write(c_ulonglong(0))
-			equippedItems = character.Inventory.getEquippedItems()
+			equippedItems = character.ObjectConfig["Inventory"].getEquippedItems()
 			packet.write(c_ushort(len(equippedItems)))
 			for item in equippedItems:
 				packet.write(c_ulong(item["LOT"]))
@@ -117,10 +119,8 @@ def LoadWorld(Server : GameServer, Player : Character, zoneID : ZoneID, address 
 	zone : Zone = Server.Game.getZoneByID(zoneID)
 	packet.write(c_uint16(zoneID))
 	packet.write(c_uint16(0))#MapInstance
-	packet.write(c_uint16(0))#MapClone
-	checksum = getZoneChecksum(zoneID)
-	for byte in checksum:
-		packet.write(c_ubyte(byte))
+	packet.write(c_ulong(0))#MapClone
+	packet.write(c_ulong(ZoneChecksums[zoneID]))
 	if(SpawnAtDefault):
 		packet.write(c_float(zone.SpawnLocation.X))
 		packet.write(c_float(zone.SpawnLocation.Y))
@@ -138,10 +138,27 @@ def LoadWorld(Server : GameServer, Player : Character, zoneID : ZoneID, address 
 	Player.Zone = zoneID
 	Server.send(packet, address)
 
+def HandleGameMessage(Server : GameServer, data : bytes, address : Address):
+	stream = ReadStream(data)
+	objectID = stream.read(c_longlong)
+	messageID = stream.read(c_ushort)
+	object : GameObject = Server.Game.getObjectByID(objectID)
+	if(object is not None):
+		object.HandleEvent("GM_{}".format(str(hex(messageID).replace("x",""))), stream, address)
+	else:
+		print("Object {} Does Not Exist!".format(objectID))
+
+
+def HandleRoutedPacket(Server : GameServer, data : bytes, address : Address):
+	""" TODO: Implement this """
+
 def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
-	packet = WriteStream()
 	session : Session = Server.Game.getSessionByAddress(address)
 	player : Character = Server.Game.getCharacterByObjectID(session.ObjectID)
+
+	zone : Zone = Server.Game.getZoneByID(player.Zone)
+	zone.createObject(player)
+
 	ldf = LDF()
 	ldf.registerKey("levelid", player.Zone, 1)
 	ldf.registerKey("objid", player.ObjectConfig["ObjectID"], 9)
@@ -157,10 +174,10 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 	bag = ElementTree.SubElement(inv, "bag")
 	bagInfo = ElementTree.SubElement(bag, "b")
 	bagInfo.set("t", "0")
-	bagInfo.set("m", str(player.Inventory.Space))
+	bagInfo.set("m", str(player.ObjectConfig["Inventory"].Space))
 	items = ElementTree.SubElement(inv, "items")
 	itemIn = ElementTree.SubElement(items, "in")
-	for item in player.Inventory.InventoryList:
+	for item in player.ObjectConfig["Inventory"].InventoryList:
 		i = ElementTree.SubElement(itemIn, "i")
 		i.set("l", str(item["LOT"]))
 		i.set("id", str(item["ObjectID"]))
@@ -171,22 +188,22 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 
 	mf = ElementTree.SubElement(root, "mf")
 	char = ElementTree.SubElement(root, "char")
-	char.set("cc", str(player.Currency))
-	char.set("ls", str(player.UniverseScore))
+	char.set("cc", str(player.ObjectConfig["Currency"]))
+	char.set("ls", str(player.ObjectConfig["UniverseScore"]))
 	lvl = ElementTree.SubElement(root, "lvl")
-	lvl.set("l", str(player.Level))
+	lvl.set("l", str(player.ObjectConfig["Level"]))
 
 	pets = ElementTree.SubElement(root, "pet")
 
 	mis = ElementTree.SubElement(root, "mis")
 	done = ElementTree.SubElement(mis, "done")
-	for mission in player.CompletedMissionIDs:
+	for mission in player.ObjectConfig["CompletedMissions"]:
 		m = ElementTree.SubElement(done, "m")
 		m.set("id", str(mission))
 		m.set("cct", "1")
 		m.set("cts", "0")
 	cur = ElementTree.SubElement(mis, "cur")
-	for mission in player.CurrentMissions:
+	for mission in player.ObjectConfig["CurrentMissions"]:
 		m = ElementTree.SubElement(cur, "m")
 		m.set("id", str(mission.MissionID))
 		sv = ElementTree.SubElement(m, "sv")
@@ -194,24 +211,69 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 
 	ldf.registerKey("xmlData", root, 13)
 
-	buffer = WriteStream()
-	ldf.writeLDF(buffer)
-	bufferLen = len(copy.deepcopy(buffer).__bytes__())
-
-	#print(from_ldf(ReadStream(copy.deepcopy(buffer).__bytes__())))
+	LegoData = WriteStream()
+	ldf.writeLDF(LegoData)
+	ldfBytes = bytes(LegoData)
+	compressed = zlib.compress(ldfBytes)
 
 	packet = WriteStream()
 	writeHeader(packet, PacketHeader.DetailedUserInfo)
-	packet.write(c_ulong(bufferLen+5))
-	packet.write(c_bool(False))
-	packet.write(buffer.__bytes__())
+	packet.write(c_ulong(len(compressed)+9))
+	packet.write(c_bool(True))
+	packet.write(c_ulong(len(ldfBytes)))
+	packet.write(c_ulong(len(compressed)))
+	packet.write(compressed)
 
 	Server.send(packet, address)
 	print("Sent Detailed User Info to Player {}".format(player.ObjectConfig["ObjectID"]))
 
+	ConstructObjectsInZone(Server, address, zone.ZoneID, ExcludeIDs=[player.ObjectConfig["ObjectID"]])
+
+	if (player.Components == []):
+		player.Components = player.findComponentsFromCDClient(Server.CDClient)
+
+	Server.ReplicaManagers[zone.ZoneID].construct(player, recipients=[address])
+
+	doneLoadingObjects = WriteStream()
+	InitializeGameMessage(doneLoadingObjects, player.ObjectConfig["ObjectID"], 0x066a)
+	Server.send(doneLoadingObjects, address)
+
+	playerReady = WriteStream()
+	InitializeGameMessage(playerReady, player.ObjectConfig["ObjectID"], 0x01fd)
+	Server.send(playerReady, address)
+
+def InitializeGameMessage(stream : WriteStream, objectID : int, messageID : int):
+	writeHeader(stream, PacketHeader.ServerGameMessage)
+	stream.write(c_longlong(objectID))
+	stream.write(c_uint16(messageID))
+
+def ConstructObjectsInZone(Server : GameServer, address : Address, zoneID : ZoneID, ExcludeIDs : list = None):
+	zone : Zone = Server.Game.getZoneByID(zoneID)
+	objects = zone.Objects
+	for object in objects:
+		if(object is ReplicaObject):
+			if(object.Components == []):
+				object.Components = object.findComponentsFromCDClient(Server.CDClient)
+			if (object.ObjectConfig["ObjectID"] not in ExcludeIDs):
+				Server.ReplicaManagers[zoneID].construct(object, recipients=[address])
 
 def SendCreationResponse(Server : GameServer, address : Address, Response : MinifigureCreationResponse):
 	packet = WriteStream()
 	writeHeader(packet, PacketHeader.MinifigureCreationResponse)
 	packet.write(c_uint8(Response.value))#Just going to leave it at success for now
 	Server.send(packet, address)
+
+
+def UpdateCharacterPositon(Server : GameServer, data : bytes, address : Address):
+	stream = ReadStream(data)
+	XPos = stream.read(c_float)
+	YPos = stream.read(c_float)
+	ZPos = stream.read(c_float)
+	XRot = stream.read(c_float)
+	YRot = stream.read(c_float)
+	ZRot = stream.read(c_float)
+	WRot = stream.read(c_float)
+	session : Session = Server.Game.getSessionByAddress(address)
+	character : Character = Server.Game.getObjectByID(session.ObjectID)
+	character.ObjectConfig["Position"] = Vector3(XPos, YPos, ZPos)
+	character.ObjectConfig["Rotation"] = Vector4(XRot, YRot, ZRot, WRot)

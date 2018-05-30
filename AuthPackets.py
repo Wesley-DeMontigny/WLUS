@@ -6,7 +6,8 @@ from GameManager import Session, SessionState
 from ServerUtilities import *
 import uuid
 from passlib.hash import sha256_crypt
-from core import GameServer, CString
+from core import GameServer
+from structures import CString
 
 def HandleHandshake(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)

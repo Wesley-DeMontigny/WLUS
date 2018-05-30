@@ -1,7 +1,8 @@
 from enum import *
 
+
 class ClothingLOT(IntEnum):
-	#Shirts
+	# Shirts
 	SHIRT_BRIGHT_RED = 4049
 	SHIRT_BRIGHT_BLUE = 4083
 	SHIRT_BRIGHT_YELLOW = 4117
@@ -19,7 +20,7 @@ class ClothingLOT(IntEnum):
 	SHIRT_BRICK_YELLOW = 4525
 	SHIRT_SAND_BLUE = 4559
 	SHIRT_SAND_GREEN = 4593
-	#Pants
+	# Pants
 	PANTS_BRIGHT_RED = 2508
 	PANTS_BRIGHT_ORANGE = 2509
 	PANTS_BRICK_YELLOW = 2511
@@ -37,6 +38,7 @@ class ClothingLOT(IntEnum):
 	PANTS_REDDISH_BROWN = 2526
 	PANTS_DARK_RED = 2527
 
+
 class DisconnectionReasons(IntEnum):
 	UnknownError = 0x00
 	DuplicateLogin = 0x04
@@ -47,12 +49,51 @@ class DisconnectionReasons(IntEnum):
 	CharacterCorruption = 0x0a
 	Kicked = 0x0b
 
+
 class LoginResponseEnum(IntEnum):
 	Success = 0x01
 	Banned = 0x02
 	InvalidPerm = 0x03
 	InvalidLoginInfo = 0x06
 	AccountLocked = 0x07
+
+class ReplicaTypes(IntEnum):
+	Construction = 0
+	Serialization = 1
+
+ZoneChecksums = {
+    1000: 0x20b8087c,
+    1001: 0x26680a3c,
+    1100: 0x49525511,
+    1101: 0x538214e2,
+    1102: 0x0fd403da,
+    1150: 0x0fd403da,
+    1151: 0x0a890303,
+    1200: 0xda1e6b30,
+    1201: 0x476e1330,
+    1203: 0x10fc0502,
+    1204: 0x07d40258,
+	1250: 0x058d0191,
+	1251: 0x094f045d,
+	1300: 0x12eac290,
+	1302: 0x0b7702ef,
+	1303: 0x152e078a,
+	1350: 0x04b6015c,
+	1400: 0x8519760d,
+	1402: 0x02f50187,
+	1403: 0x81850f4e,
+	1450: 0x03f00126,
+	1600: 0x07c202ee,
+	1601: 0x02320106,
+	1602: 0x0793037f,
+	1603: 0x043b01ad,
+	1604: 0x181507dd,
+	1700: 0x02040138,
+	1800: 0x4b17a399,
+	1900: 0x9e4af43c,
+	2000: 0x4d692c74,
+	2001: 0x09eb00ef
+}
 
 
 class ZoneID(IntEnum):
@@ -89,10 +130,12 @@ class ZoneID(IntEnum):
 	Ninjago = 2000
 	FrakjawBattle = 2001
 
+
 class SessionState(IntEnum):
 	LoggingIn = 0
 	CharacterScreen = 1
 	InGame = 3
+
 
 class MinifigureCreationResponse(IntEnum):
 	Success = 0x00
