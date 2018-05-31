@@ -10,6 +10,8 @@ And the Pyraknet folder looking something like this:</br>
 The default username is "wesley" and password is "play". If you want to change this go into __main__.py and change where it says ```Accounts.register("wesley", "play", IsAdmin=True)``` to your specific login details. After that just execute __main__.py</br>
 
 # Current Chat Commands
-/loadWorld <ZoneID>
-/getJetpack
-/setConfig <ObjectConfigAttr> <ObjectConfigValue>
+```
+/loadWorld ZoneID</br>
+/getJetpack</br>
+/setConfig ObjectConfigAttr ObjectConfigValue</br>
+```
