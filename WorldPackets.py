@@ -2,12 +2,11 @@ from ServerUtilities import *
 from GameManager import *
 from Enum import *
 import time
-from core import GameServer
+from core import GameServer, GameReplicaManager
 from structures import CString, Vector3
 from AccountManager import Account
 from xml.etree import ElementTree
 from LDF import LDF
-import copy
 import zlib
 
 def HandleHandshake(Server : GameServer, data : bytes, address : Address):
@@ -121,10 +120,11 @@ def LoadWorld(Server : GameServer, Player : Character, zoneID : ZoneID, address 
 	packet.write(c_uint16(0))#MapInstance
 	packet.write(c_ulong(0))#MapClone
 	packet.write(c_ulong(ZoneChecksums[zoneID]))
-	if(SpawnAtDefault):
+	if(SpawnAtDefault or  Player.ObjectConfig["Position"] == None):
 		packet.write(c_float(zone.SpawnLocation.X))
 		packet.write(c_float(zone.SpawnLocation.Y))
 		packet.write(c_float(zone.SpawnLocation.Z))
+		Player.ObjectConfig["Position"] = zone.SpawnLocation
 	else:
 		packet.write(c_float(Player.ObjectConfig["Position"].X))
 		packet.write(c_float(Player.ObjectConfig["Position"].Y))
@@ -134,8 +134,15 @@ def LoadWorld(Server : GameServer, Player : Character, zoneID : ZoneID, address 
 	else:
 		packet.write(c_ulong(0))
 	session : Session = Server.Game.getSessionByAddress(address)
+	session.ZoneID = zoneID
 	session.ObjectID = Player.ObjectConfig["ObjectID"]
 	Player.Zone = zoneID
+	for zone in Server.ReplicaManagers:
+		manager = Server.ReplicaManagers[zone]
+		if(manager.is_participant(address)):
+			manager.remove_participant(address)
+	RM : GameReplicaManager = Server.ReplicaManagers[zoneID]
+	RM.add_participant(address)
 	Server.send(packet, address)
 
 def HandleGameMessage(Server : GameServer, data : bytes, address : Address):
@@ -144,7 +151,7 @@ def HandleGameMessage(Server : GameServer, data : bytes, address : Address):
 	messageID = stream.read(c_ushort)
 	object : GameObject = Server.Game.getObjectByID(objectID)
 	if(object is not None):
-		object.HandleEvent("GM_{}".format(str(hex(messageID).replace("x",""))), stream, address)
+		object.HandleEvent("GM_{}".format(str(hex(messageID).replace("x",""))), stream, address, Server)
 	else:
 		print("Object {} Does Not Exist!".format(objectID))
 
@@ -232,20 +239,15 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 	if (player.Components == []):
 		player.Components = player.findComponentsFromCDClient(Server.CDClient)
 
-	Server.ReplicaManagers[zone.ZoneID].construct(player, recipients=[address])
+	Server.ReplicaManagers[zone.ZoneID].construct(player)
 
 	doneLoadingObjects = WriteStream()
-	InitializeGameMessage(doneLoadingObjects, player.ObjectConfig["ObjectID"], 0x066a)
+	Server.InitializeGameMessage(doneLoadingObjects, player.ObjectConfig["ObjectID"], 0x066a)
 	Server.send(doneLoadingObjects, address)
 
 	playerReady = WriteStream()
-	InitializeGameMessage(playerReady, player.ObjectConfig["ObjectID"], 0x01fd)
+	Server.InitializeGameMessage(playerReady, player.ObjectConfig["ObjectID"], 0x01fd)
 	Server.send(playerReady, address)
-
-def InitializeGameMessage(stream : WriteStream, objectID : int, messageID : int):
-	writeHeader(stream, PacketHeader.ServerGameMessage)
-	stream.write(c_longlong(objectID))
-	stream.write(c_uint16(messageID))
 
 def ConstructObjectsInZone(Server : GameServer, address : Address, zoneID : ZoneID, ExcludeIDs : list = None):
 	zone : Zone = Server.Game.getZoneByID(zoneID)
@@ -263,6 +265,10 @@ def SendCreationResponse(Server : GameServer, address : Address, Response : Mini
 	packet.write(c_uint8(Response.value))#Just going to leave it at success for now
 	Server.send(packet, address)
 
+def killPlayer(Server : GameServer, PlayerID : int):
+	killPacket = WriteStream()
+	Server.InitializeGameMessage(killPacket, PlayerID, 0x0025)
+	Server.brodcastPacket(killPacket, Server.Game.getObjectByID(PlayerID).Zone)
 
 def UpdateCharacterPositon(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)

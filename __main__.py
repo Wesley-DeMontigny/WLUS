@@ -21,7 +21,7 @@ def save(GM, Accounts):
 		#print("Game Was Autosaved")
 		serializeObject(Accounts, "Accounts.pickle")
 		#print("Accounts Were Autosaved")
-		time.sleep(15)
+		time.sleep(7.5)
 
 
 if __name__ == "__main__":

@@ -101,6 +101,10 @@ def writeStatsIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : Rep
 	stream.write(c_bit(False))
 
 def writeCharacter(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(False))#TODO: Implement with vehicles
+	stream.write(c_bit(True))
+	stream.write(c_ulong(ObjectConfig["Level"]))
+	stream.write(c_bit(False))
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))
 		stream.write(c_bit(False))
@@ -122,7 +126,7 @@ def writeCharacter(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repl
 		stream.write(c_ulonglong(ObjectConfig["UniverseScore"]))
 		stream.write(c_bit(False))#Free to play
 
-		Statistics : CharacterStatistics = ObjectConfig["CharacterStatistics"]
+		Statistics = ObjectConfig["CharacterStatistics"]
 		stream.write(c_longlong(Statistics.CurrencyCollected))
 		stream.write(c_longlong(Statistics.BricksCollected))
 		stream.write(c_longlong(Statistics.SmashablesSmashed))
@@ -156,11 +160,11 @@ def writeCharacter(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repl
 
 	stream.write(c_bit(False))#TODO: Implement this branch enventually
 
-	stream.write(False)
-	stream.write(False)#TODO: Implement Guilds
+	stream.write(c_bit(False))
+	stream.write(c_bit(False))#TODO: Implement Guilds
 
 def writeInventory(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
-	inventory : Inventory = ObjectConfig["Inventory"]
+	inventory = ObjectConfig["Inventory"]
 	stream.write(c_bit(True))
 	stream.write(c_ulong(len(inventory.InventoryList)))
 	for item in inventory.InventoryList:

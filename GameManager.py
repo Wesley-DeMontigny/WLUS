@@ -6,6 +6,8 @@ from Enum import SessionState, ZoneID, ReplicaTypes
 from GameDB import *
 from ObjectConstructor import WriteReplica
 from structures import Vector3, Vector4
+from PlayerEventHandlers import *
+import threading
 
 def Nothing(*args):
 	pass
@@ -16,9 +18,10 @@ class GameObject():
 		self.ObjectConfig : dict = {"LOT":0,"ObjectID":None,"Name":None}
 		self.EventHandlers : dict = {}
 		self.Tag : str = None
-	def HandleEvent(self, EventID : str, Stream : ReadStream, address : Address):
+	def HandleEvent(self, EventID : str, Stream : ReadStream, address : Address, Server : GameServer):
 		if(EventID in self.EventHandlers):
-			self.EventHandlers[EventID](Stream, address)
+			eventThread = threading.Thread(target=self.EventHandlers[EventID], args=[self, Stream, address, Server])
+			eventThread.start()
 		else:
 			print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
 	def RegisterEvent(self, EventID : str, Handler : Callable):
@@ -55,7 +58,7 @@ class ReplicaObject(GameObject):
 	def __init__(self, Parent):
 		super().__init__(Parent)
 		self.Components = []
-		self.ObjectConfig["Position"] = Vector3(0,0,0)
+		self.ObjectConfig["Position"] = None
 		self.ObjectConfig["Rotation"] = Vector4(0,0,0,0)
 		self.ObjectConfig["Scale"] = 1
 		self.ObjectConfig["SpawnerID"] = None
@@ -185,9 +188,16 @@ class Character(Humanoid):
 		self.ObjectConfig["Health"] = 4
 		self.ObjectConfig["Faction"] = 1
 		self.ObjectConfig["isSmashable"] = False
+		self.ObjectConfig["Alive"] = True
 		self.ObjectConfig["Inventory"] = Inventory(self)
 
-		self.RegisterEvent("GM_05cd", Nothing)
+		self.RegisterEvent("GM_04b2", RemoveHealth)#Request Death
+		self.RegisterEvent("GM_05cd", Nothing)#Modified Ghosting
+		self.RegisterEvent("GM_0378", Nothing)#Ready For Updates
+		self.RegisterEvent("GM_01f9", PlayerLoaded)#Player Loaded
+		self.RegisterEvent("GM_09f", Ressurect)#Ressurect Request
+		self.RegisterEvent("GM_0300", Nothing)#Set Ghosting Distance
+
 
 class Inventory():
 	def __init__(self, Parent):
@@ -225,7 +235,7 @@ class GameManager():
 		for Zone in self.Zones:
 			for i in range(len(Zone.Objects)):
 				Object = Zone.Objects[i]
-				if(Object.ObjectConfig["ObjectID"] == 1):
+				if(Object.ObjectConfig["LOT"] == 1):
 					del Zone.Objects[i]
 					purgeCount += 1
 		print("Purged {} Players From Game".format(purgeCount))
@@ -279,6 +289,22 @@ class GameManager():
 			if(Zone.ZoneID == ZoneID):
 				return Zone
 		return None
+
+	def getConnectionsInZone(self, ZoneID : ZoneID):
+		connectionList = []
+		for session in self.Sessions:
+			if(session.ZoneID == ZoneID):
+				connectionList.append(session.address)
+		return connectionList
+
+	def getPlayers(self):
+		playerList = []
+		for Zone in self.Zones:
+			for Object in Zone.Objects:
+				if(Object.ObjectConfig["LOT"] == 1):
+					playerList.append(Object)
+		return playerList
+
 
 	def registerZone(self, ZoneObject : Zone):
 		for Zone in self.Zones:

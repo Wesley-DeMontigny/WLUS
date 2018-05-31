@@ -41,6 +41,7 @@ class Account():
 	def CreateMinifigure(self, Name: str, ShirtColor: int, ShirtStyle: int, PantsColor: int, HairColor: int,
 						 HairStyle: int, lh: int, rh: int, Eyebrows: int, Eyes: int, Mouth: int):
 		Minifigure = Character(self)
+		Minifigure.Zone = 1000
 		Minifigure.ObjectConfig["Name"] = Name
 		Minifigure.ObjectConfig["ShirtColor"] = ShirtColor
 		Minifigure.ObjectConfig["ShirtStyle"] = ShirtStyle
