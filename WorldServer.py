@@ -2,7 +2,7 @@ from typing import Callable
 import WorldPackets
 from PacketHeaders import PacketHeader
 from Enum import ZoneID
-from GameManager import GameManager, ReplicaObject, Humanoid, Character
+from GameManager import GameManager, ReplicaObject, Humanoid, Character, Session
 from GameDB import GameDB
 import threading
 from ServerUtilities import *
@@ -32,7 +32,8 @@ class WorldServer(GameServer):
 		self.registerWorldHandler(PacketHeader.Handshake.value, WorldPackets.HandleHandshake)
 		print("World Server Started")
 
-		self.registerZone(ZoneID.VentureExplorer.value, SpawnLocation=Vector3(-624.13, 613.326233, -30.974))
+		for Zone in ZoneNames:
+			self.registerZone(Zone, SpawnLocation=DefaultZoneSpawns[Zone])
 
 		updateThread = threading.Thread(target=self.updateLoop)
 		updateThread.start()
@@ -46,7 +47,7 @@ class WorldServer(GameServer):
 		self.ReplicaManagers[WorldID] = GameReplicaManager(self)
 	def registerWorldHandler(self, header : PacketHeader, function : Callable):
 		self.WorldHandlers[header] = function
-	def registerZone(self, WorldID : int, lvlFiles : list = None, SpawnLocation : Vector3 = Vector3(0,0,0), Checksum : list = None):
+	def registerZone(self, WorldID : int, lvlFiles : list = None, SpawnLocation : Vector3 = Vector3(0,0,0)):
 		World = Zone(self.Game)
 		World.ZoneID = WorldID
 		World.SpawnLocation = SpawnLocation
@@ -54,7 +55,7 @@ class WorldServer(GameServer):
 		if(lvlFiles != None):
 			"""Parse Lvl Files"""
 		result = self.Game.registerZone(World)
-		if(result is not Exception): print("Registered Zone {}".format(WorldID))
+		if(result is not Exception): print("Registered '{}'".format(ZoneNames[WorldID]))
 
 	def updateLoop(self):
 		while True:
@@ -67,12 +68,11 @@ class WorldServer(GameServer):
 						except:
 							pass
 					if(isinstance(Object, Character)):
-						if(Object.ObjectConfig["Health"] <= 0 or self.inKillElevation(Object)):
+						if((Object.ObjectConfig["Health"] <= 0 or self.inKillElevation(Object)) and "Unkillable" not in Object.Tag.split(" ")):
 							if(Object.ObjectConfig["Alive"] == True):
 								Object.ObjectConfig["Alive"] = False
 								Object.ObjectConfig["Health"] = 0
-								print("Killed Player {}".format(Object.ObjectConfig["ObjectID"]))
-								WorldPackets.killPlayer(self, Object.ObjectConfig["ObjectID"])
+								Object.Kill(self)
 			sleep(1/3)
 
 	def inKillElevation(self, Player : Character):
@@ -100,3 +100,37 @@ class WorldServer(GameServer):
 		elif(zone == ZoneID.CruxPrime and yPos < -20):
 			return True
 		return False
+
+	def LoadWorld(self, Player: Character, zoneID: ZoneID, address: Address, SpawnAtDefault: bool = False):
+		packet = WriteStream()
+		print("Sending Player {} to {}".format(Player.ObjectConfig["ObjectID"], ZoneNames[zoneID]))
+		writeHeader(packet, PacketHeader.WorldInfo)
+		zone: Zone = self.Game.getZoneByID(zoneID)
+		packet.write(c_uint16(zoneID))
+		packet.write(c_uint16(0))  # MapInstance
+		packet.write(c_ulong(0))  # MapClone
+		packet.write(c_ulong(ZoneChecksums[zoneID]))
+		if (SpawnAtDefault or Player.ObjectConfig["Position"] == None):
+			packet.write(c_float(zone.SpawnLocation.X))
+			packet.write(c_float(zone.SpawnLocation.Y))
+			packet.write(c_float(zone.SpawnLocation.Z))
+			Player.ObjectConfig["Position"] = zone.SpawnLocation
+		else:
+			packet.write(c_float(Player.ObjectConfig["Position"].X))
+			packet.write(c_float(Player.ObjectConfig["Position"].Y))
+			packet.write(c_float(Player.ObjectConfig["Position"].Z))
+		if (zone.ActivityWorld):
+			packet.write(c_ulong(4))
+		else:
+			packet.write(c_ulong(0))
+		session: Session = self.Game.getSessionByAddress(address)
+		session.ZoneID = zoneID
+		session.ObjectID = Player.ObjectConfig["ObjectID"]
+		Player.Zone = zoneID
+		for zone in self.ReplicaManagers:
+			manager = self.ReplicaManagers[zone]
+			if (manager.is_participant(address)):
+				manager.remove_participant(address)
+		RM: GameReplicaManager = self.ReplicaManagers[zoneID]
+		RM.add_participant(address)
+		self.send(packet, address)

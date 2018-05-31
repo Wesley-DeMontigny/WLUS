@@ -7,30 +7,23 @@ def WriteReplica(stream : WriteStream, ComponentList : list, ObjectConfig : dict
 	writeBaseData(stream, ObjectConfig, ReplicaType)
 
 	if(108 in ComponentList):
-		print("Component 108 Is Not Implemented!")
-		return
+		writeComponent108(stream, ObjectConfig, ReplicaType)
 	if(61 in ComponentList):
-		print("Module Assembly Is Not Implemented!")
-		return
+		writeModuleAssembly(stream, ObjectConfig, ReplicaType)
 	if(1 in ComponentList):
 		writeControllablePhysics(stream, ObjectConfig, ReplicaType)
 	if(3 in ComponentList):
-		print("Simple Physics Is Not Implemented!")
-		return
+		writeSimplePhysics(stream, ObjectConfig, ReplicaType)
 	if(20 in ComponentList):
-		print("Rigidbody Physics Is Not Implemented!")
-		return
+		writeRigibbodyPhantomPhysics(stream, ObjectConfig, ReplicaType)
 	if(30 in ComponentList):
-		print("Vehicle Physics Is Not Implemented!")
-		return
+		writeVehiclePhysics(stream, ObjectConfig, ReplicaType)
 	if(40 in ComponentList):
-		print("Phantom Physics Is Not Implemented!")
-		return
+		writePhantomPhysics(stream, ObjectConfig, ReplicaType)
 	if(7 in ComponentList):
 		writeDestructible(stream, ObjectConfig, ReplicaType)
 	if(23 in ComponentList):
-		print("Collectible Is Not Implemented!")
-		return
+		writeCollectible(stream, ObjectConfig, ReplicaType)
 	if(26 in ComponentList):
 		print("Pet Is Not Implemented!")
 		return
@@ -46,32 +39,25 @@ def WriteReplica(stream : WriteStream, ComponentList : list, ObjectConfig : dict
 	if(9 in ComponentList):
 		writeSkill(stream, ObjectConfig, ReplicaType)
 	if(60 in ComponentList):
-		print("Base Combat AI Is Not Implemented!")
-		return
+		writeBaseCombatAI(stream, ObjectConfig, ReplicaType)
 	if(48 in ComponentList):
-		print("Rebuild Is Not Implemented!")
-		return
+		writeRebuild(stream, ObjectConfig, ReplicaType)
 	if(25 in ComponentList):
 		print("Moving Platform Is Not Implemented!")
 		return
 	if(49 in ComponentList):
-		print("Switch Is Not Implemented!")
-		return
+		writeSwitch(stream, ObjectConfig, ReplicaType)
 	if(16 in ComponentList):
-		print("Vendor Is Not Implemented!")
-		return
+		writeVendor(stream, ObjectConfig, ReplicaType)
 	if(6 in ComponentList):
-		print("Bouncer Is Not Implemented!")
-		return
+		writeBouncer(stream, ObjectConfig, ReplicaType)
 	if(39 in ComponentList):
-		print("Scripted Activity Is Not Implemented!")
-		return
+		writeScriptedActivity(stream, ObjectConfig, ReplicaType)
 	if(71 in ComponentList):
 		print("Racing Control Is Not Implemented!")
 		return
 	if(75 in ComponentList):
-		print("LUP Exhibit Is Not Implemented!")
-		return
+		writeExhibit(stream, ObjectConfig, ReplicaType)
 	if(2 in ComponentList):
 		writeRender(stream, ObjectConfig, ReplicaType)
 	if(107 in ComponentList):

@@ -24,7 +24,6 @@ class GameServer(pyraknet.server.Server):
 		stream.write(c_longlong(objectID))
 		stream.write(c_uint16(messageID))
 
-
 class GameReplicaManager(ReplicaManager):
 	def __init__(self, Server : GameServer):
 		super().__init__(Server)

@@ -195,6 +195,106 @@ def writeRender(stream : WriteStream, ObjectConfig : dict, ReplicaType : Replica
 def writeComponent107(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(False))
 
+def writeBouncer(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(True))
+	stream.write(c_bit(ObjectConfig["petNotRequired"]))
+
+def writeRigibbodyPhantomPhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(True))
+	stream.write(c_float(ObjectConfig["Position"].X))
+	stream.write(c_float(ObjectConfig["Position"].Y))
+	stream.write(c_float(ObjectConfig["Position"].Z))
+	stream.write(c_float(ObjectConfig["Rotation"].X))
+	stream.write(c_float(ObjectConfig["Rotation"].Y))
+	stream.write(c_float(ObjectConfig["Rotation"].Z))
+	stream.write(c_float(ObjectConfig["Rotation"].W))
+
+def writeComponent108(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(False))#TODO: Implement this
+
+def writeVendor(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(True))
+	stream.write(c_bit(False))
+	stream.write(c_bit(False))
+
+def writeSimplePhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	if(ReplicaType == ReplicaTypes.Construction):
+		stream.write(c_bit(False))
+		stream.write(c_float(0))
+	stream.write(c_bit(False))
+	stream.write(c_bit(False))
+	stream.write(c_bit(True))
+	stream.write(c_float(ObjectConfig["Position"].X))
+	stream.write(c_float(ObjectConfig["Position"].Y))
+	stream.write(c_float(ObjectConfig["Position"].Z))
+	stream.write(c_float(ObjectConfig["Rotation"].X))
+	stream.write(c_float(ObjectConfig["Rotation"].Y))
+	stream.write(c_float(ObjectConfig["Rotation"].Z))
+	stream.write(c_float(ObjectConfig["Rotation"].W))
+
+def writeVehiclePhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	if(ReplicaType == ReplicaTypes.Construction):
+		stream.write(c_uint8(0))
+		stream.write(c_bit(False))
+	stream.write(c_bit(False))
+
+def writeSwitch(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(ObjectConfig["SwitchState"]))
+
+def writeBaseCombatAI(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(True))
+	stream.write(c_ulong(ObjectConfig["AIActionState"]))
+	stream.write(c_longlong(ObjectConfig["TargetObject"]))
+
+def writePhantomPhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(True))
+	stream.write(c_float(ObjectConfig["Position"].X))
+	stream.write(c_float(ObjectConfig["Position"].Y))
+	stream.write(c_float(ObjectConfig["Position"].Z))
+	stream.write(c_float(ObjectConfig["Rotation"].X))
+	stream.write(c_float(ObjectConfig["Rotation"].Y))
+	stream.write(c_float(ObjectConfig["Rotation"].Z))
+	stream.write(c_float(ObjectConfig["Rotation"].W))
+	stream.write(c_bit(False))#TODO: Implement Physics Effects
+
+def writeExhibit(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(True))
+	stream.write(c_long(ObjectConfig["ExhibitedLOT"]))
+
+def writeScriptedActivity(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(False))#TODO: Implement this
+
+def writeRebuildIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	writeScriptedActivity(stream, ObjectConfig, ReplicaType)
+	stream.write(c_bit(True))
+	stream.write(c_ulong(ObjectConfig["RebuildState"]))
+	stream.write(c_bit(ObjectConfig["RebuildSuccess"]))
+	stream.write(c_bit(ObjectConfig["RebuildEnabled"]))
+	stream.write(c_float(0))#Time since start of rebuild
+	stream.write(c_float(0))
+	if(ReplicaType == ReplicaTypes.Construction):
+		stream.write(c_bit(False))
+		stream.write(c_float(ObjectConfig["BuildActivatorPos"].X))
+		stream.write(c_float(ObjectConfig["BuildActivatorPos"].Y))
+		stream.write(c_float(ObjectConfig["BuildActivatorPos"].Z))
+		stream.write(c_bit(False))
+
+def writeModuleAssembly(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	if(ReplicaType == ReplicaTypes.Construction):
+		stream.write(c_bit(False))#TODO: Implement
+
+def writeCollectible(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	writeStatsIndex(stream, ObjectConfig, ReplicaType)
+	writeCollectibleIndex(stream, ObjectConfig, ReplicaType)
+
+def writeRebuild(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	writeStatsIndex(stream, ObjectConfig, ReplicaType)
+	writeRebuildIndex(stream, ObjectConfig, ReplicaType)
+
+def writeCollectibleIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_uint16(ObjectConfig["CollectibleID"]))
+
+
 
 
 

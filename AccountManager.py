@@ -7,10 +7,11 @@ class AccountManager():
 	def __init__(self):
 		self.Accounts = []
 
-	def registerAccount(self, Username: str, Password: str):
+	def registerAccount(self, Username: str, Password: str, IsAdmin : bool = False):
 		account = Account(self)
 		account.Username = Username
 		account.Password = sha256_crypt.encrypt(Password)
+		account.IsAdmin = IsAdmin
 		account.AccountID = len(self.Accounts) + 1
 		account.Banned = False
 		self.Accounts.append(account)
@@ -35,6 +36,7 @@ class Account():
 		self.Username: str = None
 		self.Password: str = None
 		self.Banned: bool = False
+		self.IsAdmin : bool = False
 		self.Characters: list = []
 		self.AccountID : int = 0
 

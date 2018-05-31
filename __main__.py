@@ -45,7 +45,7 @@ if __name__ == "__main__":
 	if(pickledAccounts.exists() != True):
 		Accounts = AccountManager()
 
-		Accounts.registerAccount("wesley", "play")
+		Accounts.registerAccount("wesley", "play", IsAdmin=True)
 
 		serializeObject(Accounts, "Accounts.pickle")
 		print("Created and Serialized Account Manager")

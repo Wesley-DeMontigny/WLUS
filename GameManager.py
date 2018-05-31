@@ -2,7 +2,7 @@ from pyraknet.messages import Address
 from pyraknet.bitstream import *
 import random
 from typing import Callable
-from Enum import SessionState, ZoneID, ReplicaTypes
+from Enum import *
 from GameDB import *
 from ObjectConstructor import WriteReplica
 from structures import Vector3, Vector4
@@ -15,9 +15,9 @@ def Nothing(*args):
 class GameObject():
 	def __init__(self, Parent):
 		self.Parent = Parent
-		self.ObjectConfig : dict = {"LOT":0,"ObjectID":None,"Name":None}
+		self.ObjectConfig : dict = {"LOT":0,"ObjectID":None,"Name":""}
 		self.EventHandlers : dict = {}
-		self.Tag : str = None
+		self.Tag : str = ""
 	def HandleEvent(self, EventID : str, Stream : ReadStream, address : Address, Server : GameServer):
 		if(EventID in self.EventHandlers):
 			eventThread = threading.Thread(target=self.EventHandlers[EventID], args=[self, Stream, address, Server])
@@ -58,7 +58,7 @@ class ReplicaObject(GameObject):
 	def __init__(self, Parent):
 		super().__init__(Parent)
 		self.Components = []
-		self.ObjectConfig["Position"] = None
+		self.ObjectConfig["Position"] = Vector3(0,0,0)
 		self.ObjectConfig["Rotation"] = Vector4(0,0,0,0)
 		self.ObjectConfig["Scale"] = 1
 		self.ObjectConfig["SpawnerID"] = None
@@ -88,7 +88,6 @@ class Session():
 		self.userKey : str = None
 		self.accountUsername : str = None
 		self.address : Address = None
-		self.isAdmin : bool = False
 		self.State : SessionState = None
 
 class CharacterStatistics():
@@ -159,6 +158,9 @@ class Humanoid(ReplicaObject):
 	def Damage(self, amount):
 		self.ObjectConfig["Health"] -= amount
 
+	def Kill(self, **args):
+		print("Killed Object {}".format(self.ObjectConfig["ObjectID"]))
+
 class Character(Humanoid):
 	def __init__(self, Parent):
 		super().__init__(Parent)
@@ -190,6 +192,7 @@ class Character(Humanoid):
 		self.ObjectConfig["isSmashable"] = False
 		self.ObjectConfig["Alive"] = True
 		self.ObjectConfig["Inventory"] = Inventory(self)
+		self.ObjectConfig["Position"] = None
 
 		self.RegisterEvent("GM_04b2", RemoveHealth)#Request Death
 		self.RegisterEvent("GM_05cd", Nothing)#Modified Ghosting
@@ -197,6 +200,13 @@ class Character(Humanoid):
 		self.RegisterEvent("GM_01f9", PlayerLoaded)#Player Loaded
 		self.RegisterEvent("GM_09f", Ressurect)#Ressurect Request
 		self.RegisterEvent("GM_0300", Nothing)#Set Ghosting Distance
+		self.RegisterEvent("GM_0352", RunCommand)#Run chat command
+
+	def Kill(self, Server : GameServer):
+		super().Kill()
+		killPacket = WriteStream()
+		Server.InitializeGameMessage(killPacket, self.ObjectConfig["ObjectID"], 0x0025)
+		Server.brodcastPacket(killPacket, Server.Game.getObjectByID(self.ObjectConfig["ObjectID"]).Zone)
 
 
 class Inventory():
@@ -309,9 +319,14 @@ class GameManager():
 	def registerZone(self, ZoneObject : Zone):
 		for Zone in self.Zones:
 			if(Zone.ZoneID == ZoneObject.ZoneID):
-				print("Canceled New Zone Registration of Zone {} Because it Already Existed!".format(ZoneObject.ZoneID))
+				print("Canceled New Zone Registration of '{}' Because it Already Existed!".format(ZoneNames[ZoneObject.ZoneID]))
 				return Exception
 		self.Zones.append(ZoneObject)
+
+	def killPlayer(self, Server: GameServer, PlayerID: int):
+		killPacket = WriteStream()
+		Server.InitializeGameMessage(killPacket, PlayerID, 0x0025)
+		Server.brodcastPacket(killPacket, self.getObjectByID(PlayerID).Zone)
 
 	def getSessionByUsername(self, username):
 		for session in self.Sessions:

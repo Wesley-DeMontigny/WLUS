@@ -109,41 +109,7 @@ def HandleJoinWorld(Server : GameServer, data : bytes, address : Address):
 	SpawnAtDefault = False
 	if(player.ObjectConfig["Position"] == Vector3(0,0,0)):
 		SpawnAtDefault = True
-	LoadWorld(Server, player, player.Zone, address, SpawnAtDefault=SpawnAtDefault)
-
-def LoadWorld(Server : GameServer, Player : Character, zoneID : ZoneID, address : Address, SpawnAtDefault : bool = False):
-	packet = WriteStream()
-	print("Sending Player {} to Zone {}".format(Player.ObjectConfig["ObjectID"], zoneID))
-	writeHeader(packet, PacketHeader.WorldInfo)
-	zone : Zone = Server.Game.getZoneByID(zoneID)
-	packet.write(c_uint16(zoneID))
-	packet.write(c_uint16(0))#MapInstance
-	packet.write(c_ulong(0))#MapClone
-	packet.write(c_ulong(ZoneChecksums[zoneID]))
-	if(SpawnAtDefault or  Player.ObjectConfig["Position"] == None):
-		packet.write(c_float(zone.SpawnLocation.X))
-		packet.write(c_float(zone.SpawnLocation.Y))
-		packet.write(c_float(zone.SpawnLocation.Z))
-		Player.ObjectConfig["Position"] = zone.SpawnLocation
-	else:
-		packet.write(c_float(Player.ObjectConfig["Position"].X))
-		packet.write(c_float(Player.ObjectConfig["Position"].Y))
-		packet.write(c_float(Player.ObjectConfig["Position"].Z))
-	if(zone.ActivityWorld):
-		packet.write(c_ulong(4))
-	else:
-		packet.write(c_ulong(0))
-	session : Session = Server.Game.getSessionByAddress(address)
-	session.ZoneID = zoneID
-	session.ObjectID = Player.ObjectConfig["ObjectID"]
-	Player.Zone = zoneID
-	for zone in Server.ReplicaManagers:
-		manager = Server.ReplicaManagers[zone]
-		if(manager.is_participant(address)):
-			manager.remove_participant(address)
-	RM : GameReplicaManager = Server.ReplicaManagers[zoneID]
-	RM.add_participant(address)
-	Server.send(packet, address)
+	Server.LoadWorld(player, player.Zone, address, SpawnAtDefault=SpawnAtDefault)
 
 def HandleGameMessage(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)
@@ -265,10 +231,6 @@ def SendCreationResponse(Server : GameServer, address : Address, Response : Mini
 	packet.write(c_uint8(Response.value))#Just going to leave it at success for now
 	Server.send(packet, address)
 
-def killPlayer(Server : GameServer, PlayerID : int):
-	killPacket = WriteStream()
-	Server.InitializeGameMessage(killPacket, PlayerID, 0x0025)
-	Server.brodcastPacket(killPacket, Server.Game.getObjectByID(PlayerID).Zone)
 
 def UpdateCharacterPositon(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)
