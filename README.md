@@ -11,7 +11,7 @@ The default username is "wesley" and password is "play". If you want to change t
 
 # Current Chat Commands
 ```
-/loadWorld ZoneID</br>
-/getJetpack</br>
-/setConfig ObjectConfigAttr ObjectConfigValue
+/loadWorld <ZoneID>
+/getJetpack
+/setConfig <ObjectConfigAttr> <ObjectConfigValue>
 ```
