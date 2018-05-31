@@ -13,5 +13,5 @@ The default username is "wesley" and password is "play". If you want to change t
 ```
 /loadWorld ZoneID</br>
 /getJetpack</br>
-/setConfig ObjectConfigAttr ObjectConfigValue</br>
+/setConfig ObjectConfigAttr ObjectConfigValue
 ```
