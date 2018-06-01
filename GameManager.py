@@ -23,7 +23,8 @@ class GameObject():
 			eventThread = threading.Thread(target=self.EventHandlers[EventID], args=[self, Stream, address, Server])
 			eventThread.start()
 		else:
-			print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
+			#print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
+			pass
 	def RegisterEvent(self, EventID : str, Handler : Callable):
 		self.EventHandlers[EventID] = Handler
 
@@ -192,7 +193,7 @@ class Character(Humanoid):
 		self.ObjectConfig["isSmashable"] = False
 		self.ObjectConfig["Alive"] = True
 		self.ObjectConfig["Inventory"] = Inventory(self)
-		self.ObjectConfig["Position"] = None
+		self.ObjectConfig["LoadingIn"] = True
 
 		self.RegisterEvent("GM_04b2", RemoveHealth)#Request Death
 		self.RegisterEvent("GM_05cd", Nothing)#Modified Ghosting
@@ -213,8 +214,8 @@ class Inventory():
 	def __init__(self, Parent):
 		self.Parent = Parent
 		self.InventoryList = []
-		self.Space = 24
-	def addItem(self, LOT : int, Slot : int = None, Equipped : bool = False, Linked : bool = False, Quantity : int = 1, ObjectID : int = random.randint(100000000000000000, 999999999999999999)):
+		self.Space = 20
+	def addItem(self, LOT : int,  ObjectID : int, Slot : int = None, Equipped : bool = False, Linked : bool = False, Quantity : int = 1):
 		if(Slot != None):
 			self.InventoryList.append({"LOT":LOT, "Slot":Slot, "Equipped":Equipped, "Linked":Linked, "Quantity":Quantity, "ObjectID":ObjectID})
 		else:
@@ -243,10 +244,9 @@ class GameManager():
 	def purgePlayers(self):
 		purgeCount = 0
 		for Zone in self.Zones:
-			for i in range(len(Zone.Objects)):
-				Object = Zone.Objects[i]
-				if(Object.ObjectConfig["LOT"] == 1):
-					del Zone.Objects[i]
+			for object in Zone.Objects:
+				if(object.ObjectConfig["LOT"] == 1):
+					del Zone.Objects[Zone.Objects.index(object)]
 					purgeCount += 1
 		print("Purged {} Players From Game".format(purgeCount))
 

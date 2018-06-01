@@ -35,7 +35,8 @@ class DBTable():
 		rows = []
 		fieldQuery = c.execute("SELECT sql FROM sqlite_master WHERE name = '{}'".format(self.Name))
 		fieldResult = fieldQuery.fetchone()[0]
-		Fields = re.findall(r'`(.*?)`', fieldResult)
+		adjFields = str(fieldResult).split("(")
+		Fields = re.findall(r'`(.*?)`', adjFields[1])
 		for i in range(len(result)):
 			dictionary = {}
 			for x in range(len(result[i])):
@@ -53,9 +54,29 @@ class DBTable():
 		queryString += " VALUES ("
 		for x in range(len(keys)):
 			if (x != (len(keys) - 1)):
-				queryString += Values[keys[x]] + ","
+				queryString += "'"+str(Values[keys[x]])+"'" + ","
 			else:
-				queryString += Values[keys[x]] + ")"
+				queryString += "'"+str(Values[keys[x]])+"'" + ")"
+		c = self.Connection.cursor()
+		c.execute(queryString)
+		self.Connection.commit()
+	def Query(self, QueryStr : str):
+		c = self.Connection.cursor()
+		c.execute(QueryStr)
+	def update(self, Values : dict, Condition : str):
+		queryString = "UPDATE " + self.Name + " SET "
+		keys = list(Values.keys())
+		for i in range(len(keys)):
+			if(i != (len(keys) -1)):
+				queryString += keys[i] + " = " + "'"+str(Values[keys[i]])+"'" + ", "
+			else:
+				queryString += keys[i] + " = " + "'"+str(Values[keys[i]])+"'"
+		queryString += " WHERE " + Condition
+		c = self.Connection.cursor()
+		c.execute(queryString)
+		self.Connection.commit()
+	def delete(self, Condition : str):
+		queryString = "DELETE FROM " + self.Name + " WHERE " + Condition
 		c = self.Connection.cursor()
 		c.execute(queryString)
 		self.Connection.commit()

@@ -9,8 +9,8 @@ from core import GameServer
 from GameDB import GameDB
 
 class AuthServer(GameServer):
-	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager, CDClient : GameDB):
-		super().__init__(address, max_connections, incoming_password, GameManager, CDClient)
+	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager, CDClient : GameDB, ServerDB : GameDB):
+		super().__init__(address, max_connections, incoming_password, GameManager, CDClient, ServerDB)
 		self.add_handler(Server.Event.UserPacket, self.handlePacket)
 		self.AuthHandlers = {}
 

@@ -2,20 +2,20 @@ from typing import Callable
 import WorldPackets
 from PacketHeaders import PacketHeader
 from Enum import ZoneID
-from GameManager import GameManager, ReplicaObject, Humanoid, Character, Session
+from GameManager import GameManager, ReplicaObject, Zone, Character, Session
 from GameDB import GameDB
 import threading
 from ServerUtilities import *
 import pyraknet
-from GameManager import Zone, Vector3
+from structures import Vector3, Vector4
 from pyraknet.replicamanager import *
 from core import GameServer, GameReplicaManager
 from time import sleep
 import threading
 
 class WorldServer(GameServer):
-	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager, CDClient : GameDB):
-		super().__init__(address, max_connections, incoming_password, GameManager, CDClient)
+	def __init__(self, address: Address, max_connections: int, incoming_password: bytes, GameManager : GameManager, CDClient : GameDB, ServerDB : GameDB):
+		super().__init__(address, max_connections, incoming_password, GameManager, CDClient, ServerDB)
 		self.add_handler(pyraknet.server.Event.UserPacket, self.handlePacket)
 		self.WorldHandlers = {}
 		self.ReplicaManagers = {}
@@ -68,7 +68,7 @@ class WorldServer(GameServer):
 						except:
 							pass
 					if(isinstance(Object, Character)):
-						if((Object.ObjectConfig["Health"] <= 0 or self.inKillElevation(Object)) and "Unkillable" not in Object.Tag.split(" ")):
+						if((Object.ObjectConfig["Health"] <= 0 or self.inKillElevation(Object)) and "Unkillable" not in Object.Tag.split(" ") and Object.ObjectConfig["LoadingIn"] == False):
 							if(Object.ObjectConfig["Alive"] == True):
 								Object.ObjectConfig["Alive"] = False
 								Object.ObjectConfig["Health"] = 0
@@ -101,6 +101,16 @@ class WorldServer(GameServer):
 			return True
 		return False
 
+	def spawnObject(self, LOT : int, zoneID : ZoneID, Position : Vector3 = Vector3(0,0,0), Rotation : Vector4 = Vector4(0,0,0,0)):
+		zone : Zone = self.Game.getZoneByID(zoneID)
+		gameObject = ReplicaObject(zone)
+		gameObject.ObjectConfig["LOT"] = LOT
+		gameObject.ObjectConfig["Position"] = Position
+		gameObject.ObjectConfig["Rotation"] = Rotation
+		zone.createObject(gameObject)
+		self.ReplicaManagers[zoneID].construct(gameObject)
+		print("Spawned Object with LOT {}".format(LOT))
+
 	def LoadWorld(self, Player: Character, zoneID: ZoneID, address: Address, SpawnAtDefault: bool = False):
 		packet = WriteStream()
 		print("Sending Player {} to {}".format(Player.ObjectConfig["ObjectID"], ZoneNames[zoneID]))
@@ -110,7 +120,7 @@ class WorldServer(GameServer):
 		packet.write(c_uint16(0))  # MapInstance
 		packet.write(c_ulong(0))  # MapClone
 		packet.write(c_ulong(ZoneChecksums[zoneID]))
-		if (SpawnAtDefault or Player.ObjectConfig["Position"] == None):
+		if (SpawnAtDefault):
 			packet.write(c_float(zone.SpawnLocation.X))
 			packet.write(c_float(zone.SpawnLocation.Y))
 			packet.write(c_float(zone.SpawnLocation.Z))
@@ -126,6 +136,7 @@ class WorldServer(GameServer):
 		session: Session = self.Game.getSessionByAddress(address)
 		session.ZoneID = zoneID
 		session.ObjectID = Player.ObjectConfig["ObjectID"]
+		Player.ObjectConfig["LoadingIn"] = True
 		Player.Zone = zoneID
 		for zone in self.ReplicaManagers:
 			manager = self.ReplicaManagers[zone]

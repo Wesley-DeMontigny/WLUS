@@ -9,9 +9,10 @@ from PacketHeaders import PacketHeader
 from Enum import ZoneID
 
 class GameServer(pyraknet.server.Server):
-	def __init__(self, address: pyraknet.messages.Address, max_connections: int, incoming_password: bytes, GameManager, CDClient : GameDB):
+	def __init__(self, address: pyraknet.messages.Address, max_connections: int, incoming_password: bytes, GameManager, CDClient : GameDB, ServerDB : GameDB):
 		super().__init__(address, max_connections, incoming_password)
 		self.Game = GameManager
+		self.ServerDB = ServerDB
 		self.CDClient : GameDB.GameDB = CDClient
 
 	def brodcastPacket(self, data : WriteStream, ZoneID : ZoneID):

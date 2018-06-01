@@ -18,6 +18,7 @@ def Ressurect(Object, stream : ReadStream, address : Address, Server : GameServe
 def PlayerLoaded(Object, stream : ReadStream, address : Address, Server : GameServer):
 	sleep(1.5)
 	Object.ObjectConfig["Alive"] = True
+	Object.ObjectConfig["LoadingIn"] = False
 
 def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServer):
 	if(Object.Parent.IsAdmin == True):
@@ -27,7 +28,7 @@ def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServ
 		try:
 			if(args[0] == "/loadWorld"):
 				Server.LoadWorld(Object, int(args[1]), address, SpawnAtDefault = True)
-			elif(args[0] == "/getJetpack"):
+			elif(args[0] == "/fly"):
 				packet = WriteStream()
 				Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x0231)
 				packet.write(c_bit(True))
@@ -54,6 +55,8 @@ def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServ
 					elif(configType == Vector4):
 						Object.ObjectConfig[str(args[1])] = Vector4(float(args[2]), float(args[3]), float(args[4]), float(args[5]))
 						print("Changed {} to ({}, {}, {}, {})".format(args[1], args[2], args[3], args[4], args[5]))
+			# elif(args[0] == "/spawnObject"):
+			# 	Server.spawnObject(int(args[1]), Object.Zone, Position=Object.ObjectConfig["Position"])
 		except Exception as e:
 			print("Error While Executing Command : {}".format(e))
 

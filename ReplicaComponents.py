@@ -67,6 +67,7 @@ def writeDestructible(stream : WriteStream, ObjectConfig : dict, ReplicaType : R
 def writeDestructibleIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))#TODO: Implement entire component
+		stream.write(c_bit(False))
 
 def writeStatsIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	if(ReplicaType == ReplicaTypes.Construction):
@@ -88,7 +89,6 @@ def writeStatsIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : Rep
 	stream.write(c_float(ObjectConfig["MaxImagination"]))
 	stream.write(c_ulong(1))#Count?
 	stream.write(c_long(ObjectConfig["Faction"]))
-	stream.write(c_bit(ObjectConfig["isSmashable"]))
 
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))
@@ -177,7 +177,7 @@ def writeInventory(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repl
 		stream.write(c_uint16(item["Slot"]))
 		stream.write(c_bit(False))
 		stream.write(c_bit(False))#TODO: Implement later
-		stream.write(c_bit(False))
+		stream.write(c_bit(True))
 	stream.write(c_bit(False))
 
 def writeScript(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
@@ -197,7 +197,10 @@ def writeComponent107(stream : WriteStream, ObjectConfig : dict, ReplicaType : R
 
 def writeBouncer(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))
-	stream.write(c_bit(ObjectConfig["petNotRequired"]))
+	if("petNotRequired" in ObjectConfig):
+		stream.write(c_bit(ObjectConfig["petNotRequired"]))
+	else:
+		stream.write(c_bit(False))
 
 def writeRigibbodyPhantomPhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))
@@ -239,7 +242,10 @@ def writeVehiclePhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType :
 	stream.write(c_bit(False))
 
 def writeSwitch(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
-	stream.write(c_bit(ObjectConfig["SwitchState"]))
+	if("SwitchState" in ObjectConfig):
+		stream.write(c_bit(ObjectConfig["SwitchState"]))
+	else:
+		stream.write(c_bit(False))
 
 def writeBaseCombatAI(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))

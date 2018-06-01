@@ -97,6 +97,12 @@ def HandleMinifigureDeletion(Server : GameServer, data : bytes, address : Addres
 	for i in range(len(account.Characters)):
 		if(account.Characters[i].ObjectConfig["ObjectID"] == ObjectID):
 			del account.Characters[i]
+			Server.ServerDB.Tables["Characters"].delete("ObjectID = {}".format(ObjectID))
+			Server.ServerDB.Tables["CharacterStatistics"].delete("PlayerID = {}".format(ObjectID))
+			Server.ServerDB.Tables["Inventory"].delete("OwnerID = {}".format(ObjectID))
+			Server.ServerDB.Tables["CharacterConfig"].delete("PlayerID = {}".format(ObjectID))
+			Server.ServerDB.Tables["CompletedMissions"].delete("PlayerID = {}".format(ObjectID))
+			Server.ServerDB.Tables["CurrentMissions"].delete("PlayerID = {}".format(ObjectID))
 			print("Deleted Character {}".format(ObjectID))
 			return
 
@@ -107,7 +113,7 @@ def HandleJoinWorld(Server : GameServer, data : bytes, address : Address):
 	if(player.Zone == ZoneID.NoZone.value):
 		player.Zone = ZoneID.VentureExplorer.value
 	SpawnAtDefault = False
-	if(player.ObjectConfig["Position"] == Vector3(0,0,0)):
+	if(player.ObjectConfig["Position"].X < 2 and player.ObjectConfig["Position"].Y < 2 and player.ObjectConfig["Position"].Z < 2):
 		SpawnAtDefault = True
 	Server.LoadWorld(player, player.Zone, address, SpawnAtDefault=SpawnAtDefault)
 
