@@ -101,13 +101,14 @@ class WorldServer(GameServer):
 			return True
 		return False
 
-	def spawnObject(self, LOT : int, zoneID : ZoneID, Position : Vector3 = Vector3(0,0,0), Rotation : Vector4 = Vector4(0,0,0,0)):
+	def spawnObjectCommand(self, LOT : int, zoneID : ZoneID, Position : Vector3 = Vector3(0,0,0), Rotation : Vector4 = Vector4(0,0,0,0)):
 		zone : Zone = self.Game.getZoneByID(zoneID)
 		gameObject = ReplicaObject(zone)
 		gameObject.ObjectConfig["LOT"] = LOT
 		gameObject.ObjectConfig["Position"] = Position
 		gameObject.ObjectConfig["Rotation"] = Rotation
 		zone.createObject(gameObject)
+		gameObject.Components = gameObject.findComponentsFromCDClient(self.CDClient)
 		self.ReplicaManagers[zoneID].construct(gameObject)
 		print("Spawned Object with LOT {}".format(LOT))
 

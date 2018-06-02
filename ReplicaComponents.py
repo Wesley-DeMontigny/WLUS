@@ -74,29 +74,62 @@ def writeStatsIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : Rep
 		stream.write(c_bit(False))
 
 	stream.write(c_bit(True))
-	stream.write(c_ulong(ObjectConfig["Health"]))
-	stream.write(c_float(ObjectConfig["MaxHealth"]))
-	stream.write(c_ulong(ObjectConfig["Armor"]))
-	stream.write(c_float(ObjectConfig["MaxArmor"]))
-	stream.write(c_ulong(ObjectConfig["Imagination"]))
-	stream.write(c_float(ObjectConfig["MaxImagination"]))
+	if("Health" in ObjectConfig):
+		stream.write(c_ulong(ObjectConfig["Health"]))
+	else:
+		stream.write(c_ulong(1))
+	if("MaxHealth" in ObjectConfig):
+		stream.write(c_float(ObjectConfig["MaxHealth"]))
+	else:
+		stream.write(c_float(1))
+	if("Armor" in ObjectConfig):
+		stream.write(c_ulong(ObjectConfig["Armor"]))
+	else:
+		stream.write(c_ulong(0))
+	if("MaxArmor" in ObjectConfig):
+		stream.write(c_float(ObjectConfig["MaxArmor"]))
+	else:
+		stream.write(c_float(0))
+	if("Imagination" in ObjectConfig):
+		stream.write(c_ulong(ObjectConfig["Imagination"]))
+	else:
+		stream.write(c_ulong(0))
+	if("MaxImagination" in ObjectConfig):
+		stream.write(c_float(ObjectConfig["MaxImagination"]))
+	else:
+		stream.write(c_float(0))
 	stream.write(c_ulong(0))
 	stream.write(c_bit(False))
 	stream.write(c_bit(False))
 	stream.write(c_bit(False))
-	stream.write(c_float(ObjectConfig["MaxHealth"]))
-	stream.write(c_float(ObjectConfig["MaxArmor"]))
-	stream.write(c_float(ObjectConfig["MaxImagination"]))
+	if("MaxHealth" in ObjectConfig):
+		stream.write(c_float(ObjectConfig["MaxHealth"]))
+	else:
+		stream.write(c_float(1))
+	if("MaxArmor" in ObjectConfig):
+		stream.write(c_float(ObjectConfig["MaxArmor"]))
+	else:
+		stream.write(c_float(0))
+	if("MaxImagination" in ObjectConfig):
+		stream.write(c_float(ObjectConfig["MaxImagination"]))
+	else:
+		stream.write(c_float(0))
 	stream.write(c_ulong(1))#Count?
-	stream.write(c_long(ObjectConfig["Faction"]))
+	if("Faction" in ObjectConfig):
+		stream.write(c_long(ObjectConfig["Faction"]))
+	else:
+		stream.write(c_long(1))
 
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))
 		stream.write(c_bit(False))
-		stream.write(c_bit(ObjectConfig["isSmashable"]))
-		if(ObjectConfig["isSmashable"]):
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
+		if("isSmashable" in ObjectConfig):
+			stream.write(c_bit(ObjectConfig["isSmashable"]))
+			if(ObjectConfig["isSmashable"]):
+				stream.write(c_bit(False))
+				stream.write(c_bit(False))
+		else:
+			stream.write(c_bit(True))
 
 	stream.write(c_bit(False))
 
@@ -249,8 +282,14 @@ def writeSwitch(stream : WriteStream, ObjectConfig : dict, ReplicaType : Replica
 
 def writeBaseCombatAI(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))
-	stream.write(c_ulong(ObjectConfig["AIActionState"]))
-	stream.write(c_longlong(ObjectConfig["TargetObject"]))
+	if("AIActionState" in ObjectConfig):
+		stream.write(c_ulong(ObjectConfig["AIActionState"]))
+	else:
+		stream.write(c_ulong(0))
+	if("TargetObject" in ObjectConfig):
+		stream.write(c_longlong(ObjectConfig["TargetObject"]))
+	else:
+		stream.write(c_longlong(0))
 
 def writePhantomPhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))
@@ -265,7 +304,10 @@ def writePhantomPhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType :
 
 def writeExhibit(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))
-	stream.write(c_long(ObjectConfig["ExhibitedLOT"]))
+	if("ExhibitedLOT" in ObjectConfig):
+		stream.write(c_long(ObjectConfig["ExhibitedLOT"]))
+	else:
+		stream.write(c_long(45))
 
 def writeScriptedActivity(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(False))#TODO: Implement this
@@ -273,16 +315,30 @@ def writeScriptedActivity(stream : WriteStream, ObjectConfig : dict, ReplicaType
 def writeRebuildIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	writeScriptedActivity(stream, ObjectConfig, ReplicaType)
 	stream.write(c_bit(True))
-	stream.write(c_ulong(ObjectConfig["RebuildState"]))
-	stream.write(c_bit(ObjectConfig["RebuildSuccess"]))
-	stream.write(c_bit(ObjectConfig["RebuildEnabled"]))
+	if("RebuildState" in ObjectConfig):
+		stream.write(c_ulong(ObjectConfig["RebuildState"]))
+	else:
+		stream.write(c_ulong(0))
+	if("RebuildSuccess" in ObjectConfig):
+		stream.write(c_bit(ObjectConfig["RebuildSuccess"]))
+	else:
+		stream.write(c_bit(False))
+	if("RebuildEnabled" in ObjectConfig):
+		stream.write(c_bit(ObjectConfig["RebuildEnabled"]))
+	else:
+		stream.write(c_bit(True))
 	stream.write(c_float(0))#Time since start of rebuild
 	stream.write(c_float(0))
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))
-		stream.write(c_float(ObjectConfig["BuildActivatorPos"].X))
-		stream.write(c_float(ObjectConfig["BuildActivatorPos"].Y))
-		stream.write(c_float(ObjectConfig["BuildActivatorPos"].Z))
+		if("BuildActivatorPos" in ObjectConfig):
+			stream.write(c_float(ObjectConfig["BuildActivatorPos"].X))
+			stream.write(c_float(ObjectConfig["BuildActivatorPos"].Y))
+			stream.write(c_float(ObjectConfig["BuildActivatorPos"].Z))
+		else:
+			stream.write(c_float(ObjectConfig["Position"].X))
+			stream.write(c_float(ObjectConfig["Position"].Y))
+			stream.write(c_float(ObjectConfig["Position"].Z))
 		stream.write(c_bit(False))
 
 def writeModuleAssembly(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
@@ -298,7 +354,10 @@ def writeRebuild(stream : WriteStream, ObjectConfig : dict, ReplicaType : Replic
 	writeRebuildIndex(stream, ObjectConfig, ReplicaType)
 
 def writeCollectibleIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
-	stream.write(c_uint16(ObjectConfig["CollectibleID"]))
+	if("CollectibleID" in ObjectConfig):
+		stream.write(c_uint16(ObjectConfig["CollectibleID"]))
+	else:
+		stream.write(c_uint16(0))
 
 
 

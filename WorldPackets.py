@@ -223,13 +223,12 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 
 def ConstructObjectsInZone(Server : GameServer, address : Address, zoneID : ZoneID, ExcludeIDs : list = None):
 	zone : Zone = Server.Game.getZoneByID(zoneID)
-	objects = zone.Objects
-	for object in objects:
-		if(object is ReplicaObject):
-			if(object.Components == []):
-				object.Components = object.findComponentsFromCDClient(Server.CDClient)
-			if (object.ObjectConfig["ObjectID"] not in ExcludeIDs):
-				Server.ReplicaManagers[zoneID].construct(object, recipients=[address])
+	for Object in zone.Objects:
+		if(isinstance(Object, ReplicaObject)):
+			if(Object.Components == []):
+				Object.Components = Object.findComponentsFromCDClient(Server.CDClient)
+			if (Object.ObjectConfig["ObjectID"] not in ExcludeIDs):
+				Server.ReplicaManagers[zoneID].construct(Object, recipients=[address])
 
 def SendCreationResponse(Server : GameServer, address : Address, Response : MinifigureCreationResponse):
 	packet = WriteStream()

@@ -50,7 +50,12 @@ class GameReplicaManager(ReplicaManager):
 		out.write(c_ushort(self._network_ids[obj]))
 		obj.write_construction(out)
 
-		self._server.send(out, recipients)
+		outBytes = bytes(out)
+		if(obj.ObjectConfig["LOT"] != 1):
+			file = open("39_2007-51995_2_[24]_[23-2d].bin", "wb")
+			file.write(outBytes)
+
+		self._server.send(outBytes, recipients)
 
 	def serialize(self, obj: Any) -> None:
 
