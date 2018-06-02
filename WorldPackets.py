@@ -210,7 +210,7 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 
 	if (player.Components == []):
 		player.Components = player.findComponentsFromCDClient(Server.CDClient)
-
+	player.ObjectConfig["ObjectType"] = player.getObjectType(Server.CDClient)
 	Server.ReplicaManagers[zone.ZoneID].construct(player)
 
 	doneLoadingObjects = WriteStream()
@@ -225,6 +225,7 @@ def ConstructObjectsInZone(Server : GameServer, address : Address, zoneID : Zone
 	zone : Zone = Server.Game.getZoneByID(zoneID)
 	for Object in zone.Objects:
 		if(isinstance(Object, ReplicaObject)):
+			Object.ObjectConfig["ObjectType"] = Object.getObjectType(Server.CDClient)
 			if(Object.Components == []):
 				Object.Components = Object.findComponentsFromCDClient(Server.CDClient)
 			if (Object.ObjectConfig["ObjectID"] not in ExcludeIDs):

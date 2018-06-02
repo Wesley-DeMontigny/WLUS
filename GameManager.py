@@ -59,6 +59,7 @@ class ReplicaObject(GameObject):
 	def __init__(self, Parent):
 		super().__init__(Parent)
 		self.Components = []
+		self.ObjectConfig["ObjectType"] = ""
 		self.ObjectConfig["Position"] = Vector3(0,0,0)
 		self.ObjectConfig["Rotation"] = Vector4(0,0,0,0)
 		self.ObjectConfig["Scale"] = 1
@@ -72,6 +73,9 @@ class ReplicaObject(GameObject):
 
 	def on_destruction(self):
 		print("Destroying Object {}".format(self.ObjectConfig["ObjectID"]))
+
+	def getObjectType(self, CDClient : GameDB):
+		return CDClient.Tables["Objects"].select(["type"], "id = {}".format(self.ObjectConfig["LOT"]))[0]["type"]
 
 	def findComponentsFromCDClient(self, CDClient : GameDB):
 		componentsRegistry : DBTable = CDClient.Tables["ComponentsRegistry"]
@@ -155,12 +159,46 @@ class Humanoid(ReplicaObject):
 		self.ObjectConfig["MaxImagination"] = 0
 		self.ObjectConfig["Faction"] = 0
 		self.ObjectConfig["isSmashable"] = True
+		self.ObjectConfig["LootIndex"] = None
+		self.ObjectConfig["CurrencyIndex"] = None
+		self.ObjectConfig["HumanoidLevel"] = None
 
 	def Damage(self, amount):
 		self.ObjectConfig["Health"] -= amount
 
 	def Kill(self, **args):
 		print("Killed Object {}".format(self.ObjectConfig["ObjectID"]))
+
+	def setDestructible(self, CDClient : GameDB):
+		ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 7".format(self.ObjectConfig["LOT"]))
+		DestructibleComp = CDClient.Tables["DestructibleComponent"].select(["faction", "level", "LootMatrixIndex",
+																			"CurrencyIndex", "life", "armor", "imagination", "isSmashable"], "id = {}".format(ComponentID[0]["component_id"]))[0]
+		self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
+		self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
+		self.ObjectConfig["LootIndex"] = int(DestructibleComp["LootMatrixIndex"])
+		self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
+		self.ObjectConfig["Health"] = int(DestructibleComp["life"])
+		self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
+		self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
+		self.ObjectConfig["MaxArmor"] = int(DestructibleComp["armor"])
+		self.ObjectConfig["Imagination"] = int(DestructibleComp["imagination"])
+		self.ObjectConfig["MaxImagination"] = int(DestructibleComp["imagination"])
+		self.ObjectConfig["isSmashable"] = bool(DestructibleComp["isSmashable"])
+
+class Smashable(Humanoid):
+	def __init__(self, Parent):
+		super().__init__(Parent)
+		self.ObjectConfig["isSmashable"] = True
+		self.ObjectConfig["Faction"] = 6
+
+class Enemy(Humanoid):
+	def __init__(self, Parent):
+		super().__init__(Parent)
+		self.ObjectConfig["OnGround"] = True
+		self.ObjectConfig["Velocity"] = Vector3(0,0,0)
+		self.ObjectConfig["AngularVelocity"] = Vector4(0,0,0,0)
+		self.ObjectConfig["isSmashable"] = True
+		self.ObjectConfig["Faction"] = 4
 
 class Character(Humanoid):
 	def __init__(self, Parent):

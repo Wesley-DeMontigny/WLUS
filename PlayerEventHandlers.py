@@ -24,8 +24,8 @@ def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServ
 	if(Object.Parent.IsAdmin == True):
 		clientState = stream.read(c_int)
 		command = stream.read(str, length_type=c_ulong)
-		args = command.split(" ")
 		try:
+			args = command.split(" ")
 			if(args[0] == "/loadWorld"):
 				Server.LoadWorld(Object, int(args[1]), address, SpawnAtDefault = True)
 			elif(args[0] == "/fly"):
@@ -57,9 +57,8 @@ def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServ
 						print("Changed {} to ({}, {}, {}, {})".format(args[1], args[2], args[3], args[4], args[5]))
 			elif(args[0] == "/spawnObject"):
 				Server.spawnObjectCommand(int(args[1]), Object.Zone, Position=Object.ObjectConfig["Position"])
-		except Exception as e:
-			print("Error While Executing Command : {}".format(e))
-
+		except:
+			pass
 	else:
 		print("{} Is Not An Admin!".format(Object.ObjectConfig("Name")))
 

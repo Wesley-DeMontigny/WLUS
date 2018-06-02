@@ -40,20 +40,29 @@ def writeControllablePhysics(stream : WriteStream, ObjectConfig : dict, ReplicaT
 	stream.write(c_float(ObjectConfig["Rotation"].Y))
 	stream.write(c_float(ObjectConfig["Rotation"].Z))
 	stream.write(c_float(ObjectConfig["Rotation"].W))
-	stream.write(c_bit(ObjectConfig["OnGround"]))
-	stream.write(c_bit(False))
-	if(ObjectConfig["Velocity"] != Vector3(0,0,0)):
+	if("OnGround" in ObjectConfig):
+		stream.write(c_bit(ObjectConfig["OnGround"]))
+	else:
 		stream.write(c_bit(True))
-		stream.write(c_float(ObjectConfig["Velocity"].X))
-		stream.write(c_float(ObjectConfig["Velocity"].Y))
-		stream.write(c_float(ObjectConfig["Velocity"].Z))
+	stream.write(c_bit(False))
+	if("Velocity" in ObjectConfig):
+		if(ObjectConfig["Velocity"] != Vector3(0,0,0)):
+			stream.write(c_bit(True))
+			stream.write(c_float(ObjectConfig["Velocity"].X))
+			stream.write(c_float(ObjectConfig["Velocity"].Y))
+			stream.write(c_float(ObjectConfig["Velocity"].Z))
+		else:
+			stream.write(c_bit(False))
 	else:
 		stream.write(c_bit(False))
-	if(ObjectConfig["AngularVelocity"] != Vector3(0,0,0)):
-		stream.write(c_bit(True))
-		stream.write(c_float(ObjectConfig["AngularVelocity"].X))
-		stream.write(c_float(ObjectConfig["AngularVelocity"].Y))
-		stream.write(c_float(ObjectConfig["AngularVelocity"].Z))
+	if("AngularVelocity" in ObjectConfig):
+		if(ObjectConfig["AngularVelocity"] != Vector3(0,0,0)):
+			stream.write(c_bit(True))
+			stream.write(c_float(ObjectConfig["AngularVelocity"].X))
+			stream.write(c_float(ObjectConfig["AngularVelocity"].Y))
+			stream.write(c_float(ObjectConfig["AngularVelocity"].Z))
+		else:
+			stream.write(c_bit(False))
 	else:
 		stream.write(c_bit(False))
 	stream.write(c_bit(False))#Moving platform flag?
@@ -119,17 +128,18 @@ def writeStatsIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : Rep
 		stream.write(c_long(ObjectConfig["Faction"]))
 	else:
 		stream.write(c_long(1))
+	if("isSmashable" in ObjectConfig):
+		stream.write(c_bit(ObjectConfig["isSmashable"]))
+	else:
+		stream.write(c_bit(False))
 
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))
 		stream.write(c_bit(False))
 		if("isSmashable" in ObjectConfig):
-			stream.write(c_bit(ObjectConfig["isSmashable"]))
 			if(ObjectConfig["isSmashable"]):
 				stream.write(c_bit(False))
 				stream.write(c_bit(False))
-		else:
-			stream.write(c_bit(True))
 
 	stream.write(c_bit(False))
 
@@ -197,20 +207,23 @@ def writeCharacter(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repl
 	stream.write(c_bit(False))#TODO: Implement Guilds
 
 def writeInventory(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
-	inventory = ObjectConfig["Inventory"]
-	stream.write(c_bit(True))
-	stream.write(c_ulong(len(inventory.InventoryList)))
-	for item in inventory.InventoryList:
-		stream.write(c_longlong(item["ObjectID"]))
-		stream.write(c_long(item["LOT"]))
+	if("Inventory" in ObjectConfig):
+		inventory = ObjectConfig["Inventory"]
+		stream.write(c_bit(True))
+		stream.write(c_ulong(len(inventory.InventoryList)))
+		for item in inventory.InventoryList:
+			stream.write(c_longlong(item["ObjectID"]))
+			stream.write(c_long(item["LOT"]))
+			stream.write(c_bit(False))
+			stream.write(c_bit(True))
+			stream.write(c_ulong(item["Quantity"]))
+			stream.write(c_bit(True))
+			stream.write(c_uint16(item["Slot"]))
+			stream.write(c_bit(False))
+			stream.write(c_bit(False))#TODO: Implement later
+			stream.write(c_bit(True))
+	else:
 		stream.write(c_bit(False))
-		stream.write(c_bit(True))
-		stream.write(c_ulong(item["Quantity"]))
-		stream.write(c_bit(True))
-		stream.write(c_uint16(item["Slot"]))
-		stream.write(c_bit(False))
-		stream.write(c_bit(False))#TODO: Implement later
-		stream.write(c_bit(True))
 	stream.write(c_bit(False))
 
 def writeScript(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):

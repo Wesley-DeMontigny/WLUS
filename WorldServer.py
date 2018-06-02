@@ -2,7 +2,7 @@ from typing import Callable
 import WorldPackets
 from PacketHeaders import PacketHeader
 from Enum import ZoneID
-from GameManager import GameManager, ReplicaObject, Zone, Character, Session
+from GameManager import *
 from GameDB import GameDB
 import threading
 from ServerUtilities import *
@@ -102,15 +102,38 @@ class WorldServer(GameServer):
 		return False
 
 	def spawnObjectCommand(self, LOT : int, zoneID : ZoneID, Position : Vector3 = Vector3(0,0,0), Rotation : Vector4 = Vector4(0,0,0,0)):
-		zone : Zone = self.Game.getZoneByID(zoneID)
-		gameObject = ReplicaObject(zone)
-		gameObject.ObjectConfig["LOT"] = LOT
-		gameObject.ObjectConfig["Position"] = Position
-		gameObject.ObjectConfig["Rotation"] = Rotation
-		zone.createObject(gameObject)
-		gameObject.Components = gameObject.findComponentsFromCDClient(self.CDClient)
-		self.ReplicaManagers[zoneID].construct(gameObject)
-		print("Spawned Object with LOT {}".format(LOT))
+		objectType = str(self.CDClient.Tables["Objects"].select(["type"], "id = {}".format(LOT))[0]["type"])
+		zone: Zone = self.Game.getZoneByID(zoneID)
+		if(objectType == "Smashables"):
+			smashable = Smashable(zone)
+			smashable.ObjectConfig["LOT"] = LOT
+			smashable.ObjectConfig["Position"] = Position
+			smashable.ObjectConfig["Rotation"] = Rotation
+			smashable.ObjectConfig["ObjectType"] = "Smashables"
+			smashable.setDestructible(self.CDClient)
+			zone.createObject(smashable)
+			smashable.Components = smashable.findComponentsFromCDClient(self.CDClient)
+			self.ReplicaManagers[zoneID].construct(smashable)
+		elif(objectType == "Enemies"):
+			enemy = Enemy(zone)
+			enemy.ObjectConfig["LOT"] = LOT
+			enemy.ObjectConfig["Position"] = Position
+			enemy.ObjectConfig["Rotation"] = Rotation
+			enemy.ObjectConfig["ObjectType"] = "Enemies"
+			enemy.setDestructible(self.CDClient)
+			zone.createObject(enemy)
+			enemy.Components = enemy.findComponentsFromCDClient(self.CDClient)
+			self.ReplicaManagers[zoneID].construct(enemy)
+		else:
+				gameObject = ReplicaObject(zone)
+				gameObject.ObjectConfig["LOT"] = LOT
+				gameObject.ObjectConfig["Position"] = Position
+				gameObject.ObjectConfig["Rotation"] = Rotation
+				gameObject.ObjectConfig["ObjectType"] = objectType
+				zone.createObject(gameObject)
+				gameObject.Components = gameObject.findComponentsFromCDClient(self.CDClient)
+				self.ReplicaManagers[zoneID].construct(gameObject)
+		print("Spawned Object with Type '{}' and LOT '{}'".format(objectType, LOT))
 
 	def LoadWorld(self, Player: Character, zoneID: ZoneID, address: Address, SpawnAtDefault: bool = False):
 		packet = WriteStream()
