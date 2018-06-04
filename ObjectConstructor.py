@@ -25,8 +25,7 @@ def WriteReplica(stream : WriteStream, ComponentList : list, ObjectConfig : dict
 	if(23 in ComponentList):
 		writeCollectible(stream, ObjectConfig, ReplicaType)
 	if(26 in ComponentList):
-		print("Pet Is Not Implemented!")
-		return
+		writePet(stream, ObjectConfig, ReplicaType)
 	if(4 in ComponentList):
 		writeCharacter(stream, ObjectConfig, ReplicaType)
 	if(19 in ComponentList):
@@ -43,8 +42,7 @@ def WriteReplica(stream : WriteStream, ComponentList : list, ObjectConfig : dict
 	if(48 in ComponentList):
 		writeRebuild(stream, ObjectConfig, ReplicaType)
 	if(25 in ComponentList):
-		print("Moving Platform Is Not Implemented!")
-		return
+		writeMovingPlatform(stream, ObjectConfig, ReplicaType)
 	if(49 in ComponentList):
 		writeSwitch(stream, ObjectConfig, ReplicaType)
 	if(16 in ComponentList):

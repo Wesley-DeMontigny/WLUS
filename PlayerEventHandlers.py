@@ -56,7 +56,9 @@ def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServ
 						Object.ObjectConfig[str(args[1])] = Vector4(float(args[2]), float(args[3]), float(args[4]), float(args[5]))
 						print("Changed {} to ({}, {}, {}, {})".format(args[1], args[2], args[3], args[4], args[5]))
 			elif(args[0] == "/spawnObject"):
-				Server.spawnObjectCommand(int(args[1]), Object.Zone, Position=Object.ObjectConfig["Position"])
+				Server.spawnObject(int(args[1]), Object.Zone, {}, Position=Object.ObjectConfig["Position"])
+			# elif(args[0] == "/addItem"):
+			# 	Server.addItemToInventory(int(args[1]), Object, Linked=1)
 		except:
 			pass
 	else:

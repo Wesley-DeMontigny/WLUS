@@ -25,6 +25,13 @@ def writeBaseData(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repli
 		stream.write(c_bit(False))
 	stream.write(c_bit(False))#TODO: Implement Parent/Child Objects Later
 
+def writePet(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(False))
+
+def writeMovingPlatform(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
+	stream.write(c_bit(False))#TODO: Implement
+	stream.write(c_bit(False))
+
 def writeControllablePhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	if(ReplicaType == ReplicaTypes.Construction):
 		stream.write(c_bit(False))#Jetpack Flag?
@@ -209,9 +216,10 @@ def writeCharacter(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repl
 def writeInventory(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	if("Inventory" in ObjectConfig):
 		inventory = ObjectConfig["Inventory"]
+		equipped = inventory.getEquippedItems()
 		stream.write(c_bit(True))
-		stream.write(c_ulong(len(inventory.InventoryList)))
-		for item in inventory.InventoryList:
+		stream.write(c_ulong(len(equipped)))
+		for item in equipped:
 			stream.write(c_longlong(item["ObjectID"]))
 			stream.write(c_long(item["LOT"]))
 			stream.write(c_bit(False))

@@ -1,5 +1,6 @@
 from enum import *
 from structures import Vector3
+from os import listdir
 
 
 class ClothingLOT(IntEnum):
@@ -96,6 +97,51 @@ ZoneChecksums = {
 	2001: 0x09eb00ef
 }
 
+nimbus_lvl = []
+for file in listdir("resources/nimbus_station_lvl"):
+	nimbus_lvl.append("resources/nimbus_station_lvl/"+file)
+avant_lvl = []
+for file in listdir("resources/avant_gardens_lvl"):
+	avant_lvl.append("resources/avant_gardens_lvl/"+file)
+fv_lvl = []
+for file in listdir("resources/forbidden_valley_lvl"):
+	fv_lvl.append("resources/forbidden_valley_lvl/"+file)
+gnarled_lvl = []
+for file in listdir("resources/gnarled_forest_lvl"):
+	gnarled_lvl.append("resources/gnarled_forest_lvl/"+file)
+ZoneLvls = {1000 : ["resources/nd_space_ship.lvl"],
+			1001: [],
+			1100: avant_lvl,
+			1101: [],
+			1102: [],
+			1150: [],
+			1151: [],
+			1200: nimbus_lvl,
+			1201: ["resources/nd_ns_pet_ranch.lvl"],
+			1203: [],
+			1204: [],
+			1250: [],
+			1251: [],
+			1300: gnarled_lvl,
+			1302: [],
+			1303: [],
+			1350: [],
+			1400: fv_lvl,
+			1402: [],
+			1403: [],
+			1450: [],
+			1600: ["resources/nd_starbase3001.lvl"],
+			1601: ["resources/wbl_deep_freeze_intro.lvl"],
+			1602: ["resources/wbl_robot_city_intro.lvl"],
+			1603: ["resources/wbl_moon_base_intro.lvl"],
+			1604: ["resources/wbl_portabello.lvl"],
+			1700: ["resources/nd_lego_club.lvl"],
+			1800: [],
+			1900: [],
+			2000: [],
+			2001: []
+			}
+
 DefaultZoneSpawns = {1000 : Vector3(-624.13, 613.326233, -30.974),
 		1001 : Vector3(-187.2391, 608.2743, 54.5554352),
 		1100 : Vector3(522.9949, 406.040375, 129.992722),
@@ -111,7 +157,7 @@ DefaultZoneSpawns = {1000 : Vector3(-624.13, 613.326233, -30.974),
 		1251 : Vector3(31.55009, 470.885254, 193.457321),
 		1300 : Vector3(-329.965881, 302.470184, -470.232758),
 		1302 : Vector3(-293.072571, 233.0, -4.16148),
-		1303 : Vector3(0.0, 0.0, 0.0),#TODO: Find spawn for Keelhaul Canyon
+		1303 : Vector3(0.0, 0.0, 0.0),
 		1350 : Vector3(-19.713892, 440.20932, 26.935009),
 		1400 : Vector3(390.284363, 229.452881, -511.350983),
 		1402 : Vector3(-264.426575, 290.3452, 308.619049),

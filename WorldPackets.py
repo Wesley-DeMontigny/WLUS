@@ -85,7 +85,7 @@ def HandleMinifigureCreation(Server : GameServer, data : bytes, address : Addres
 	Eyes = stream.read(c_ulong)
 	Mouth = stream.read(c_ulong)
 	account.CreateMinifigure(name, ShirtColor, ShirtStyle, PantsColor, HairColor, HairStyle, lh, rh, Eyebrows, Eyes, Mouth)
-	time.sleep(.5)
+	time.sleep(.1)
 	SendCreationResponse(Server, address, MinifigureCreationResponse.Success)
 	HandleMinifigListRequest(Server, b"", address)
 
@@ -217,6 +217,9 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 	Server.InitializeGameMessage(doneLoadingObjects, player.ObjectConfig["ObjectID"], 0x066a)
 	Server.send(doneLoadingObjects, address)
 
+	session.State = SessionState.InGame
+	print("Server Finished Loading Objects")
+
 	playerReady = WriteStream()
 	Server.InitializeGameMessage(playerReady, player.ObjectConfig["ObjectID"], 0x01fd)
 	Server.send(playerReady, address)
@@ -230,6 +233,7 @@ def ConstructObjectsInZone(Server : GameServer, address : Address, zoneID : Zone
 				Object.Components = Object.findComponentsFromCDClient(Server.CDClient)
 			if (Object.ObjectConfig["ObjectID"] not in ExcludeIDs):
 				Server.ReplicaManagers[zoneID].construct(Object, recipients=[address])
+				time.sleep(.2)
 
 def SendCreationResponse(Server : GameServer, address : Address, Response : MinifigureCreationResponse):
 	packet = WriteStream()

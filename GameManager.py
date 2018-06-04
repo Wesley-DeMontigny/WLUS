@@ -8,6 +8,7 @@ from ObjectConstructor import WriteReplica
 from structures import Vector3, Vector4
 from PlayerEventHandlers import *
 import threading
+import LVLFiles
 
 def Nothing(*args):
 	pass
@@ -170,13 +171,18 @@ class Humanoid(ReplicaObject):
 		print("Killed Object {}".format(self.ObjectConfig["ObjectID"]))
 
 	def setDestructible(self, CDClient : GameDB):
-		ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 7".format(self.ObjectConfig["LOT"]))
-		DestructibleComp = CDClient.Tables["DestructibleComponent"].select(["faction", "level", "LootMatrixIndex",
-																			"CurrencyIndex", "life", "armor", "imagination", "isSmashable"], "id = {}".format(ComponentID[0]["component_id"]))[0]
+		try:
+			ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 7".format(self.ObjectConfig["LOT"]))
+			DestructibleComp = CDClient.Tables["DestructibleComponent"].select(["faction", "level", "LootMatrixIndex",
+																				"CurrencyIndex", "life", "armor", "imagination", "isSmashable"], "id = {}".format(ComponentID[0]["component_id"]))[0]
+		except:
+			return
 		self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
 		self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
-		self.ObjectConfig["LootIndex"] = int(DestructibleComp["LootMatrixIndex"])
-		self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
+		if(DestructibleComp["LootMatrixIndex"] is not None):
+			self.ObjectConfig["LootIndex"] = int(DestructibleComp["LootMatrixIndex"])
+		if(DestructibleComp["CurrencyIndex"] is not None):
+			self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
 		self.ObjectConfig["Health"] = int(DestructibleComp["life"])
 		self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
 		self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
@@ -271,7 +277,11 @@ class Inventory():
 			if(item["Equipped"] == True):
 				equippedItems.append(item)
 		return equippedItems
-
+	def getItemByID(self, ObjectID : int):
+		for item in self.InventoryList:
+			if(item["ObjectID"] == ObjectID):
+				return item
+		return None
 
 class GameManager():
 	def __init__(self):
@@ -354,13 +364,22 @@ class GameManager():
 		return playerList
 
 
-	def registerZone(self, ZoneObject : Zone):
+	def registerZone(self, ZoneObject : Zone, lvlFiles : list, Server : GameServer):
 		for Zone in self.Zones:
 			if(Zone.ZoneID == ZoneObject.ZoneID):
 				print("Canceled New Zone Registration of '{}' Because it Already Existed!".format(ZoneNames[ZoneObject.ZoneID]))
 				return Exception
 		self.Zones.append(ZoneObject)
-
+		for file in lvlFiles:
+			lvl = LVLFiles.lvlFile(file)
+			for object in lvl.Objects:
+				if("spawntemplate" in object["LDF"]):
+					respawn = None
+					if("respawn" in object["LDF"]):
+						respawn = float(object["LDF"]["respawn"])
+					Server.spawnObject(int(object["LDF"]["spawntemplate"]), ZoneObject.ZoneID, {"Scale":int(object["Scale"]),
+																								"SpawnerID":int(object["ObjectID"]),
+																								"Respawn":respawn}, object["Position"], object["Rotation"], debug=False)
 	def killPlayer(self, Server: GameServer, PlayerID: int):
 		killPacket = WriteStream()
 		Server.InitializeGameMessage(killPacket, PlayerID, 0x0025)
