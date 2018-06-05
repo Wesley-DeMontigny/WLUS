@@ -17,3 +17,6 @@ After all of that that just execute ```__main__.py```, The default Username is "
 /setConfig <ObjectConfigAttr> <ObjectConfigValue>
 /spawnObject <LOT>
 ```
+
+# Disclaimer
+The LEGO Group has not endorsed or authorized the operation of this game and is not liable for any safety issues in relation to its operation
