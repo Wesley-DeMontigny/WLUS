@@ -109,6 +109,12 @@ for file in listdir("resources/forbidden_valley_lvl"):
 gnarled_lvl = []
 for file in listdir("resources/gnarled_forest_lvl"):
 	gnarled_lvl.append("resources/gnarled_forest_lvl/"+file)
+ninjago_lvl = []
+for file in listdir("resources/ninjago_lvl"):
+	ninjago_lvl.append("resources/ninjago_lvl/"+file)
+nexus_lvl = []
+for file in listdir("resources/nexus_tower_lvl"):
+	nexus_lvl.append("resources/nexus_tower_lvl/"+file)
 ZoneLvls = {1000 : ["resources/nd_space_ship.lvl"],
 			1001: [],
 			1100: avant_lvl,
@@ -137,8 +143,8 @@ ZoneLvls = {1000 : ["resources/nd_space_ship.lvl"],
 			1604: ["resources/wbl_portabello.lvl"],
 			1700: ["resources/nd_lego_club.lvl"],
 			1800: [],
-			1900: [],
-			2000: [],
+			1900: nexus_lvl,
+			2000: ninjago_lvl,
 			2001: []
 			}
 

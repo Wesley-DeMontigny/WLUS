@@ -8,6 +8,7 @@ from pathlib import Path
 import os
 import time
 import sqlite3
+from copy import deepcopy
 from GameDB import GameDB
 from AccountManager import AccountManager
 
@@ -19,7 +20,11 @@ def save(GM, ServerDB):
 	while True:
 		time.sleep(5)
 		try:
-			serializeObject(GM, "Game.pickle")
+			adjGM = deepcopy(GM)
+			adjGM.AccountManager = None
+			adjGM.purgePlayers()
+			adjGM.clearSessions()
+			serializeObject(adjGM, "Game.pickle")
 			GM.AccountManager.Save(ServerDB)
 		except:
 			pass

@@ -1,4 +1,5 @@
 from pyraknet.bitstream import *
+import math
 
 #Ripped this straight off of PYLUS Because I had no idea how to make the char_size of strings equal to 1. Idk why it was removed as a parameter but whatever I guess
 class CString(Serializable):
@@ -28,6 +29,11 @@ class Vector3():
 		self.X = X
 		self.Y = Y
 		self.Z = Z
+	def distance(self, point):
+		XVal = pow(self.X - point.X, 2)
+		YVal = pow(self.Y - point.Y, 2)
+		ZVal = pow(self.Z - point.Z, 2)
+		return math.sqrt(XVal + YVal + ZVal)
 
 class Vector4():
 	def __init__(self, X : float, Y : float, Z : float, W : float):

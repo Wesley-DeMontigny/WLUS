@@ -8,6 +8,7 @@ from AccountManager import Account
 from xml.etree import ElementTree
 from LDF import LDF
 import zlib
+from ObjectEventHandlers import *
 
 def HandleHandshake(Server : GameServer, data : bytes, address : Address):
 	stream = ReadStream(data)
@@ -122,8 +123,14 @@ def HandleGameMessage(Server : GameServer, data : bytes, address : Address):
 	objectID = stream.read(c_longlong)
 	messageID = stream.read(c_ushort)
 	object : GameObject = Server.Game.getObjectByID(objectID)
+	eventName = "GM_{}".format(str(hex(messageID).replace("x","")))
 	if(object is not None):
-		object.HandleEvent("GM_{}".format(str(hex(messageID).replace("x",""))), stream, address, Server)
+		if (eventName == "GM_02f8"):
+			PlatformResync(object, stream, address, Server)
+		elif (eventName == "GM_0208"):
+			MissionOffering(object, stream, address, Server)
+		else:
+			object.HandleEvent(eventName, stream, address, Server)
 	else:
 		print("Object {} Does Not Exist!".format(objectID))
 
@@ -226,14 +233,17 @@ def HandleDetailedLoad(Server : GameServer, data : bytes, address : Address):
 
 def ConstructObjectsInZone(Server : GameServer, address : Address, zoneID : ZoneID, ExcludeIDs : list = None):
 	zone : Zone = Server.Game.getZoneByID(zoneID)
+	session : Session = Server.Game.getSessionByAddress(address)
+	player : Character = Server.Game.getObjectByID(session.ObjectID)
 	for Object in zone.Objects:
 		if(isinstance(Object, ReplicaObject)):
 			Object.ObjectConfig["ObjectType"] = Object.getObjectType(Server.CDClient)
 			if(Object.Components == []):
 				Object.Components = Object.findComponentsFromCDClient(Server.CDClient)
-			if (Object.ObjectConfig["ObjectID"] not in ExcludeIDs):
-				Server.ReplicaManagers[zoneID].construct(Object, recipients=[address])
-				time.sleep(.2)
+				if (player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) < player.ObjectConfig["GhostingDistance"]):
+					if (Object.ObjectConfig["ObjectID"] not in ExcludeIDs):
+						Server.ReplicaManagers[zoneID].construct(Object, recipients=[address])
+						time.sleep(.05)
 
 def SendCreationResponse(Server : GameServer, address : Address, Response : MinifigureCreationResponse):
 	packet = WriteStream()
@@ -255,3 +265,4 @@ def UpdateCharacterPositon(Server : GameServer, data : bytes, address : Address)
 	character : Character = Server.Game.getObjectByID(session.ObjectID)
 	character.ObjectConfig["Position"] = Vector3(XPos, YPos, ZPos)
 	character.ObjectConfig["Rotation"] = Vector4(XRot, YRot, ZRot, WRot)
+	character.ObjectConfig["NeedsUpdate"] = True

@@ -57,6 +57,7 @@ def WriteReplica(stream : WriteStream, ComponentList : list, ObjectConfig : dict
 	if(75 in ComponentList):
 		writeExhibit(stream, ObjectConfig, ReplicaType)
 	if(2 in ComponentList):
-		writeRender(stream, ObjectConfig, ReplicaType)
+		if("Render" not in ObjectConfig or ObjectConfig["Render"] == True):
+			writeRender(stream, ObjectConfig, ReplicaType)
 	if(107 in ComponentList):
 		writeComponent107(stream, ObjectConfig, ReplicaType)

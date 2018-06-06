@@ -32,6 +32,9 @@ class GameReplicaManager(ReplicaManager):
 	def remove_participant(self, address : Address):
 		self._participants.discard(address)
 
+	def get_participants(self):
+		return self._participants
+
 	def construct(self, obj: Any, new: bool=True, recipients: Iterable[Address]=None):
 		self._construct(obj, new, recipients)
 
@@ -53,14 +56,17 @@ class GameReplicaManager(ReplicaManager):
 
 		self._server.send(outBytes, recipients)
 
-	def serialize(self, obj: Any) -> None:
+	def serialize(self, obj: Any, recipients : Iterable[Address]=None) -> None:
+
+		if recipients is None:
+			recipients = self._participants
 
 		out = WriteStream()
 		out.write(c_ubyte(Message.ReplicaManagerSerialize))
 		out.write(c_ushort(self._network_ids[obj]))
 		obj.serialize(out)
 
-		self._server.send(out, self._participants)
+		self._server.send(out, recipients)
 
 	def destruct(self, obj: Any) -> None:
 

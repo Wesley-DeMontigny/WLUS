@@ -1,11 +1,13 @@
 from pyraknet.messages import Address
 from pyraknet.bitstream import *
 import random
+import time
 from typing import Callable
 from Enum import *
 from GameDB import *
 from ObjectConstructor import WriteReplica
 from structures import Vector3, Vector4
+from ObjectEventHandlers import *
 from PlayerEventHandlers import *
 import threading
 import LVLFiles
@@ -24,7 +26,7 @@ class GameObject():
 			eventThread = threading.Thread(target=self.EventHandlers[EventID], args=[self, Stream, address, Server])
 			eventThread.start()
 		else:
-			#print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
+			print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
 			pass
 	def RegisterEvent(self, EventID : str, Handler : Callable):
 		self.EventHandlers[EventID] = Handler
@@ -66,6 +68,8 @@ class ReplicaObject(GameObject):
 		self.ObjectConfig["Scale"] = 1
 		self.ObjectConfig["SpawnerID"] = None
 
+		self.ObjectConfig["NeedsUpdate"] = False
+
 	def write_construction(self, stream: WriteStream):
 		WriteReplica(stream, self.Components, self.ObjectConfig, ReplicaTypes.Construction)
 
@@ -73,7 +77,7 @@ class ReplicaObject(GameObject):
 		WriteReplica(stream, self.Components, self.ObjectConfig, ReplicaTypes.Serialization)
 
 	def on_destruction(self):
-		print("Destroying Object {}".format(self.ObjectConfig["ObjectID"]))
+		pass
 
 	def getObjectType(self, CDClient : GameDB):
 		return CDClient.Tables["Objects"].select(["type"], "id = {}".format(self.ObjectConfig["LOT"]))[0]["type"]
@@ -130,24 +134,24 @@ class Mission():
 		self.Parent : Character = Parent
 		self.MissionType : str = None
 		self.MissionID : int = 0
+		self.TaskType : int = 0
 		self.RewardCurrency : int = 0
 		self.RewardItems : list = []
 		self.RewardUniverseScore : int = 0
 		self.Offerer : int = 0
 		self.Target : int = 0
 		self.Progress : int = 0
+		self.Prereq = []
 	def Complete(self):
 		self.Parent.ObjectConfig["UniverseScore"] += self.RewardUniverseScore
 		self.Parent.ObjectConfig["Currency"] += self.RewardCurrency
 		for item in self.RewardItems:
-			self.Parent.ObjectConfig["Inventory"].addItem(item)
+			itemId = random.randint(100000000000000000, 999999999999999999)
+			self.Parent.ObjectConfig["Inventory"].addItem(item, itemId)
 		self.Parent.ObjectConfig["CompletedMissions"].append(self.MissionID)
-		try:
-			for i in range(len(self.Parent.ObjectConfig["CurrentMissions"])):
-				if(self.Parent.ObjectConfig["CurrentMissions"][i] == self):
-					del self.Parent.ObjectConfig["CurrentMissions"][i]
-		except:
-			pass
+		for i in range(len(self.Parent.ObjectConfig["CurrentMissions"])):
+			if(self.Parent.ObjectConfig["CurrentMissions"][i] == self):
+				del self.Parent.ObjectConfig["CurrentMissions"][i]
 
 class Humanoid(ReplicaObject):
 	def __init__(self, Parent):
@@ -166,6 +170,7 @@ class Humanoid(ReplicaObject):
 
 	def Damage(self, amount):
 		self.ObjectConfig["Health"] -= amount
+		self.ObjectConfig["NeedsUpdate"] = True
 
 	def Kill(self, **args):
 		print("Killed Object {}".format(self.ObjectConfig["ObjectID"]))
@@ -177,19 +182,32 @@ class Humanoid(ReplicaObject):
 																				"CurrencyIndex", "life", "armor", "imagination", "isSmashable"], "id = {}".format(ComponentID[0]["component_id"]))[0]
 		except:
 			return
-		self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
-		self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
+		if(DestructibleComp["faction"] is not None):
+			self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
+
+		if (DestructibleComp["level"] is not None):
+			self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
+
 		if(DestructibleComp["LootMatrixIndex"] is not None):
 			self.ObjectConfig["LootIndex"] = int(DestructibleComp["LootMatrixIndex"])
+
 		if(DestructibleComp["CurrencyIndex"] is not None):
 			self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
-		self.ObjectConfig["Health"] = int(DestructibleComp["life"])
-		self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
-		self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
-		self.ObjectConfig["MaxArmor"] = int(DestructibleComp["armor"])
-		self.ObjectConfig["Imagination"] = int(DestructibleComp["imagination"])
-		self.ObjectConfig["MaxImagination"] = int(DestructibleComp["imagination"])
-		self.ObjectConfig["isSmashable"] = bool(DestructibleComp["isSmashable"])
+
+		if (DestructibleComp["life"] is not None):
+			self.ObjectConfig["Health"] = int(DestructibleComp["life"])
+			self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
+
+		if (DestructibleComp["armor"] is not None):
+			self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
+			self.ObjectConfig["MaxArmor"] = int(DestructibleComp["armor"])
+
+		if (DestructibleComp["imagination"] is not None):
+			self.ObjectConfig["Imagination"] = int(DestructibleComp["imagination"])
+			self.ObjectConfig["MaxImagination"] = int(DestructibleComp["imagination"])
+
+		if (DestructibleComp["isSmashable"] is not None):
+			self.ObjectConfig["isSmashable"] = bool(DestructibleComp["isSmashable"])
 
 class Smashable(Humanoid):
 	def __init__(self, Parent):
@@ -239,13 +257,17 @@ class Character(Humanoid):
 		self.ObjectConfig["Inventory"] = Inventory(self)
 		self.ObjectConfig["LoadingIn"] = True
 
-		self.RegisterEvent("GM_04b2", RemoveHealth)#Request Death
-		self.RegisterEvent("GM_05cd", Nothing)#Modified Ghosting
+		self.ObjectConfig["GhostingDistance"] = 250
+		self.ClientObjects : list = []
+
+		self.RegisterEvent("GM_04b2", SmashPlayer)#Request Death
+		self.RegisterEvent("GM_05cd", Nothing)#Modify Ghosting Distance
 		self.RegisterEvent("GM_0378", Nothing)#Ready For Updates
 		self.RegisterEvent("GM_01f9", PlayerLoaded)#Player Loaded
 		self.RegisterEvent("GM_09f", Ressurect)#Ressurect Request
 		self.RegisterEvent("GM_0300", Nothing)#Set Ghosting Distance
 		self.RegisterEvent("GM_0352", RunCommand)#Run chat command
+		self.RegisterEvent("GM_016c", HandleInteraction)#Handles Interaction Request
 
 	def Kill(self, Server : GameServer):
 		super().Kill()
@@ -253,6 +275,35 @@ class Character(Humanoid):
 		Server.InitializeGameMessage(killPacket, self.ObjectConfig["ObjectID"], 0x0025)
 		Server.brodcastPacket(killPacket, Server.Game.getObjectByID(self.ObjectConfig["ObjectID"]).Zone)
 
+	def getMissionByID(self, MissionID):
+		for mission in self.ObjectConfig["CurrentMissions"]:
+			if(mission.MissionID == MissionID):
+				return mission
+		return None
+
+	def giveMission(self,  missionRow : dict, taskType : int):
+		missionObj = Mission(self)
+		missionObj.Offerer = int(missionRow["offer_objectID"])
+		missionObj.TaskType = taskType
+		missionObj.Target = int(missionRow["target_objectID"])
+		missionObj.MissionID = int(missionRow["id"])
+		missionObj.MissionType = str(missionRow["defined_type"])
+		missionObj.RewardUniverseScore = int(missionRow["LegoScore"])
+		missionObj.RewardCurrency = int(missionRow["reward_currency"])
+		missionObj.Prereq = str(missionRow["prereqMissionID"]).split("|")
+		if (int(missionRow["reward_item1"]) != -1):
+			for _ in range(int(missionRow["reward_item1_count"])):
+				missionObj.RewardItems.append(int(missionRow["reward_item1"]))
+		if (int(missionRow["reward_item2"]) != -1):
+			for _ in range(int(missionRow["reward_item2_count"])):
+				missionObj.RewardItems.append(int(missionRow["reward_item2"]))
+		if (int(missionRow["reward_item3"]) != -1):
+			for _ in range(int(missionRow["reward_item3_count"])):
+				missionObj.RewardItems.append(int(missionRow["reward_item3"]))
+		if (int(missionRow["reward_item4"]) != -1):
+			for _ in range(int(missionRow["reward_item4_count"])):
+				missionObj.RewardItems.append(int(missionRow["reward_item4"]))
+		self.ObjectConfig["CurrentMissions"].append(missionObj)
 
 class Inventory():
 	def __init__(self, Parent):
@@ -296,7 +347,7 @@ class GameManager():
 				if(object.ObjectConfig["LOT"] == 1):
 					del Zone.Objects[Zone.Objects.index(object)]
 					purgeCount += 1
-		print("Purged {} Players From Game".format(purgeCount))
+		#print("Purged {} Players From Game".format(purgeCount))
 
 
 	def registerSession(self, Session : Session):
@@ -310,6 +361,12 @@ class GameManager():
 
 	def clearSessions(self):
 		self.Sessions = []
+
+	def getObjectZone(self, Object : GameObject):
+		for zone in self.Zones:
+			if(Object in zone.Objects):
+				return zone.ZoneID
+		return None
 
 	def getAccountByUsername(self, Username : str):
 		return self.AccountManager.getAccountByUsername(Username)
@@ -335,7 +392,7 @@ class GameManager():
 
 	def getSessionByCharacterID(self, characterID):
 		for session in self.Sessions:
-			if(session.character.objectID == characterID):
+			if(session.ObjectID == characterID):
 				return session
 		return None
 
@@ -375,11 +432,15 @@ class GameManager():
 			for object in lvl.Objects:
 				if("spawntemplate" in object["LDF"]):
 					respawn = None
+					renderDisabled = False
+					if("renderDisabled" in object["LDF"] and object["LDF"]["renderDisabled"] == '1'):
+						renderDisabled = True
 					if("respawn" in object["LDF"]):
 						respawn = float(object["LDF"]["respawn"])
 					Server.spawnObject(int(object["LDF"]["spawntemplate"]), ZoneObject.ZoneID, {"Scale":int(object["Scale"]),
 																								"SpawnerID":int(object["ObjectID"]),
-																								"Respawn":respawn}, object["Position"], object["Rotation"], debug=False)
+																								"Respawn":respawn, "Render":not renderDisabled}, object["Position"], object["Rotation"], debug=False, initialize=True)
+					time.sleep(.05)
 	def killPlayer(self, Server: GameServer, PlayerID: int):
 		killPacket = WriteStream()
 		Server.InitializeGameMessage(killPacket, PlayerID, 0x0025)

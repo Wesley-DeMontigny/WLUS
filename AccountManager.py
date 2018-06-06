@@ -86,26 +86,42 @@ class AccountManager():
 										   "RacesFinished": Stats.RacesFinished,
 										   "RacesWon": Stats.RacesWon}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
 
-					CompMissionTable.delete("PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+					CompletedMissionStr = ""
 					for mission in character.ObjectConfig["CompletedMissions"]:
-						CompMissionTable.insert({"PlayerID":character.ObjectConfig["ObjectID"], "MissionID":mission})
+						CompletedMissionStr += mission + "|"
+					CompMissionTable.update({"Missions":CompletedMissionStr[:-1]}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
 
-					CurrentMissionsTable.delete("PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+					CurrentMissions = CurrentMissionsTable.selectAll("PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+					currentMissionTableIds = []
+					for mission in CurrentMissions:
+						currentMissionTableIds.append(int(mission["MissionID"]))
+
+					currentMissionCharacterIds = []
 					for mission in character.ObjectConfig["CurrentMissions"]:
-						rewardItems = ""
-						for x in range(len(mission.RewardItems)):
-							if(x != len(mission.RewardItems)-1):
-								rewardItems += str(mission.RewardItems[x]) + "|"
-							else:
-								rewardItems += str(mission.RewardItems[x])
-						CurrentMissionsTable.insert({"PlayerID":character.ObjectConfig["ObjectID"],
-													 "MissionType":mission.MissionType,
-													 "RewardCurrency":mission.RewardCurrency,
-													 "RewardItems":rewardItems,
-													 "RewardUniverseScore":mission.RewardUniverseScore,
-													 "Offerer":mission.Offerer,
-													 "Target":mission.Target,
-													 "Progress":mission.Progress})
+						currentMissionCharacterIds.append(int(mission.MissionID))
+
+					for mission in character.ObjectConfig["CurrentMissions"]:
+						if (mission.MissionID in currentMissionTableIds):
+							CurrentMissionsTable.update({"Progress":mission.Progress}, "PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
+						else:
+							rewardItems = ""
+							for x in range(len(mission.RewardItems)):
+								if(x != len(mission.RewardItems)-1):
+									rewardItems += str(mission.RewardItems[x]) + "|"
+								else:
+									rewardItems += str(mission.RewardItems[x])
+							CurrentMissionsTable.insert({"PlayerID":character.ObjectConfig["ObjectID"],
+														 "MissionType":mission.MissionType,
+														 "RewardCurrency":mission.RewardCurrency,
+														 "RewardItems":rewardItems,
+														 "RewardUniverseScore":mission.RewardUniverseScore,
+														 "Offerer":mission.Offerer,
+														 "MissionID": mission.MissionID,
+														 "Target":mission.Target,
+														 "Progress":mission.Progress})
+					for mission in currentMissionTableIds:
+						if(mission not in currentMissionCharacterIds):
+							CurrentMissionsTable.delete("PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
 
 					InventoryTable.delete("OwnerID = {}".format(character.ObjectConfig["ObjectID"]))
 					inventory : Inventory = character.ObjectConfig["Inventory"]
@@ -169,8 +185,10 @@ class AccountManager():
 										   "RacesFinished": Stats.RacesFinished,
 										   "RacesWon": Stats.RacesWon})
 
+					CompletedMissionStr = ""
 					for mission in character.ObjectConfig["CompletedMissions"]:
-						CompMissionTable.insert({"PlayerID":character.ObjectConfig["ObjectID"], "MissionID":mission})
+						CompletedMissionStr += mission + "|"
+					CompMissionTable.insert({"PlayerID":character.ObjectConfig["ObjectID"], "Missions":CompletedMissionStr[:-1]})
 
 					for mission in character.ObjectConfig["CurrentMissions"]:
 						rewardItems = ""
@@ -185,6 +203,7 @@ class AccountManager():
 													 "RewardItems":rewardItems,
 													 "RewardUniverseScore":mission.RewardUniverseScore,
 													 "Offerer":mission.Offerer,
+													 "MissionID":mission.MissionID,
 													 "Target":mission.Target,
 													 "Progress":mission.Progress})
 
@@ -235,7 +254,7 @@ class AccountManager():
 			Characters = CharacterTable.selectAll("AccountID = {}".format(account["AccountID"]))
 			for character in Characters:
 				PlayerStatistics = CharacterStats.selectAll("PlayerID = {}".format(character["ObjectID"]))[0]
-				CompletedMissions = CompMissionTable.selectAll("PlayerID = {}".format(character["ObjectID"]))
+				CompletedMissions = CompMissionTable.selectAll("PlayerID = {}".format(character["ObjectID"]))[0]
 				CurrentMissions = CurrentMissionsTable.selectAll("PlayerID = {}".format(character["ObjectID"]))
 				PlayerInventory = InventoryTable.selectAll("OwnerID = {}".format(character["ObjectID"]))
 				CharacterConfig = CharacterConfigTable.selectAll("PlayerID = {}".format(character["ObjectID"]))[0]
@@ -269,8 +288,9 @@ class AccountManager():
 				LoadedPlayer.ObjectConfig["MaxImagination"] = CharacterConfig["MaxImagination"]
 				LoadedPlayer.ObjectConfig["Currency"] = CharacterConfig["Currency"]
 
-				for mission in CompletedMissions:
-					LoadedPlayer.ObjectConfig["CompletedMissions"].append(int(mission["MissionID"]))
+				if(CompletedMissions["Missions"] != ""):
+					for mission in str(CompletedMissions["Missions"]).split("|"):
+						LoadedPlayer.ObjectConfig["CompletedMissions"].append(int(mission))
 
 				for mission in CurrentMissions:
 					MissionObject = Mission(LoadedPlayer)
