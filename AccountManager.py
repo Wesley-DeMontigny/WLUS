@@ -123,13 +123,29 @@ class AccountManager():
 						if(mission not in currentMissionCharacterIds):
 							CurrentMissionsTable.delete("PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
 
-					InventoryTable.delete("OwnerID = {}".format(character.ObjectConfig["ObjectID"]))
+					PlayerInventory = InventoryTable.selectAll("OwnerID = {}".format(character["ObjectID"]))
 					inventory : Inventory = character.ObjectConfig["Inventory"]
+
+					InventoryTableObjects = []
+					for item in PlayerInventory:
+						InventoryTableObjects.append(item["ObjectID"])
+
+					InventoryCharacterObjects = []
 					for item in inventory.InventoryList:
-						InventoryTable.insert({"LOT":item["LOT"], "Slot":item["Slot"],
-											   "Equipped":int(item["Equipped"]), "Linked":int(item["Linked"]),
-											   "Quantity":item["Quantity"], "ObjectID":item["ObjectID"],
-											   "OwnerID":character.ObjectConfig["ObjectID"]})
+						InventoryCharacterObjects.append(item["ObjectID"])
+
+					for item in inventory.InventoryList:
+						if(item["ObjectID"] not in InventoryTableObjects):
+							InventoryTable.insert({"LOT":item["LOT"], "Slot":item["Slot"],
+												   "Equipped":int(item["Equipped"]), "Linked":int(item["Linked"]),
+												   "Quantity":item["Quantity"], "ObjectID":item["ObjectID"],
+												   "OwnerID":character.ObjectConfig["ObjectID"]})
+						else:
+							InventoryTable.update({"Linked":int(item["Linked"]), "Quantity":item["Quantity"], "Slot":item["Slot"]}, "ObjectID = {} AND OwnerID = {}".format(item["ObjectID"], character.ObjectConfig["ObjectID"]))
+					for item in InventoryTableObjects:
+						if(item not in InventoryCharacterObjects):
+							InventoryTable.delete("OwnerID = {} AND ObjectID = {}".format(character.ObjectConfig["ObjectID"], item))
+
 
 					posStr = "{},{},{}".format(character.ObjectConfig["Position"].X,character.ObjectConfig["Position"].Y,character.ObjectConfig["Position"].Z)
 					rotStr = "{},{},{},{}".format(character.ObjectConfig["Rotation"].X,

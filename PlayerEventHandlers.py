@@ -21,6 +21,7 @@ def HandleInteraction(Object, stream : ReadStream, address : Address, Server : G
 										"reward_item3_count", "reward_item4", "reward_item4_count"], "offer_objectID = {} OR target_objectID = {}".format(gameObject.ObjectConfig["LOT"],gameObject.ObjectConfig["LOT"]))
 	except:
 		return
+
 	if(missions != []):
 		for mission in missions:
 			canGive = True
@@ -29,13 +30,13 @@ def HandleInteraction(Object, stream : ReadStream, address : Address, Server : G
 					if(prereqMission not in Object.ObjectConfig["CompletedMissions"]):
 						canGive = False
 			if(canGive):
-				packet = WriteStream()
-				Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x00f8)
-				packet.write(c_int(int(mission["id"])))
-				packet.write(c_longlong(gameObject.ObjectConfig["ObjectID"]))
-				Server.send(packet, address)
-				print("Offering Mission {}".format(mission["id"]))
-				return
+				if(mission["id"] not in Object.ObjectConfig["CompletedMissions"]):
+					packet = WriteStream()
+					Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x00f8)
+					packet.write(c_int(int(mission["id"])))
+					packet.write(c_longlong(gameObject.ObjectConfig["ObjectID"]))
+					Server.send(packet, address)
+					print("Offering Mission {}".format(mission["id"]))
 
 
 def SmashPlayer(Object, stream : ReadStream, address : Address, Server : GameServer):

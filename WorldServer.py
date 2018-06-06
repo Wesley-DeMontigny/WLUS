@@ -155,31 +155,6 @@ class WorldServer(GameServer):
 		if(self.Game.getObjectZone(Object) is not None):
 			self.brodcastPacket(packet, self.Game.getObjectZone(Object))
 
-	# def addItemToInventory(self, LOT : int, Player : Character, Quantity : int = 1, Linked : bool = False):
-	# 	inventory : Inventory = Player.ObjectConfig["Inventory"]
-	# 	objectID = random.randint(100000000000000000, 999999999999999999)
-	# 	inventory.addItem(LOT, objectID, Quantity=Quantity, Linked=Linked, Equipped=False)
-	# 	syncPacket = WriteStream()
-	# 	self.InitializeGameMessage(syncPacket, Player.ObjectConfig["ObjectID"], 227)
-	# 	syncPacket.write(c_bit(Linked))#Linked
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_ulong(0))
-	# 	syncPacket.write(c_long(LOT))
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_bit(False))
-	# 	syncPacket.write(c_longlong(objectID))
-	# 	syncPacket.write(c_float(0))#X flying loot
-	# 	syncPacket.write(c_float(0))#Y flying loot
-	# 	syncPacket.write(c_float(0))#Z flying loot
-	# 	syncPacket.write(c_bit(True))
-	# 	syncPacket.write(c_int(inventory.getItemByID(objectID)["Slot"]))
-	# 	session = self.Game.getSessionByCharacterID(Player.ObjectConfig["ObjectID"])
-	# 	self.send(syncPacket, session.address)
-
 	def spawnObject(self, LOT : int, zoneID : ZoneID, CustomConfig : dict, Position : Vector3 = Vector3(0,0,0), Rotation : Vector4 = Vector4(0,0,0,0), debug : bool = True,
 					initialize : bool = False):
 		try:

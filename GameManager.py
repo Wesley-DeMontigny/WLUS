@@ -148,10 +148,6 @@ class Mission():
 		for item in self.RewardItems:
 			itemId = random.randint(100000000000000000, 999999999999999999)
 			self.Parent.ObjectConfig["Inventory"].addItem(item, itemId)
-		self.Parent.ObjectConfig["CompletedMissions"].append(self.MissionID)
-		for i in range(len(self.Parent.ObjectConfig["CurrentMissions"])):
-			if(self.Parent.ObjectConfig["CurrentMissions"][i] == self):
-				del self.Parent.ObjectConfig["CurrentMissions"][i]
 
 class Humanoid(ReplicaObject):
 	def __init__(self, Parent):

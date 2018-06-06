@@ -27,8 +27,9 @@ def MissionOffering(Object, stream : ReadStream, address : Address, Server : Gam
 	Server.InitializeGameMessage(NotifyMission, PlayerID, 0x0fe)
 	NotifyMission.write(c_int(MissionID))
 	NotifyMission.write(c_int(State))
-	NotifyMission.write(c_bit(Complete))
+	NotifyMission.write(c_bit(False))
 	Server.send(NotifyMission, address)
+
 	if(Server.Game.getObjectByID(PlayerID).getMissionByID(MissionID) is None):
 		missionTable = Server.CDClient.Tables["Missions"]
 		mission = missionTable.select(["target_objectID", "id", "defined_type",
@@ -42,3 +43,8 @@ def MissionOffering(Object, stream : ReadStream, address : Address, Server : Gam
 		player = Server.Game.getObjectByID(PlayerID)
 		missionObj = player.getMissionByID(MissionID)
 		missionObj.Complete()
+		missionObj.Parent.ObjectConfig["CompletedMissions"].append(MissionID)
+		for i in range(len(missionObj.Parent.ObjectConfig["CurrentMissions"])):
+			if(missionObj.Parent.ObjectConfig["CurrentMissions"][i] == missionObj):
+				del missionObj.Parent.ObjectConfig["CurrentMissions"][i]
+				print("Removed Old Mission")
