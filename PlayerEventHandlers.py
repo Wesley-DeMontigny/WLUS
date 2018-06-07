@@ -25,9 +25,9 @@ def HandleInteraction(Object, stream : ReadStream, address : Address, Server : G
 	if(missions != []):
 		for mission in missions:
 			canGive = True
-			if(str(mission["prereqMissionID"]) != ""):
-				for prereqMission in str(mission["prereqMissionID"]).split("|"):
-					if(prereqMission not in Object.ObjectConfig["CompletedMissions"]):
+			if(str(mission["prereqMissionID"]) != "" and mission["prereqMissionID"] is not None):
+				for prereqMission in mission["prereqMissionID"].split("|"):
+					if(int(prereqMission) not in Object.ObjectConfig["CompletedMissions"]):
 						canGive = False
 			if(canGive):
 				if(mission["id"] not in Object.ObjectConfig["CompletedMissions"]):
@@ -37,6 +37,7 @@ def HandleInteraction(Object, stream : ReadStream, address : Address, Server : G
 					packet.write(c_longlong(gameObject.ObjectConfig["ObjectID"]))
 					Server.send(packet, address)
 					print("Offering Mission {}".format(mission["id"]))
+					return
 
 
 def SmashPlayer(Object, stream : ReadStream, address : Address, Server : GameServer):
@@ -47,6 +48,7 @@ def ModifyGhostingDistance(Object, stream : ReadStream, address : Address, Serve
 
 def Ressurect(Object, stream : ReadStream, address : Address, Server : GameServer):
 	packet = WriteStream()
+	print("Ressurecting Player {}".format(Object.ObjectConfig["ObjectID"]))
 	Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x00a0)
 	Object.ObjectConfig["Health"] = Object.ObjectConfig["MaxHealth"]
 	Object.ObjectConfig["Armor"] = Object.ObjectConfig["MaxArmor"]
@@ -97,8 +99,8 @@ def RunCommand(Object, stream : ReadStream, address : Address, Server : GameServ
 					Object.ObjectConfig["NeedsUpdate"] = True
 			elif(args[0] == "/spawnObject"):
 				Server.spawnObject(int(args[1]), Object.Zone, {}, Position=Object.ObjectConfig["Position"])
-			# elif(args[0] == "/addItem"):
-			# 	Server.addItemToInventory(int(args[1]), Object, Linked=1)
+			elif(args[0] == "/togglePVP"):
+				Object.ObjectConfig["PVPEnabled"] = not Object.ObjectConfig["PVPEnabled"]
 		except:
 			pass
 	else:

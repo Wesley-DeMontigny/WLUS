@@ -19,15 +19,12 @@ def serializeObject(Object : any, Filename : str):
 def save(GM, ServerDB):
 	while True:
 		time.sleep(5)
-		try:
-			adjGM = deepcopy(GM)
-			adjGM.AccountManager = None
-			adjGM.purgePlayers()
-			adjGM.clearSessions()
-			serializeObject(adjGM, "Game.pickle")
-			GM.AccountManager.Save(ServerDB)
-		except:
-			pass
+		adjGM = deepcopy(GM)
+		adjGM.AccountManager = None
+		adjGM.purgePlayers()
+		adjGM.Sessions = []
+		serializeObject(adjGM, "Game.pickle")
+		GM.AccountManager.Save(GM, ServerDB)
 
 
 if __name__ == "__main__":
@@ -44,19 +41,20 @@ if __name__ == "__main__":
 		pickledFile = open(pickledGame, "rb")
 		GM = pickle.load(pickledFile)
 		GM.purgePlayers()
-		GM.clearSessions()
+		GM.Sessions = []
 
 	CDClientDB : GameDB = GameDB(sqlite3.connect("resources/cdclient.sqlite", check_same_thread=False))
 	ServerDB : GameDB = GameDB(sqlite3.connect("server.sqlite", check_same_thread=False))
 
 	GM.AccountManager = AccountManager()
 	GM.AccountManager.InitializeAccounts(ServerDB)
-
 	pickleThread = threading.Thread(target=save, args=[GM, ServerDB])
 	pickleThread.start()
 
-	Auth = AuthServer.AuthServer(("localhost", 1001), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB, ServerDB=ServerDB)
-	World = WorldServer.WorldServer(("localhost", 2002), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB, ServerDB=ServerDB)
+	serverIP = "127.0.0.1"
+
+	Auth = AuthServer.AuthServer((serverIP, 1001), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB, ServerDB=ServerDB)
+	World = WorldServer.WorldServer((serverIP, 2002), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB, ServerDB=ServerDB)
 
 	loop = asyncio.get_event_loop()
 	loop.run_forever()

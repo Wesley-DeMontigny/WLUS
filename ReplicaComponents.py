@@ -208,7 +208,12 @@ def writeCharacter(stream : WriteStream, ObjectConfig : dict, ReplicaType : Repl
 		stream.write(c_bit(False))
 		stream.write(c_bit(False))#Landing by rocket
 
-	stream.write(c_bit(False))#TODO: Implement this branch enventually
+	stream.write(c_bit(True))#TODO: Implement this branch enventually
+	stream.write(c_bit(ObjectConfig["PVPEnabled"]))
+	stream.write(c_bit(False))
+	stream.write(c_uint8(0))
+	stream.write(c_bit(False))
+	stream.write(c_uint8(0))
 
 	stream.write(c_bit(False))
 	stream.write(c_bit(False))#TODO: Implement Guilds

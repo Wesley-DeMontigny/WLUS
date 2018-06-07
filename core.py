@@ -12,6 +12,7 @@ class GameServer(pyraknet.server.Server):
 	def __init__(self, address: pyraknet.messages.Address, max_connections: int, incoming_password: bytes, GameManager, CDClient : GameDB, ServerDB : GameDB):
 		super().__init__(address, max_connections, incoming_password)
 		self.Game = GameManager
+		self.IP = address[0]
 		self.ServerDB = ServerDB
 		self.CDClient : GameDB.GameDB = CDClient
 

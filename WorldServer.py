@@ -69,7 +69,7 @@ class WorldServer(GameServer):
 		character : Character = game.getObjectByID(session.ObjectID)
 		if(character is not None):
 			zoneID = character.Zone
-			if(session.State != SessionState.CharacterScreen and session.State != SessionState.LoggingIn):
+			if(session.State != SessionState.CharacterScreen and session.State != SessionState.LoggingIn and session.State is not None):
 				self.ReplicaManagers[zoneID].remove_participant(address)
 				self.ReplicaManagers[zoneID].destruct(character)
 				del game.getZoneByID(zoneID).Objects[game.getZoneByID(zoneID).Objects.index(character)]
@@ -85,42 +85,48 @@ class WorldServer(GameServer):
 				for Object in Zone.Objects:
 					if (isinstance(Object, ReplicaObject)):
 						if (Object.ObjectConfig["ObjectID"] not in player.ClientObjects):
-							if (player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) < player.ObjectConfig[
-								"GhostingDistance"] and Object != player):
+							if ((player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) < player.ObjectConfig[
+								"GhostingDistance"] or Object.ObjectConfig["LOT"] == 1) and Object != player):
 								player.ClientObjects.append(Object.ObjectConfig["ObjectID"])
 								RM.construct(Object, recipients=[session.address])
 								sleep(.05)
 						else:
-							if (player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) > player.ObjectConfig[
-								"GhostingDistance"] and Object != player):
-								player.ClientObjects.remove(Object.ObjectConfig["ObjectID"])
-								RM.destruct(Object)
-								sleep(.05)
+							if ((player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) > player.ObjectConfig[
+								"GhostingDistance"] and Object != player) and Object.ObjectConfig["LOT"] != 1):
+								try:
+									player.ClientObjects.remove(Object.ObjectConfig["ObjectID"])
+									RM.destruct(Object)
+									sleep(.05)
+								except:
+									pass
 
 	def updateLoop(self):
 		while True:
 			for player in self.Game.getPlayers():
 				session : Session = self.Game.getSessionByCharacterID(player.ObjectConfig["ObjectID"])
 				RM: GameReplicaManager = self.ReplicaManagers[player.Zone]
-				Zone = self.Game.getZoneByID(player.Zone)
-				#Serialize Loop
-				for ObjectID in player.ClientObjects:
-					Object = self.Game.getObjectByID(ObjectID)
-					if(isinstance(Object, ReplicaObject)):
-						if(RM.is_participant(session.address)):
+				if (RM.is_participant(session.address)):
+					try:
+						RM.serialize(player, recipients=[session.address])
+					except:
+						pass
+					if((player.ObjectConfig["Health"] <= 0 or self.inKillElevation(player)) and "Unkillable" not in player.Tag.split(" ") and player.ObjectConfig["LoadingIn"] == False
+					   and player.ObjectConfig["Alive"] == True):
+						player.ObjectConfig["Alive"] = False
+						player.ObjectConfig["Health"] = 0
+						player.ObjectConfig["NeedsUpdate"] = True
+						player.Kill(self)
+					for ObjectID in player.ClientObjects:
+						Object = self.Game.getObjectByID(ObjectID)
+						if(isinstance(Object, ReplicaObject)):
 							try:
 								if((player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) < player.ObjectConfig["GhostingDistance"] and Object.ObjectConfig["NeedsUpdate"] == True) or Object == player):
 										RM.serialize(Object, recipients=[session.address])
 										Object.ObjectConfig["NeedsUpdate"] = False
 							except:
 								pass
-					if(isinstance(Object, Character)):
-						if((Object.ObjectConfig["Health"] <= 0 or self.inKillElevation(Object)) and "Unkillable" not in Object.Tag.split(" ") and Object.ObjectConfig["LoadingIn"] == False):
-							Object.ObjectConfig["Alive"] = False
-							Object.ObjectConfig["Health"] = 0
-							Object.ObjectConfig["NeedsUpdate"] = True
-							Object.Kill(self)
-					sleep(.001)
+						sleep(.0025)
+
 
 	def inKillElevation(self, Player : Character):
 		zone = Player.Zone
@@ -170,7 +176,7 @@ class WorldServer(GameServer):
 			gameObject.ObjectConfig["ObjectType"] = "Smashables"
 			for key in CustomConfig:
 				gameObject.ObjectConfig[key] = CustomConfig[key]
-				gameObject.setDestructible(self.CDClient)
+			gameObject.setDestructible(self.CDClient)
 		elif(objectType == "Enemies"):
 			gameObject = Enemy(zone)
 			gameObject.ObjectConfig["LOT"] = LOT
@@ -179,13 +185,13 @@ class WorldServer(GameServer):
 			gameObject.ObjectConfig["ObjectType"] = "Enemies"
 			gameObject.setDestructible(self.CDClient)
 		else:
-				gameObject = ReplicaObject(zone)
-				gameObject.ObjectConfig["LOT"] = LOT
-				gameObject.ObjectConfig["Position"] = Position
-				gameObject.ObjectConfig["Rotation"] = Rotation
-				gameObject.ObjectConfig["ObjectType"] = objectType
-				zone.createObject(gameObject)
+			gameObject = ReplicaObject(zone)
+			gameObject.ObjectConfig["LOT"] = LOT
+			gameObject.ObjectConfig["Position"] = Position
+			gameObject.ObjectConfig["Rotation"] = Rotation
+			gameObject.ObjectConfig["ObjectType"] = objectType
 
+		zone.createObject(gameObject)
 		gameObject.Components = gameObject.findComponentsFromCDClient(self.CDClient)
 		if (initialize == False):
 			self.ReplicaManagers[zoneID].construct(gameObject)
@@ -228,6 +234,7 @@ class WorldServer(GameServer):
 			manager = self.ReplicaManagers[zone]
 			if (manager.is_participant(address)):
 				manager.remove_participant(address)
+				manager.destruct(Player)
 		RM: GameReplicaManager = self.ReplicaManagers[zoneID]
 		RM.add_participant(address)
 		self.send(packet, address)

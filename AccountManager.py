@@ -44,7 +44,7 @@ class AccountManager():
 					return Character
 		return None
 
-	def Save(self, Server : GameDB):
+	def Save(self, GM, Server : GameDB):
 		CharacterTable : DBTable = Server.Tables["Characters"]
 		CharacterStats : DBTable = Server.Tables["CharacterStatistics"]
 		CompMissionTable : DBTable = Server.Tables["CompletedMissions"]
@@ -53,57 +53,160 @@ class AccountManager():
 		CharacterConfigTable : DBTable = Server.Tables["CharacterConfig"]
 
 		for account in self.Accounts:
-			for character in account.Characters:
-				if(CharacterTable.select(["Name"], "ObjectID = {}".format(character.ObjectConfig["ObjectID"])) != []):
-					#print("Updated Character {}".format(character.ObjectConfig["ObjectID"]))
-					CharacterTable.update({"Name":character.ObjectConfig["Name"], "Zone":character.Zone}, "ObjectID = {} AND AccountID = {}".format(character.ObjectConfig["ObjectID"], account.AccountID))
+			for AccountCharacter in account.Characters:
+				character = GM.getObjectByID(AccountCharacter.ObjectConfig["ObjectID"])
+				if(character is not None):
+					if(CharacterTable.select(["Name"], "ObjectID = {}".format(character.ObjectConfig["ObjectID"])) != []):
+						CharacterTable.update({"Name":character.ObjectConfig["Name"], "Zone":character.Zone}, "ObjectID = {} AND AccountID = {}".format(character.ObjectConfig["ObjectID"], account.AccountID))
+						Stats : CharacterStats = character.ObjectConfig["CharacterStatistics"]
+						CharacterStats.update({"CurrencyCollected":Stats.CurrencyCollected,
+											   "BricksCollected": Stats.BricksCollected,
+											   "SmashablesSmashed": Stats.SmashablesSmashed,
+											   "QuickBuildsDone": Stats.QuickBuildsDone,
+											   "EnemiesSmashed": Stats.EnemiesSmashed,
+											   "RocketsUsed": Stats.RocketsUsed,
+											   "PetsTamed": Stats.PetsTamed,
+											   "ImaginationCollected": Stats.ImaginationCollected,
+											   "HealthCollected": Stats.HealthCollected,
+											   "ArmorCollected": Stats.ArmorCollected,
+											   "DistanceTraveled": Stats.DistanceTraveled,
+											   "TimesDied": Stats.TimesDied,
+											   "DamageTaken": Stats.DamageTaken,
+											   "DamageHealed": Stats.DamageHealed,
+											   "ArmorRepaired": Stats.ArmorRepaired,
+											   "ImaginationRestored": Stats.ImaginationRestored,
+											   "ImaginationUsed": Stats.ImaginationUsed,
+											   "DistanceDriven": Stats.DistanceDriven,
+											   "TimeAirborneInCar": Stats.TimeAirborneInCar,
+											   "RacingImaginationCollected": Stats.RacingImaginationCollected,
+											   "RacingImaginationCratesSmashed": Stats.RacingImaginationCratesSmashed,
+											   "RaceCarBoosts": Stats.RaceCarBoosts,
+											   "CarWrecks": Stats.CarWrecks,
+											   "RacingSmashablesSmashed": Stats.RacingSmashablesSmashed,
+											   "RacesFinished": Stats.RacesFinished,
+											   "RacesWon": Stats.RacesWon}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
 
-					Stats : CharacterStats = character.ObjectConfig["CharacterStatistics"]
-					CharacterStats.update({"CurrencyCollected":Stats.CurrencyCollected,
-										   "BricksCollected": Stats.BricksCollected,
-										   "SmashablesSmashed": Stats.SmashablesSmashed,
-										   "QuickBuildsDone": Stats.QuickBuildsDone,
-										   "EnemiesSmashed": Stats.EnemiesSmashed,
-										   "RocketsUsed": Stats.RocketsUsed,
-										   "PetsTamed": Stats.PetsTamed,
-										   "ImaginationCollected": Stats.ImaginationCollected,
-										   "HealthCollected": Stats.HealthCollected,
-										   "ArmorCollected": Stats.ArmorCollected,
-										   "DistanceTraveled": Stats.DistanceTraveled,
-										   "TimesDied": Stats.TimesDied,
-										   "DamageTaken": Stats.DamageTaken,
-										   "DamageHealed": Stats.DamageHealed,
-										   "ArmorRepaired": Stats.ArmorRepaired,
-										   "ImaginationRestored": Stats.ImaginationRestored,
-										   "ImaginationUsed": Stats.ImaginationUsed,
-										   "DistanceDriven": Stats.DistanceDriven,
-										   "TimeAirborneInCar": Stats.TimeAirborneInCar,
-										   "RacingImaginationCollected": Stats.RacingImaginationCollected,
-										   "RacingImaginationCratesSmashed": Stats.RacingImaginationCratesSmashed,
-										   "RaceCarBoosts": Stats.RaceCarBoosts,
-										   "CarWrecks": Stats.CarWrecks,
-										   "RacingSmashablesSmashed": Stats.RacingSmashablesSmashed,
-										   "RacesFinished": Stats.RacesFinished,
-										   "RacesWon": Stats.RacesWon}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+						CompletedMissionStr = ""
+						for mission in character.ObjectConfig["CompletedMissions"]:
+							CompletedMissionStr += str(mission) + "|"
+						CompMissionTable.update({"Missions":CompletedMissionStr[:-1]}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
 
-					CompletedMissionStr = ""
-					for mission in character.ObjectConfig["CompletedMissions"]:
-						CompletedMissionStr += mission + "|"
-					CompMissionTable.update({"Missions":CompletedMissionStr[:-1]}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+						CurrentMissions = CurrentMissionsTable.selectAll("PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+						currentMissionTableIds = []
+						for mission in CurrentMissions:
+							currentMissionTableIds.append(int(mission["MissionID"]))
 
-					CurrentMissions = CurrentMissionsTable.selectAll("PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
-					currentMissionTableIds = []
-					for mission in CurrentMissions:
-						currentMissionTableIds.append(int(mission["MissionID"]))
+						currentMissionCharacterIds = []
+						for mission in character.ObjectConfig["CurrentMissions"]:
+							currentMissionCharacterIds.append(int(mission.MissionID))
 
-					currentMissionCharacterIds = []
-					for mission in character.ObjectConfig["CurrentMissions"]:
-						currentMissionCharacterIds.append(int(mission.MissionID))
+						for mission in character.ObjectConfig["CurrentMissions"]:
+							if (mission.MissionID in currentMissionTableIds):
+								CurrentMissionsTable.update({"Progress":mission.Progress}, "PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
+							else:
+								rewardItems = ""
+								for x in range(len(mission.RewardItems)):
+									if(x != len(mission.RewardItems)-1):
+										rewardItems += str(mission.RewardItems[x]) + "|"
+									else:
+										rewardItems += str(mission.RewardItems[x])
+								CurrentMissionsTable.insert({"PlayerID":character.ObjectConfig["ObjectID"],
+															 "MissionType":mission.MissionType,
+															 "RewardCurrency":mission.RewardCurrency,
+															 "RewardItems":rewardItems,
+															 "RewardUniverseScore":mission.RewardUniverseScore,
+															 "Offerer":mission.Offerer,
+															 "MissionID": mission.MissionID,
+															 "Target":mission.Target,
+															 "Progress":mission.Progress})
+						for mission in currentMissionTableIds:
+							if(mission not in currentMissionCharacterIds):
+								CurrentMissionsTable.delete("PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
 
-					for mission in character.ObjectConfig["CurrentMissions"]:
-						if (mission.MissionID in currentMissionTableIds):
-							CurrentMissionsTable.update({"Progress":mission.Progress}, "PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
-						else:
+						PlayerInventory = InventoryTable.selectAll("OwnerID = {}".format(character.ObjectConfig["ObjectID"]))
+						inventory : Inventory = character.ObjectConfig["Inventory"]
+
+						InventoryTableObjects = []
+						for item in PlayerInventory:
+							InventoryTableObjects.append(item["ObjectID"])
+
+						InventoryCharacterObjects = []
+						for item in inventory.InventoryList:
+							InventoryCharacterObjects.append(item["ObjectID"])
+
+						for item in inventory.InventoryList:
+							if(item["ObjectID"] not in InventoryTableObjects):
+								InventoryTable.insert({"LOT":item["LOT"], "Slot":item["Slot"],
+													   "Equipped":int(item["Equipped"]), "Linked":int(item["Linked"]),
+													   "Quantity":item["Quantity"], "ObjectID":item["ObjectID"],
+													   "OwnerID":character.ObjectConfig["ObjectID"]})
+							else:
+								InventoryTable.update({"Linked":int(item["Linked"]), "Quantity":item["Quantity"], "Slot":item["Slot"]}, "ObjectID = {} AND OwnerID = {}".format(item["ObjectID"], character.ObjectConfig["ObjectID"]))
+						for item in InventoryTableObjects:
+							if(item not in InventoryCharacterObjects):
+								InventoryTable.delete("OwnerID = {} AND ObjectID = {}".format(character.ObjectConfig["ObjectID"], item))
+
+
+						posStr = "{},{},{}".format(character.ObjectConfig["Position"].X,character.ObjectConfig["Position"].Y,character.ObjectConfig["Position"].Z)
+						rotStr = "{},{},{},{}".format(character.ObjectConfig["Rotation"].X,
+												   character.ObjectConfig["Rotation"].Y,
+												   character.ObjectConfig["Rotation"].Z,
+													character.ObjectConfig["Rotation"].W)
+
+						CharacterConfigTable.update({"UniverseScore":character.ObjectConfig["UniverseScore"],
+													 "Level":character.ObjectConfig["Level"],
+													 "Health":character.ObjectConfig["Health"],
+													 "MaxHealth":character.ObjectConfig["MaxHealth"],
+													 "Armor":character.ObjectConfig["Armor"],
+													 "MaxArmor": character.ObjectConfig["MaxArmor"],
+													 "Imagination": character.ObjectConfig["Imagination"],
+													 "MaxImagination": character.ObjectConfig["MaxImagination"],
+													 "Currency": character.ObjectConfig["Currency"],
+													 "Position":posStr,
+													 "Rotation":rotStr}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
+					else:
+						print("Inserted Character {}".format(character.ObjectConfig["ObjectID"]))
+						CharacterTable.insert({"ObjectID":character.ObjectConfig["ObjectID"], "Name":character.ObjectConfig["Name"],
+						"Zone":character.Zone, "ShirtColor":character.ObjectConfig["ShirtColor"], "ShirtStyle":character.ObjectConfig["ShirtStyle"],
+						"PantsColor":character.ObjectConfig["PantsColor"], "HairColor":character.ObjectConfig["HairColor"], "HairStyle":character.ObjectConfig["HairStyle"],
+						"lh":character.ObjectConfig["lh"], "rh":character.ObjectConfig["rh"], "Eyebrows":character.ObjectConfig["Eyebrows"],
+						"Eyes":character.ObjectConfig["Eyes"], "Mouth":character.ObjectConfig["Mouth"], "AccountID":account.AccountID})
+
+						Stats : CharacterStats = character.ObjectConfig["CharacterStatistics"]
+						CharacterStats.insert({"PlayerID":character.ObjectConfig["ObjectID"],
+											   "CurrencyCollected":Stats.CurrencyCollected,
+											   "BricksCollected": Stats.BricksCollected,
+											   "SmashablesSmashed": Stats.SmashablesSmashed,
+											   "QuickBuildsDone": Stats.QuickBuildsDone,
+											   "EnemiesSmashed": Stats.EnemiesSmashed,
+											   "RocketsUsed": Stats.RocketsUsed,
+											   "PetsTamed": Stats.PetsTamed,
+											   "ImaginationCollected": Stats.ImaginationCollected,
+											   "HealthCollected": Stats.HealthCollected,
+											   "ArmorCollected": Stats.ArmorCollected,
+											   "DistanceTraveled": Stats.DistanceTraveled,
+											   "TimesDied": Stats.TimesDied,
+											   "DamageTaken": Stats.DamageTaken,
+											   "DamageHealed": Stats.DamageHealed,
+											   "ArmorRepaired": Stats.ArmorRepaired,
+											   "ImaginationRestored": Stats.ImaginationRestored,
+											   "ImaginationUsed": Stats.ImaginationUsed,
+											   "DistanceDriven": Stats.DistanceDriven,
+											   "TimeAirborneInCar": Stats.TimeAirborneInCar,
+											   "RacingImaginationCollected": Stats.RacingImaginationCollected,
+											   "RacingImaginationCratesSmashed": Stats.RacingImaginationCratesSmashed,
+											   "RaceCarBoosts": Stats.RaceCarBoosts,
+											   "CarWrecks": Stats.CarWrecks,
+											   "RacingSmashablesSmashed": Stats.RacingSmashablesSmashed,
+											   "RacesFinished": Stats.RacesFinished,
+											   "RacesWon": Stats.RacesWon})
+
+						CompletedMissionStr = ""
+						for mission in character.ObjectConfig["CompletedMissions"]:
+							CompletedMissionStr += mission + "|"
+						CompMissionTable.insert({"PlayerID":character.ObjectConfig["ObjectID"], "Missions":CompletedMissionStr[:-1]})
+
+						for mission in character.ObjectConfig["CurrentMissions"]:
 							rewardItems = ""
 							for x in range(len(mission.RewardItems)):
 								if(x != len(mission.RewardItems)-1):
@@ -116,138 +219,35 @@ class AccountManager():
 														 "RewardItems":rewardItems,
 														 "RewardUniverseScore":mission.RewardUniverseScore,
 														 "Offerer":mission.Offerer,
-														 "MissionID": mission.MissionID,
+														 "MissionID":mission.MissionID,
 														 "Target":mission.Target,
 														 "Progress":mission.Progress})
-					for mission in currentMissionTableIds:
-						if(mission not in currentMissionCharacterIds):
-							CurrentMissionsTable.delete("PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
 
-					PlayerInventory = InventoryTable.selectAll("OwnerID = {}".format(character["ObjectID"]))
-					inventory : Inventory = character.ObjectConfig["Inventory"]
-
-					InventoryTableObjects = []
-					for item in PlayerInventory:
-						InventoryTableObjects.append(item["ObjectID"])
-
-					InventoryCharacterObjects = []
-					for item in inventory.InventoryList:
-						InventoryCharacterObjects.append(item["ObjectID"])
-
-					for item in inventory.InventoryList:
-						if(item["ObjectID"] not in InventoryTableObjects):
+						inventory : Inventory = character.ObjectConfig["Inventory"]
+						for item in inventory.InventoryList:
 							InventoryTable.insert({"LOT":item["LOT"], "Slot":item["Slot"],
 												   "Equipped":int(item["Equipped"]), "Linked":int(item["Linked"]),
 												   "Quantity":item["Quantity"], "ObjectID":item["ObjectID"],
 												   "OwnerID":character.ObjectConfig["ObjectID"]})
-						else:
-							InventoryTable.update({"Linked":int(item["Linked"]), "Quantity":item["Quantity"], "Slot":item["Slot"]}, "ObjectID = {} AND OwnerID = {}".format(item["ObjectID"], character.ObjectConfig["ObjectID"]))
-					for item in InventoryTableObjects:
-						if(item not in InventoryCharacterObjects):
-							InventoryTable.delete("OwnerID = {} AND ObjectID = {}".format(character.ObjectConfig["ObjectID"], item))
 
+						posStr = "{},{},{}".format(character.ObjectConfig["Position"].X,character.ObjectConfig["Position"].Y,character.ObjectConfig["Position"].Z)
+						rotStr = "{},{},{},{}".format(character.ObjectConfig["Rotation"].X,
+												   character.ObjectConfig["Rotation"].Y,
+												   character.ObjectConfig["Rotation"].Z,
+													character.ObjectConfig["Rotation"].W)
 
-					posStr = "{},{},{}".format(character.ObjectConfig["Position"].X,character.ObjectConfig["Position"].Y,character.ObjectConfig["Position"].Z)
-					rotStr = "{},{},{},{}".format(character.ObjectConfig["Rotation"].X,
-											   character.ObjectConfig["Rotation"].Y,
-											   character.ObjectConfig["Rotation"].Z,
-												character.ObjectConfig["Rotation"].W)
-
-					CharacterConfigTable.update({"UniverseScore":character.ObjectConfig["UniverseScore"],
-												 "Level":character.ObjectConfig["Level"],
-												 "Health":character.ObjectConfig["Health"],
-												 "MaxHealth":character.ObjectConfig["MaxHealth"],
-												 "Armor":character.ObjectConfig["Armor"],
-												 "MaxArmor": character.ObjectConfig["MaxArmor"],
-												 "Imagination": character.ObjectConfig["Imagination"],
-												 "MaxImagination": character.ObjectConfig["MaxImagination"],
-												 "Currency": character.ObjectConfig["Currency"],
-												 "Position":posStr,
-												 "Rotation":rotStr}, "PlayerID = {}".format(character.ObjectConfig["ObjectID"]))
-				else:
-					#print("Inserted Character {}".format(character.ObjectConfig["ObjectID"]))
-					CharacterTable.insert({"ObjectID":character.ObjectConfig["ObjectID"], "Name":character.ObjectConfig["Name"],
-					"Zone":character.Zone, "ShirtColor":character.ObjectConfig["ShirtColor"], "ShirtStyle":character.ObjectConfig["ShirtStyle"],
-					"PantsColor":character.ObjectConfig["PantsColor"], "HairColor":character.ObjectConfig["HairColor"], "HairStyle":character.ObjectConfig["HairStyle"],
-					"lh":character.ObjectConfig["lh"], "rh":character.ObjectConfig["rh"], "Eyebrows":character.ObjectConfig["Eyebrows"],
-					"Eyes":character.ObjectConfig["Eyes"], "Mouth":character.ObjectConfig["Mouth"], "AccountID":account.AccountID})
-
-					Stats : CharacterStats = character.ObjectConfig["CharacterStatistics"]
-					CharacterStats.insert({"PlayerID":character.ObjectConfig["ObjectID"],
-										   "CurrencyCollected":Stats.CurrencyCollected,
-										   "BricksCollected": Stats.BricksCollected,
-										   "SmashablesSmashed": Stats.SmashablesSmashed,
-										   "QuickBuildsDone": Stats.QuickBuildsDone,
-										   "EnemiesSmashed": Stats.EnemiesSmashed,
-										   "RocketsUsed": Stats.RocketsUsed,
-										   "PetsTamed": Stats.PetsTamed,
-										   "ImaginationCollected": Stats.ImaginationCollected,
-										   "HealthCollected": Stats.HealthCollected,
-										   "ArmorCollected": Stats.ArmorCollected,
-										   "DistanceTraveled": Stats.DistanceTraveled,
-										   "TimesDied": Stats.TimesDied,
-										   "DamageTaken": Stats.DamageTaken,
-										   "DamageHealed": Stats.DamageHealed,
-										   "ArmorRepaired": Stats.ArmorRepaired,
-										   "ImaginationRestored": Stats.ImaginationRestored,
-										   "ImaginationUsed": Stats.ImaginationUsed,
-										   "DistanceDriven": Stats.DistanceDriven,
-										   "TimeAirborneInCar": Stats.TimeAirborneInCar,
-										   "RacingImaginationCollected": Stats.RacingImaginationCollected,
-										   "RacingImaginationCratesSmashed": Stats.RacingImaginationCratesSmashed,
-										   "RaceCarBoosts": Stats.RaceCarBoosts,
-										   "CarWrecks": Stats.CarWrecks,
-										   "RacingSmashablesSmashed": Stats.RacingSmashablesSmashed,
-										   "RacesFinished": Stats.RacesFinished,
-										   "RacesWon": Stats.RacesWon})
-
-					CompletedMissionStr = ""
-					for mission in character.ObjectConfig["CompletedMissions"]:
-						CompletedMissionStr += mission + "|"
-					CompMissionTable.insert({"PlayerID":character.ObjectConfig["ObjectID"], "Missions":CompletedMissionStr[:-1]})
-
-					for mission in character.ObjectConfig["CurrentMissions"]:
-						rewardItems = ""
-						for x in range(len(mission.RewardItems)):
-							if(x != len(mission.RewardItems)-1):
-								rewardItems += str(mission.RewardItems[x]) + "|"
-							else:
-								rewardItems += str(mission.RewardItems[x])
-						CurrentMissionsTable.insert({"PlayerID":character.ObjectConfig["ObjectID"],
-													 "MissionType":mission.MissionType,
-													 "RewardCurrency":mission.RewardCurrency,
-													 "RewardItems":rewardItems,
-													 "RewardUniverseScore":mission.RewardUniverseScore,
-													 "Offerer":mission.Offerer,
-													 "MissionID":mission.MissionID,
-													 "Target":mission.Target,
-													 "Progress":mission.Progress})
-
-					inventory : Inventory = character.ObjectConfig["Inventory"]
-					for item in inventory.InventoryList:
-						InventoryTable.insert({"LOT":item["LOT"], "Slot":item["Slot"],
-											   "Equipped":int(item["Equipped"]), "Linked":int(item["Linked"]),
-											   "Quantity":item["Quantity"], "ObjectID":item["ObjectID"],
-											   "OwnerID":character.ObjectConfig["ObjectID"]})
-
-					posStr = "{},{},{}".format(character.ObjectConfig["Position"].X,character.ObjectConfig["Position"].Y,character.ObjectConfig["Position"].Z)
-					rotStr = "{},{},{},{}".format(character.ObjectConfig["Rotation"].X,
-											   character.ObjectConfig["Rotation"].Y,
-											   character.ObjectConfig["Rotation"].Z,
-												character.ObjectConfig["Rotation"].W)
-
-					CharacterConfigTable.insert({"UniverseScore":character.ObjectConfig["UniverseScore"],
-												 "Level":character.ObjectConfig["Level"],
-												 "Health":character.ObjectConfig["Health"],
-												 "MaxHealth":character.ObjectConfig["MaxHealth"],
-												 "Armor":character.ObjectConfig["Armor"],
-												 "MaxArmor": character.ObjectConfig["MaxArmor"],
-												 "Imagination": character.ObjectConfig["Imagination"],
-												 "MaxImagination": character.ObjectConfig["MaxImagination"],
-												 "Currency": character.ObjectConfig["Currency"],
-												 "PlayerID": character.ObjectConfig["ObjectID"],
-												 "Position":posStr,
-												 "Rotation":rotStr})
+						CharacterConfigTable.insert({"UniverseScore":character.ObjectConfig["UniverseScore"],
+													 "Level":character.ObjectConfig["Level"],
+													 "Health":character.ObjectConfig["Health"],
+													 "MaxHealth":character.ObjectConfig["MaxHealth"],
+													 "Armor":character.ObjectConfig["Armor"],
+													 "MaxArmor": character.ObjectConfig["MaxArmor"],
+													 "Imagination": character.ObjectConfig["Imagination"],
+													 "MaxImagination": character.ObjectConfig["MaxImagination"],
+													 "Currency": character.ObjectConfig["Currency"],
+													 "PlayerID": character.ObjectConfig["ObjectID"],
+													 "Position":posStr,
+													 "Rotation":rotStr})
 
 	def InitializeAccounts(self, Server : GameDB):
 		self.Accounts = []

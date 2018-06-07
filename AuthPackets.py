@@ -51,8 +51,8 @@ def LoginResponse(Server : Server, Username : str, Password: str):
 	packet.write(c_ushort(64))
 	userKey = (str(uuid.uuid4()))
 	packet.write(userKey[0:18], allocated_length=33)
-	packet.write(CString("127.0.0.1", allocated_length=33))#World Instance IP
-	packet.write(CString("127.0.0.1", allocated_length=33))#Chat Instance IP
+	packet.write(CString(Server.IP, allocated_length=33))#World Instance IP
+	packet.write(CString(Server.IP, allocated_length=33))#Chat Instance IP
 	packet.write(c_uint16(2002))#World Port
 	packet.write(c_ushort(3003))#Chat Port
 	packet.write(CString('0', allocated_length=33))#Some other IP

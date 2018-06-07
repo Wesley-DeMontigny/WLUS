@@ -26,7 +26,10 @@ def MissionOffering(Object, stream : ReadStream, address : Address, Server : Gam
 	NotifyMission = WriteStream()
 	Server.InitializeGameMessage(NotifyMission, PlayerID, 0x0fe)
 	NotifyMission.write(c_int(MissionID))
-	NotifyMission.write(c_int(State))
+	if(Complete == False):
+		NotifyMission.write(c_int(State))
+	else:
+		NotifyMission.write(c_int(8))
 	NotifyMission.write(c_bit(False))
 	Server.send(NotifyMission, address)
 
@@ -44,7 +47,9 @@ def MissionOffering(Object, stream : ReadStream, address : Address, Server : Gam
 		missionObj = player.getMissionByID(MissionID)
 		missionObj.Complete()
 		missionObj.Parent.ObjectConfig["CompletedMissions"].append(MissionID)
+		print(missionObj.Parent.ObjectConfig["CompletedMissions"])
 		for i in range(len(missionObj.Parent.ObjectConfig["CurrentMissions"])):
 			if(missionObj.Parent.ObjectConfig["CurrentMissions"][i] == missionObj):
 				del missionObj.Parent.ObjectConfig["CurrentMissions"][i]
 				print("Removed Old Mission")
+				break

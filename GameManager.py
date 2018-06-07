@@ -26,7 +26,7 @@ class GameObject():
 			eventThread = threading.Thread(target=self.EventHandlers[EventID], args=[self, Stream, address, Server])
 			eventThread.start()
 		else:
-			print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
+			#print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
 			pass
 	def RegisterEvent(self, EventID : str, Handler : Callable):
 		self.EventHandlers[EventID] = Handler
@@ -181,7 +181,7 @@ class Humanoid(ReplicaObject):
 		if(DestructibleComp["faction"] is not None):
 			self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
 
-		if (DestructibleComp["level"] is not None):
+		if (DestructibleComp["level"] is not None and int(DestructibleComp["level"]) != -1):
 			self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
 
 		if(DestructibleComp["LootMatrixIndex"] is not None):
@@ -190,15 +190,15 @@ class Humanoid(ReplicaObject):
 		if(DestructibleComp["CurrencyIndex"] is not None):
 			self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
 
-		if (DestructibleComp["life"] is not None):
+		if (DestructibleComp["life"] is not None and int(DestructibleComp["life"]) != -1):
 			self.ObjectConfig["Health"] = int(DestructibleComp["life"])
 			self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
 
-		if (DestructibleComp["armor"] is not None):
+		if (DestructibleComp["armor"] is not None and int(DestructibleComp["armor"]) != -1):
 			self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
 			self.ObjectConfig["MaxArmor"] = int(DestructibleComp["armor"])
 
-		if (DestructibleComp["imagination"] is not None):
+		if (DestructibleComp["imagination"] is not None and int(DestructibleComp["imagination"]) != -1):
 			self.ObjectConfig["Imagination"] = int(DestructibleComp["imagination"])
 			self.ObjectConfig["MaxImagination"] = int(DestructibleComp["imagination"])
 
@@ -252,6 +252,7 @@ class Character(Humanoid):
 		self.ObjectConfig["Alive"] = True
 		self.ObjectConfig["Inventory"] = Inventory(self)
 		self.ObjectConfig["LoadingIn"] = True
+		self.ObjectConfig["PVPEnabled"] = False
 
 		self.ObjectConfig["GhostingDistance"] = 250
 		self.ClientObjects : list = []
