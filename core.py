@@ -14,7 +14,7 @@ class GameServer(pyraknet.server.Server):
 		self.Game = GameManager
 		self.IP = address[0]
 		self.ServerDB = ServerDB
-		self.CDClient : GameDB.GameDB = CDClient
+		self.CDClient = CDClient
 
 	def brodcastPacket(self, data : WriteStream, ZoneID : ZoneID):
 		connections = self.Game.getConnectionsInZone(ZoneID)

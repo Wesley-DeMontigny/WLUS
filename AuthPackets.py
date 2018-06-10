@@ -36,12 +36,7 @@ def LoginResponse(Server : Server, Username : str, Password: str):
 	packet = WriteStream()
 	userInfo = Server.Game.getAccountByUsername(Username)
 	print("Attempted login with username '{}' and password '{}'".format(Username, Password))
-	response = None
-	if(userInfo is not None and userInfo.Banned != True and sha256_crypt.verify(Password, userInfo.Password)):#Success
-		response = LoginResponseEnum.Success
-		print("Login accepted!")
-	else:#Just put wrong info for now
-		response = LoginResponseEnum.InvalidLoginInfo
+	response = Server.checkLogin(Username, Password)
 	writeHeader(packet, PacketHeader.LoginResponse)
 	packet.write(c_uint8(response))
 	packet.write(CString("Talk_Like_A_Pirate", allocated_length=33))

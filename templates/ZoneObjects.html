@@ -1,0 +1,48 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<link rel="icon" href="{{ url_for('static', filename='icon.ico') }}">
+		<title>WLUS || Home</title>
+	</head>
+	<body style="background-color:#343c49;color:#ffffff;">		
+		<script>
+			function updateElement(id)
+			{
+				$.ajax({
+					url: window.location.href;, 
+					cache: false,
+					success: function(response) {
+						result = $(response).find("#"+id);
+						$("#"+id).html(result.html());
+					}
+				});
+			}
+		</script>
+		<div class="col-md-1" style="height:100%" />
+		<div style="height:100%" class="col-md-10">
+			<button type="button" width="100%" class="btn btn-info" onclick="updateElement('ObjectBody');">Refresh</button>
+			<table class="table" style="width:100%;">
+				<thead>
+					<tr>
+						<th>Object ID</th>
+						<th>Spawner ID</th>
+						<th>LOT</th>
+						<th>Position</th>
+					</tr>
+				</thead>
+				<tbody id="ObjectBody">
+					{% for object in Objects %}
+						<tr>
+							<td>{{object.ObjectID}}</td>
+							<td>{{object.SpawnerID}}</td>
+							<td>{{object.LOT}}</td>
+							<td>{{object.Position}}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

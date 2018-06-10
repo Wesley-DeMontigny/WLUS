@@ -1,0 +1,147 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<link rel="icon" href="{{ url_for('static', filename='icon.ico') }}">
+		<title>WLUS || Home</title>
+		<script>
+			setInterval(function(){
+				$("#navContainer").height($(document).height())
+			}, 50)
+		</script>
+	</head>
+		<script>
+			function updateElement(id)
+			{
+				$.ajax({
+					url: window.location.href;, 
+					cache: false,
+					success: function(response) {
+						result = $(response).find("#"+id);
+						$("#"+id).html(result.html());
+					}
+				});
+			}
+		</script>
+	<body style="background-color:#343c49;color:#ffffff;">
+		<div class="col-md-2" id="navContainer" style="background-color:#606c7f;height:100%;">
+			<h3>Welcome {{User}}!</h3>
+			<ul class="nav nav-tabs nav-stacked" style="width:100%">
+				<li class="active"><a data-toggle="tab" style="color:#000000;" href="#home">Home</a></li>
+				<li><a data-toggle="tab" style="color:#000000;" href="#myCharacters">My Characters</a></li>
+				{% if Admin %}
+				<li><a data-toggle="tab" style="color:#000000;" href="#sessions">Session Registry</a></li>
+				<li><a data-toggle="tab" style="color:#000000;" href="#zones">Zone Registry</a></li>
+				<li><a data-toggle="tab" style="color:#000000;" href="#accounts">Account Registry</a></li>
+				{% endif %}
+			</ul>
+		</div>
+		<div style="height:100%" class="col-md-10">
+			<div class="tab-content">
+				<div id="home" class="tab-pane fade in active">
+					<h3>Home</h3>
+					<p>This is just the test homepage for the WLUS app. Eventually something more useful will be put here. Right now there isn't a whole lot to see in this app unless you are signed in as an admin.</p>
+				</div>
+				<div id="myCharacters" class="tab-pane fade">
+					<h3>Characters</h3>
+					<button type="button" width="100%" class="btn btn-info" onclick="updateElement('myCharactersBody');">Refresh</button>
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Current Zone</th>
+							</tr>
+						</thead>
+						<tbody id="myCharactersBody">
+							{% for character in MyCharacters %}
+							<tr>
+								<td>{{character.Name}}</td>
+								<td>{{character.Zone}}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				{% if Admin %}
+				<div id="sessions" class="tab-pane fade">
+					<h3>Session Registry</h3>
+					<button type="button" width="100%" class="btn btn-info" onclick="updateElement('SessionBody');">Refresh</button>
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Zone ID</th>
+								<th>Object ID</th>
+								<th>User Key</th>
+								<th>Account Name</th>
+								<th>Address</th>
+							</tr>
+						</thead>
+						<tbody id="SessionBody">
+							{% for session in Sessions %}
+								<tr>
+									<td>{{session.Zone}}</td>
+									<td>{{session.ObjectID}}</td>
+									<td>{{session.UserKey}}</td>
+									<td>{{session.Name}}</td>
+									<td>{{session.Addr}}</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				<div id="zones" class="tab-pane fade">
+					<h3>Zone Registry</h3>
+					<button type="button" width="100%" class="btn btn-info" onclick="updateElement('ZoneBody');">Refresh</button>
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Zone ID</th>
+								<th>Spawn Location</th>
+								<th>Is Activity</th>
+								<th>Zone Name</th>
+								<th>Objects</th>
+							</tr>
+						</thead>
+						<tbody id="ZoneBody">
+							{% for zone in Zones %}
+								<tr>
+									<td>{{zone.Zone}}</td>
+									<td>{{zone.SpawnLoc}}</td>
+									<td>{{zone.Activity}}</td>
+									<td>{{zone.Name}}</td>
+									<td><a href="/Objects/{{zone.Zone}}" class="btn btn-success" target="_blank">View Objects</a></td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				<div id="accounts" class="tab-pane fade">
+					<h3>Account Registry</h3>
+					<button type="button" width="100%" class="btn btn-info" onclick="updateElement('AccountBody');">Refresh</button>
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Account ID</th>
+								<th>Username</th>
+								<th>IsAdmin</th>
+								<th>Banned</th>
+							</tr>
+						</thead>
+						<tbody id="AccountBody">
+							{% for account in Accounts %}
+								<tr>
+									<td>{{account.ID}}</td>
+									<td>{{account.Username}}</td>
+									<td>{{account.IsAdmin}}</td>
+									<td>{{account.Banned}}</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				{% endif %}
+			</div>
+		</div>
+	</body>
+</html>

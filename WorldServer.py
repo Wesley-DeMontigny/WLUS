@@ -44,19 +44,27 @@ class WorldServer(GameServer):
 		constructionThread.start()
 		sleep(10)
 		print("Server is Ready!")
+
 	def handlePacket(self, data : bytes, address : Address):
 		if(data[0:8] in self.WorldHandlers):
 			t = threading.Thread(target=self.WorldHandlers[data[0:8]], args=[self, data[8:], address])
 			t.start()
 		else:
 			print("Header {} Has No Handler!".format(data[0:8]))
+
 	def registerReplicaManager(self, WorldID : int):
 		self.ReplicaManagers[WorldID] = GameReplicaManager(self)
+
 	def registerWorldHandler(self, header : PacketHeader, function : Callable):
 		self.WorldHandlers[header] = function
-	def registerZone(self, WorldID : int, lvlFiles : list, SpawnLocation : Vector3 = Vector3(0,0,0)):
+
+	def registerZone(self, WorldID : int, lvlFiles : list, SpawnLocation : Vector3 = Vector3(0,0,0), ZoneName : str = None):
 		World = Zone(self.Game)
 		World.ZoneID = WorldID
+		if(ZoneName == None):
+			World.ZoneName = ZoneNames[WorldID]
+		else:
+			World.ZoneName = ZoneName
 		World.SpawnLocation = SpawnLocation
 		self.registerReplicaManager(WorldID)
 		result = self.Game.registerZone(World, lvlFiles, self)
@@ -174,8 +182,6 @@ class WorldServer(GameServer):
 			gameObject.ObjectConfig["Position"] = Position
 			gameObject.ObjectConfig["Rotation"] = Rotation
 			gameObject.ObjectConfig["ObjectType"] = "Smashables"
-			for key in CustomConfig:
-				gameObject.ObjectConfig[key] = CustomConfig[key]
 			gameObject.setDestructible(self.CDClient)
 		elif(objectType == "Enemies"):
 			gameObject = Enemy(zone)
@@ -190,6 +196,9 @@ class WorldServer(GameServer):
 			gameObject.ObjectConfig["Position"] = Position
 			gameObject.ObjectConfig["Rotation"] = Rotation
 			gameObject.ObjectConfig["ObjectType"] = objectType
+
+		for key in CustomConfig:
+			gameObject.ObjectConfig[key] = CustomConfig[key]
 
 		zone.createObject(gameObject)
 		gameObject.Components = gameObject.findComponentsFromCDClient(self.CDClient)

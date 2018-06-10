@@ -9,17 +9,17 @@ class AccountManager():
 	def __init__(self):
 		self.Accounts = []
 
-	def registerAccountToClient(self, Username: str, Password: str, IsAdmin : bool = False):
+	def registerAccountToClient(self, Username: str, Password: str, AccountID : int, IsAdmin : bool = False, Banned : bool = False):
 		account = Account(self)
 		account.Username = Username
 		account.Password = sha256_crypt.encrypt(Password)
 		account.IsAdmin = IsAdmin
-		account.AccountID = len(self.Accounts) + 1
-		account.Banned = False
+		account.AccountID = AccountID
+		account.Banned = Banned
 		self.Accounts.append(account)
 
 	def registerAccountToDB(self, Username: str, Password: str, IsAdmin : bool, DB : GameDB):
-		if(DB.Tables["Accounts"].select(["AccountID"], "Username = {}".format(Username)) != []):
+		if(DB.Tables["Accounts"].select(["AccountID"], "Username = {}".format(Username)) == []):
 			DB.Tables["Accounts"].insert({"Username":Username, "Password":sha256_crypt.encrypt(Password), "IsAdmin":int(IsAdmin), "Banned":0})
 			return True
 		else:
@@ -29,6 +29,12 @@ class AccountManager():
 		result = self.registerAccountToDB(Username, Password, IsAdmin, DB)
 		if(result == True):
 			print("Registered Account")
+			accountInfo = DB.Tables["Accounts"].selectAll("Username = {}".format(Username))
+			self.registerAccountToClient(Username=accountInfo["Username"], Password=accountInfo["Password"], AccountID=int(accountInfo["AccountID"]), IsAdmin=bool(accountInfo["IsAdmin"]), Banned=bool(accountInfo["Banned"]))
+			return True
+		else:
+			return False
+
 
 
 	def getAccountByUsername(self, Username: str):
@@ -121,7 +127,7 @@ class AccountManager():
 															 "Progress":mission.Progress})
 						for mission in currentMissionTableIds:
 							if(mission not in currentMissionCharacterIds):
-								CurrentMissionsTable.delete("PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission.MissionID))
+								CurrentMissionsTable.delete("PlayerID = {} AND MissionID = {}".format(character.ObjectConfig["ObjectID"], mission))
 
 						PlayerInventory = InventoryTable.selectAll("OwnerID = {}".format(character.ObjectConfig["ObjectID"]))
 						inventory : Inventory = character.ObjectConfig["Inventory"]

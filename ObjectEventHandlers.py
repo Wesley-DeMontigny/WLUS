@@ -43,13 +43,14 @@ def MissionOffering(Object, stream : ReadStream, address : Address, Server : Gam
 									   "id = {}".format(MissionID))[0]
 		Server.Game.getObjectByID(PlayerID).giveMission(mission, task)
 	else:
-		player = Server.Game.getObjectByID(PlayerID)
-		missionObj = player.getMissionByID(MissionID)
-		missionObj.Complete()
-		missionObj.Parent.ObjectConfig["CompletedMissions"].append(MissionID)
-		print(missionObj.Parent.ObjectConfig["CompletedMissions"])
-		for i in range(len(missionObj.Parent.ObjectConfig["CurrentMissions"])):
-			if(missionObj.Parent.ObjectConfig["CurrentMissions"][i] == missionObj):
-				del missionObj.Parent.ObjectConfig["CurrentMissions"][i]
-				print("Removed Old Mission")
-				break
+		if(Complete == True):
+			player = Server.Game.getObjectByID(PlayerID)
+			missionObj = player.getMissionByID(MissionID)
+			missionObj.Complete()
+			missionObj.Parent.ObjectConfig["CompletedMissions"].append(MissionID)
+			print(missionObj.Parent.ObjectConfig["CompletedMissions"])
+			for i in range(len(missionObj.Parent.ObjectConfig["CurrentMissions"])):
+				if(missionObj.Parent.ObjectConfig["CurrentMissions"][i] == missionObj):
+					del missionObj.Parent.ObjectConfig["CurrentMissions"][i]
+					print("Removed Old Mission")
+					break

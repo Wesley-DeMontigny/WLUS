@@ -26,10 +26,18 @@ def HandleInteraction(Object, stream : ReadStream, address : Address, Server : G
 		for mission in missions:
 			canGive = True
 			if(str(mission["prereqMissionID"]) != "" and mission["prereqMissionID"] is not None):
-				for prereqMission in mission["prereqMissionID"].split("|"):
-					if(int(prereqMission) not in Object.ObjectConfig["CompletedMissions"]):
-						canGive = False
+				try:
+					for prereqMission in mission["prereqMissionID"].split("|"):
+						if(int(prereqMission) not in Object.ObjectConfig["CompletedMissions"]):
+							canGive = False
+				except:
+					for prereqMission in mission["prereqMissionID"].split(","):
+						if(int(prereqMission) not in Object.ObjectConfig["CompletedMissions"]):
+							canGive = False
 			if(canGive):
+				currentMissionIds = []
+				for currentMission in Object.ObjectConfig["CurrentMissions"]:
+					currentMissionIds.append(currentMission.MissionID)
 				if(mission["id"] not in Object.ObjectConfig["CompletedMissions"]):
 					packet = WriteStream()
 					Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x00f8)

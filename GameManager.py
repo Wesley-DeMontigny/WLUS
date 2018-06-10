@@ -38,6 +38,7 @@ class Zone():
 		self.Objects : list = []
 		self.SpawnLocation : Vector3 = Vector3(0,0,0)
 		self.ActivityWorld : bool = False
+		self.ZoneName : str = ""
 	def createObject(self, Object : GameObject):
 		if(Object.ObjectConfig["ObjectID"] == None):
 			Object.ObjectConfig["ObjectID"] = random.randint(100000000000000000, 999999999999999999)

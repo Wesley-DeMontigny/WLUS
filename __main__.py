@@ -11,6 +11,8 @@ import sqlite3
 from copy import deepcopy
 from GameDB import GameDB
 from AccountManager import AccountManager
+import configparser
+from WebApp import ServerApp
 
 def serializeObject(Object : any, Filename : str):
 	pickledFile = open(os.getcwd() + "/" + Filename, "wb")
@@ -51,10 +53,24 @@ if __name__ == "__main__":
 	pickleThread = threading.Thread(target=save, args=[GM, ServerDB])
 	pickleThread.start()
 
-	serverIP = "127.0.0.1"
+	config = configparser.ConfigParser()
+	config.read("config.ini")
+	ServerConfig = config["Server"]
+	serverIP = str(ServerConfig["IP"])
+	serverVersion = str(ServerConfig["Version"])
+	serverName = str(ServerConfig["ServerName"])
+	webPort = int(ServerConfig["WebPort"])
+
+	AdminConfig = config["Admin"]
+	adminPassword = AdminConfig["Password"]
+	adminUsername = AdminConfig["Username"]
 
 	Auth = AuthServer.AuthServer((serverIP, 1001), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB, ServerDB=ServerDB)
 	World = WorldServer.WorldServer((serverIP, 2002), max_connections=10, incoming_password=b"3.25 ND1", GameManager=GM, CDClient=CDClientDB, ServerDB=ServerDB)
+
+	App = ServerApp(serverName,serverVersion,webPort,adminUsername,adminPassword,World,Auth,GM.AccountManager)
+	appThread = threading.Thread(target=App.run)
+	appThread.start()
 
 	loop = asyncio.get_event_loop()
 	loop.run_forever()
