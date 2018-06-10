@@ -259,7 +259,7 @@ def writeBouncer(stream : WriteStream, ObjectConfig : dict, ReplicaType : Replic
 	if("petNotRequired" in ObjectConfig):
 		stream.write(c_bit(ObjectConfig["petNotRequired"]))
 	else:
-		stream.write(c_bit(False))
+		stream.write(c_bit(True))
 
 def writeRigibbodyPhantomPhysics(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
 	stream.write(c_bit(True))
@@ -380,7 +380,7 @@ def writeRebuild(stream : WriteStream, ObjectConfig : dict, ReplicaType : Replic
 	writeRebuildIndex(stream, ObjectConfig, ReplicaType)
 
 def writeCollectibleIndex(stream : WriteStream, ObjectConfig : dict, ReplicaType : ReplicaTypes):
-	if("CollectibleID" in ObjectConfig):
+	if("CollectibleID" in ObjectConfig and ObjectConfig["CollectibleID"]is not None):
 		stream.write(c_uint16(ObjectConfig["CollectibleID"]))
 	else:
 		stream.write(c_uint16(0))

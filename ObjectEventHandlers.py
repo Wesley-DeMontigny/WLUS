@@ -7,6 +7,29 @@ def PlatformResync(Object, stream : ReadStream, address : Address, Server : Game
 	Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x02f9)
 	Server.send(packet, address)
 
+
+def HandleCollectibles(Object, stream: ReadStream, address: Address, Server: GameServer):
+	if("RequiredMission" in Object.ObjectConfig):
+		PlayerID = stream.read(c_longlong)
+		MissionID = Object.ObjectConfig["RequiredMission"]
+		Player = Server.Game.getObjectByID(PlayerID)
+
+		MissionTask = WriteStream()
+		taskTable = Server.CDClient.Tables["MissionTasks"]
+		task = taskTable.select(["taskType"], "id = {}".format(MissionID))[0]["taskType"]
+		Server.InitializeGameMessage(MissionTask, PlayerID, 0x0ff)
+		MissionTask.write(c_int(MissionID))
+		MissionTask.write(c_int(1 << (task + 1)))
+
+		update = WriteStream()
+		update.write(c_float(Object.ObjectConfig["CollectibleID"] + (Player.Zone << 8)))
+		updateBytes = bytes(update)
+
+		MissionTask.write(c_uint8(len(updateBytes)))
+		MissionTask.write(updateBytes)
+
+		Server.send(MissionTask, address)
+
 def MissionOffering(Object, stream : ReadStream, address : Address, Server : GameServer):
 	Complete = stream.read(c_bit)
 	State = stream.read(c_int)

@@ -58,9 +58,9 @@ def Ressurect(Object, stream : ReadStream, address : Address, Server : GameServe
 	packet = WriteStream()
 	print("Ressurecting Player {}".format(Object.ObjectConfig["ObjectID"]))
 	Server.InitializeGameMessage(packet, Object.ObjectConfig["ObjectID"], 0x00a0)
+	Server.brodcastPacket(packet, Object.Zone)
 	Object.ObjectConfig["Health"] = Object.ObjectConfig["MaxHealth"]
 	Object.ObjectConfig["Armor"] = Object.ObjectConfig["MaxArmor"]
-	Server.brodcastPacket(packet, Object.Zone)
 	Object.ObjectConfig["Alive"] = True
 
 def PlayerLoaded(Object, stream : ReadStream, address : Address, Server : GameServer):

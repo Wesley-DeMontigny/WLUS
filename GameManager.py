@@ -26,7 +26,7 @@ class GameObject():
 			eventThread = threading.Thread(target=self.EventHandlers[EventID], args=[self, Stream, address, Server])
 			eventThread.start()
 		else:
-			#print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
+			print("Object {} Has No Handler For Event {}".format(self.ObjectConfig["ObjectID"], EventID))
 			pass
 	def RegisterEvent(self, EventID : str, Handler : Callable):
 		self.EventHandlers[EventID] = Handler
@@ -90,6 +90,62 @@ class ReplicaObject(GameObject):
 		for row in components:
 			compList.append(row["component_type"])
 		return compList
+
+	def getInventory(self, CDClient : GameDB):
+		try:
+			ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 17".format(self.ObjectConfig["LOT"]))
+			InventoryObjects = CDClient.Tables["InventoryComponent"].selectAll("id = {}".format(ComponentID[0]["component_id"]))
+		except:
+			return
+		if("Inventory" not in self.ObjectConfig):
+			self.ObjectConfig["Inventory"] = Inventory(self)
+		inventory: Inventory = self.ObjectConfig["Inventory"]
+		for item in InventoryObjects:
+			objectID = random.randint(100000000000000000, 999999999999999999)
+			inventory.addItem(int(item["itemid"]), objectID, Quantity=int(item["count"]), Equipped=bool(item["equip"]))
+
+	def setDestructible(self, CDClient : GameDB):
+		try:
+			ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 7".format(self.ObjectConfig["LOT"]))
+			DestructibleComp = CDClient.Tables["DestructibleComponent"].select(["faction", "level", "LootMatrixIndex",
+																				"CurrencyIndex", "life", "armor", "imagination", "isSmashable"], "id = {}".format(ComponentID[0]["component_id"]))[0]
+		except:
+			return
+		if(DestructibleComp["faction"] is not None):
+			self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
+
+		if (DestructibleComp["level"] is not None and int(DestructibleComp["level"]) != -1):
+			self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
+
+		if(DestructibleComp["LootMatrixIndex"] is not None):
+			self.ObjectConfig["LootIndex"] = int(DestructibleComp["LootMatrixIndex"])
+
+		if(DestructibleComp["CurrencyIndex"] is not None):
+			self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
+
+		if (DestructibleComp["life"] is not None and int(DestructibleComp["life"]) != -1):
+			self.ObjectConfig["Health"] = int(DestructibleComp["life"])
+			self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
+
+		if (DestructibleComp["armor"] is not None and int(DestructibleComp["armor"]) != -1):
+			self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
+			self.ObjectConfig["MaxArmor"] = int(DestructibleComp["armor"])
+
+		if (DestructibleComp["imagination"] is not None and int(DestructibleComp["imagination"]) != -1):
+			self.ObjectConfig["Imagination"] = int(DestructibleComp["imagination"])
+			self.ObjectConfig["MaxImagination"] = int(DestructibleComp["imagination"])
+
+		if (DestructibleComp["isSmashable"] is not None):
+			self.ObjectConfig["isSmashable"] = bool(DestructibleComp["isSmashable"])
+
+	def setCollectible(self, CDClient : GameDB):
+		try:
+			ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 23".format(self.ObjectConfig["LOT"]))
+			Collectible = CDClient.Tables["CollectibleComponent"].select(["requirement_mission"], "id = {}".format(ComponentID[0]["component_id"]))[0]
+		except:
+			return
+		if(Collectible["requirement_mission"] is not None):
+			self.ObjectConfig["RequiredMission"] = int(Collectible["requirement_mission"])
 
 class Session():
 	def __init__(self, Parent):
@@ -172,45 +228,20 @@ class Humanoid(ReplicaObject):
 	def Kill(self, **args):
 		print("Killed Object {}".format(self.ObjectConfig["ObjectID"]))
 
-	def setDestructible(self, CDClient : GameDB):
-		try:
-			ComponentID = CDClient.Tables["ComponentsRegistry"].select(["component_id"], "id = {} AND component_type = 7".format(self.ObjectConfig["LOT"]))
-			DestructibleComp = CDClient.Tables["DestructibleComponent"].select(["faction", "level", "LootMatrixIndex",
-																				"CurrencyIndex", "life", "armor", "imagination", "isSmashable"], "id = {}".format(ComponentID[0]["component_id"]))[0]
-		except:
-			return
-		if(DestructibleComp["faction"] is not None):
-			self.ObjectConfig["Faction"] = int(DestructibleComp["faction"])
-
-		if (DestructibleComp["level"] is not None and int(DestructibleComp["level"]) != -1):
-			self.ObjectConfig["HumanoidLevel"] = int(DestructibleComp["level"])
-
-		if(DestructibleComp["LootMatrixIndex"] is not None):
-			self.ObjectConfig["LootIndex"] = int(DestructibleComp["LootMatrixIndex"])
-
-		if(DestructibleComp["CurrencyIndex"] is not None):
-			self.ObjectConfig["CurrencyIndex"] = int(DestructibleComp["CurrencyIndex"])
-
-		if (DestructibleComp["life"] is not None and int(DestructibleComp["life"]) != -1):
-			self.ObjectConfig["Health"] = int(DestructibleComp["life"])
-			self.ObjectConfig["MaxHealth"] = int(DestructibleComp["life"])
-
-		if (DestructibleComp["armor"] is not None and int(DestructibleComp["armor"]) != -1):
-			self.ObjectConfig["Armor"] = int(DestructibleComp["armor"])
-			self.ObjectConfig["MaxArmor"] = int(DestructibleComp["armor"])
-
-		if (DestructibleComp["imagination"] is not None and int(DestructibleComp["imagination"]) != -1):
-			self.ObjectConfig["Imagination"] = int(DestructibleComp["imagination"])
-			self.ObjectConfig["MaxImagination"] = int(DestructibleComp["imagination"])
-
-		if (DestructibleComp["isSmashable"] is not None):
-			self.ObjectConfig["isSmashable"] = bool(DestructibleComp["isSmashable"])
-
 class Smashable(Humanoid):
 	def __init__(self, Parent):
 		super().__init__(Parent)
 		self.ObjectConfig["isSmashable"] = True
 		self.ObjectConfig["Faction"] = 6
+		self.ObjectConfig["ObjectType"] = "Smashables"
+
+class NPC(Humanoid):
+	def __init__(self, Parent):
+		super().__init__(Parent)
+		self.ObjectConfig["isSmashable"] = False
+		self.ObjectConfig["Faction"] = -1
+		self.ObjectConfig["ObjectType"] = "NPC"
+		self.ObjectConfig["Inventory"] = Inventory(self)
 
 class Enemy(Humanoid):
 	def __init__(self, Parent):
@@ -219,6 +250,7 @@ class Enemy(Humanoid):
 		self.ObjectConfig["Velocity"] = Vector3(0,0,0)
 		self.ObjectConfig["AngularVelocity"] = Vector4(0,0,0,0)
 		self.ObjectConfig["isSmashable"] = True
+		self.ObjectConfig["ObjectType"] = "Enemies"
 		self.ObjectConfig["Faction"] = 4
 
 class Character(Humanoid):
@@ -431,12 +463,16 @@ class GameManager():
 				if("spawntemplate" in object["LDF"]):
 					respawn = None
 					renderDisabled = False
+					collectibleID = 0
 					if("renderDisabled" in object["LDF"] and object["LDF"]["renderDisabled"] == '1'):
 						renderDisabled = True
 					if("respawn" in object["LDF"]):
 						respawn = float(object["LDF"]["respawn"])
+					if("collectible_id" in object["LDF"]):
+						collectibleID = object["LDF"]["collectible_id"]
 					Server.spawnObject(int(object["LDF"]["spawntemplate"]), ZoneObject.ZoneID, {"Scale":int(object["Scale"]),
 																								"SpawnerID":int(object["ObjectID"]),
+																								"CollectibleID":int(collectibleID),
 																								"Respawn":respawn, "Render":not renderDisabled}, object["Position"], object["Rotation"], debug=False, initialize=True)
 					time.sleep(.05)
 	def killPlayer(self, Server: GameServer, PlayerID: int):

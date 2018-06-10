@@ -42,8 +42,14 @@ class WorldServer(GameServer):
 		updateThread.start()
 		constructionThread = threading.Thread(target=self.constructionLoop)
 		constructionThread.start()
-		sleep(10)
-		print("Server is Ready!")
+		playerThread = threading.Thread(target=self.playerUpdate)
+		playerThread.start()
+		msgThread = threading.Thread(target=exec, args=
+		["""
+from time import sleep
+sleep(10)
+print("Server Is Ready!")""",])
+		msgThread.start()
 
 	def handlePacket(self, data : bytes, address : Address):
 		if(data[0:8] in self.WorldHandlers):
@@ -108,32 +114,43 @@ class WorldServer(GameServer):
 								except:
 									pass
 
+	def playerUpdate(self):
+		while True:
+			for player in self.Game.getPlayers():
+				session : Session = self.Game.getSessionByCharacterID(player.ObjectConfig["ObjectID"])
+				RM: GameReplicaManager = self.ReplicaManagers[player.Zone]
+				if(session is not None):
+					if (RM.is_participant(session.address)):
+						try:
+							RM.serialize(player)
+						except:
+							pass
+						if ((player.ObjectConfig["Health"] <= 0 or self.inKillElevation(
+								player)) and "Unkillable" not in player.Tag.split(" ") and player.ObjectConfig["LoadingIn"] == False
+							and player.ObjectConfig["Alive"] == True):
+							player.ObjectConfig["Alive"] = False
+							player.ObjectConfig["Health"] = 0
+							player.ObjectConfig["NeedsUpdate"] = True
+							player.Kill(self)
+						sleep(.075)
+
 	def updateLoop(self):
 		while True:
 			for player in self.Game.getPlayers():
 				session : Session = self.Game.getSessionByCharacterID(player.ObjectConfig["ObjectID"])
 				RM: GameReplicaManager = self.ReplicaManagers[player.Zone]
-				if (RM.is_participant(session.address)):
-					try:
-						RM.serialize(player, recipients=[session.address])
-					except:
-						pass
-					if((player.ObjectConfig["Health"] <= 0 or self.inKillElevation(player)) and "Unkillable" not in player.Tag.split(" ") and player.ObjectConfig["LoadingIn"] == False
-					   and player.ObjectConfig["Alive"] == True):
-						player.ObjectConfig["Alive"] = False
-						player.ObjectConfig["Health"] = 0
-						player.ObjectConfig["NeedsUpdate"] = True
-						player.Kill(self)
-					for ObjectID in player.ClientObjects:
-						Object = self.Game.getObjectByID(ObjectID)
-						if(isinstance(Object, ReplicaObject)):
-							try:
-								if((player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) < player.ObjectConfig["GhostingDistance"] and Object.ObjectConfig["NeedsUpdate"] == True) or Object == player):
-										RM.serialize(Object, recipients=[session.address])
-										Object.ObjectConfig["NeedsUpdate"] = False
-							except:
-								pass
-						sleep(.0025)
+				if(session is not None):
+					if (RM.is_participant(session.address)):
+						for ObjectID in player.ClientObjects:
+							Object = self.Game.getObjectByID(ObjectID)
+							if(isinstance(Object, ReplicaObject)):
+								try:
+									if((player.ObjectConfig["Position"].distance(Object.ObjectConfig["Position"]) < player.ObjectConfig["GhostingDistance"] and Object.ObjectConfig["NeedsUpdate"] == True) or Object == player):
+											RM.serialize(Object, recipients=[session.address])
+											Object.ObjectConfig["NeedsUpdate"] = False
+								except:
+									pass
+							sleep(.0025)
 
 
 	def inKillElevation(self, Player : Character):
@@ -181,21 +198,26 @@ class WorldServer(GameServer):
 			gameObject.ObjectConfig["LOT"] = LOT
 			gameObject.ObjectConfig["Position"] = Position
 			gameObject.ObjectConfig["Rotation"] = Rotation
-			gameObject.ObjectConfig["ObjectType"] = "Smashables"
-			gameObject.setDestructible(self.CDClient)
 		elif(objectType == "Enemies"):
 			gameObject = Enemy(zone)
 			gameObject.ObjectConfig["LOT"] = LOT
 			gameObject.ObjectConfig["Position"] = Position
 			gameObject.ObjectConfig["Rotation"] = Rotation
-			gameObject.ObjectConfig["ObjectType"] = "Enemies"
-			gameObject.setDestructible(self.CDClient)
+		elif(objectType == "NPC"):
+			gameObject = NPC(zone)
+			gameObject.ObjectConfig["LOT"] = LOT
+			gameObject.ObjectConfig["Position"] = Position
+			gameObject.ObjectConfig["Rotation"] = Rotation
 		else:
 			gameObject = ReplicaObject(zone)
 			gameObject.ObjectConfig["LOT"] = LOT
 			gameObject.ObjectConfig["Position"] = Position
 			gameObject.ObjectConfig["Rotation"] = Rotation
 			gameObject.ObjectConfig["ObjectType"] = objectType
+
+		gameObject.getInventory(self.CDClient)
+		gameObject.setDestructible(self.CDClient)
+		gameObject.setCollectible(self.CDClient)
 
 		for key in CustomConfig:
 			gameObject.ObjectConfig[key] = CustomConfig[key]

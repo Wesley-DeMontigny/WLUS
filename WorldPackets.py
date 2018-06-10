@@ -31,6 +31,7 @@ def HandleSessionKey(Server : GameServer, data : bytes, address : Address):
 
 def HandleMinifigListRequest(Server : GameServer, data : bytes, address : Address):
 	session = Server.Game.getSessionByAddress(address)
+	time.sleep(2)
 	if(session.State == SessionState.CharacterScreen):
 		characters = Server.Game.getAccountByUsername(session.accountUsername).Characters
 		packet = WriteStream()
@@ -129,6 +130,8 @@ def HandleGameMessage(Server : GameServer, data : bytes, address : Address):
 			PlatformResync(object, stream, address, Server)
 		elif (eventName == "GM_0208"):
 			MissionOffering(object, stream, address, Server)
+		elif(eventName == "GM_01e6"):
+			HandleCollectibles(object, stream, address, Server)
 		else:
 			object.HandleEvent(eventName, stream, address, Server)
 	else:
@@ -265,4 +268,6 @@ def UpdateCharacterPositon(Server : GameServer, data : bytes, address : Address)
 	character : Character = Server.Game.getObjectByID(session.ObjectID)
 	character.ObjectConfig["Position"] = Vector3(XPos, YPos, ZPos)
 	character.ObjectConfig["Rotation"] = Vector4(XRot, YRot, ZRot, WRot)
+	character.ObjectConfig["Velocity"] = Vector3(XPos, YPos, ZPos)
+	character.ObjectConfig["AngularVelocity"] = Vector4(XRot, YRot, ZRot, WRot)
 	character.ObjectConfig["NeedsUpdate"] = True
