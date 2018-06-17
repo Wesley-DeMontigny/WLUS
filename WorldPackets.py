@@ -269,5 +269,3 @@ def UpdateCharacterPositon(Server : GameServer, data : bytes, address : Address)
 	character.ObjectConfig["Position"] = Vector3(XPos, YPos, ZPos)
 	character.ObjectConfig["Rotation"] = Vector4(XRot, YRot, ZRot, WRot)
 	character.ObjectConfig["Velocity"] = Vector3(XPos, YPos, ZPos)
-	character.ObjectConfig["AngularVelocity"] = Vector4(XRot, YRot, ZRot, WRot)
-	character.ObjectConfig["NeedsUpdate"] = True

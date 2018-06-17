@@ -47,6 +47,23 @@ def HandleInteraction(Object, stream : ReadStream, address : Address, Server : G
 					print("Offering Mission {}".format(mission["id"]))
 					return
 
+def EquipItem(Object, stream : ReadStream, address : Address, Server : GameServer):
+	ignoreCooldown = stream.read(c_bit)
+	outSuccess = stream.read(c_bit)
+	itemToEquip = stream.read(c_longlong)
+	inventory = Object.ObjectConfig["Inventory"]
+	inventory.equipItem(itemToEquip)
+
+def UnequipItem(Object, stream : ReadStream, address : Address, Server : GameServer):
+	evenIfDead = stream.read(c_bit)
+	ignoreCooldown = stream.read(c_bit)
+	outSuccess = stream.read(c_bit)
+	itemToUnequip = stream.read(c_longlong)
+	replacementItem = stream.read(c_longlong)
+	inventory = Object.ObjectConfig["Inventory"]
+	inventory.unequipItem(itemToUnequip)
+	inventory.equipItem(replacementItem)
+
 
 def SmashPlayer(Object, stream : ReadStream, address : Address, Server : GameServer):
 	Object.Kill(Server)

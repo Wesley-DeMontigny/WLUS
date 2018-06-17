@@ -222,6 +222,10 @@ print("Server Is Ready!")""",])
 		for key in CustomConfig:
 			gameObject.ObjectConfig[key] = CustomConfig[key]
 
+		objectTable : DBTable = self.CDClient.Tables["Objects"]
+		objectName = objectTable.select(["name"], "id = {}".format(LOT))[0]["name"]
+		gameObject.ObjectConfig["ObjectName"] = objectName
+
 		zone.createObject(gameObject)
 		gameObject.Components = gameObject.findComponentsFromCDClient(self.CDClient)
 		if (initialize == False):

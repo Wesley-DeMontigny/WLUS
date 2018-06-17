@@ -2,6 +2,8 @@ from flask import Flask, request, render_template
 from passlib.hash import sha256_crypt
 from Enum import *
 import time
+from io import StringIO
+import sys
 
 class ServerApp():
 	def __init__(self, ServerName : str, ServerVesion : str, Port : int, AdminUsername : str, AdminPassword : str, WorldServer, AuthServer, AccountManager):
@@ -77,10 +79,28 @@ class ServerApp():
 						ObjectList = []
 						for object in World.Objects:
 							ObjectList.append({"ObjectID":object.ObjectConfig["ObjectID"], "SpawnerID":object.ObjectConfig["SpawnerID"], "LOT":object.ObjectConfig["LOT"],
-											   "Position": "{},{},{}".format(object.ObjectConfig["Position"].X,object.ObjectConfig["Position"].Y,object.ObjectConfig["Position"].Z)})
+											   "Position": "{},{},{}".format(object.ObjectConfig["Position"].X,object.ObjectConfig["Position"].Y,object.ObjectConfig["Position"].Z),
+											   "ObjectName":object.ObjectConfig["ObjectName"]})
 						return render_template("ZoneObjects.html", ServerName=self.ServerName, ServerVersion=self.ServerVersion, Objects=ObjectList)
 					else:
 						return "Zone not found!"
+				else:
+					return "Permissions not high enough!"
+			else:
+				return ""
+
+		@self.app.route("/execute", methods=["POST"])
+		def handleCodeExecuteion():
+			if(request.remote_addr in self.Sessions):
+				if(self.Sessions[request.remote_addr]["Admin"] == True):
+					content = request.get_json()
+					pyCode = content.get('pyCode')
+					old_stdout = sys.stdout
+					result = StringIO()
+					sys.stdout = result
+					eval(pyCode)
+					sys.stdout = old_stdout
+					return ">>" + pyCode + "<br/>" + str(result.getvalue())
 				else:
 					return "Permissions not high enough!"
 			else:

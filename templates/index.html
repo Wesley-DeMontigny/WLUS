@@ -10,12 +10,25 @@
 				$("#navContainer").height($(document).height())
 			}, 50)
 		</script>
+		<style>
+			.tab{
+				color:#fff;
+			}
+			.tab:hover{
+				background-color:#fff;
+				color:#000;
+			}
+			.tab:focus{
+				background-color:#fff;
+				color:#000;
+			}
+		</style>
 	</head>
 		<script>
 			function updateElement(id)
 			{
 				$.ajax({
-					url: window.location.href;, 
+					url: window.location.href, 
 					cache: false,
 					success: function(response) {
 						result = $(response).find("#"+id);
@@ -28,12 +41,13 @@
 		<div class="col-md-2" id="navContainer" style="background-color:#606c7f;height:100%;">
 			<h3>Welcome {{User}}!</h3>
 			<ul class="nav nav-tabs nav-stacked" style="width:100%">
-				<li class="active"><a data-toggle="tab" style="color:#000000;" href="#home">Home</a></li>
-				<li><a data-toggle="tab" style="color:#000000;" href="#myCharacters">My Characters</a></li>
+				<li class="active"><a data-toggle="tab" class="tab" href="#home">Home</a></li>
+				<li><a data-toggle="tab" class="tab" href="#myCharacters">My Characters</a></li>
 				{% if Admin %}
-				<li><a data-toggle="tab" style="color:#000000;" href="#sessions">Session Registry</a></li>
-				<li><a data-toggle="tab" style="color:#000000;" href="#zones">Zone Registry</a></li>
-				<li><a data-toggle="tab" style="color:#000000;" href="#accounts">Account Registry</a></li>
+				<li><a data-toggle="tab" class="tab" href="#sessions">Session Registry</a></li>
+				<li><a data-toggle="tab" class="tab" href="#zones">Zone Registry</a></li>
+				<li><a data-toggle="tab" class="tab" href="#accounts">Account Registry</a></li>
+				<li><a data-toggle="tab" class="tab" href="#terminalPage">Terminal</a></li>
 				{% endif %}
 			</ul>
 		</div>
@@ -139,6 +153,28 @@
 							{% endfor %}
 						</tbody>
 					</table>
+				</div>
+				<div id="terminalPage" class="tab-pane fade">
+					<h3>Terminal</h3>
+					<div style="background-color:black;color:#6cff5b;height:450px;" id="execOutput" class="pre-scrollable">
+						
+					</div>
+					<input type="text" style="background-color:black;color:#6cff5b;width:100%;" class="form-control" id="pyCode">
+					<div style="col-md-6"> </div>
+					<button type="button" class="btn btn-success" onclick="submitExec();">Submit</button>
+					<script>
+						function submitExec()
+						{
+							$.ajax({
+							   url:'/execute',
+							   contentType: 'application/json',
+							   type:'POST',
+							   data: JSON.stringify({'pyCode':$("#pyCode").val()})
+							}).done(function(data){
+								$("#execOutput").append("<p>"+data+"</p>");
+							});
+						}
+					</script>
 				</div>
 				{% endif %}
 			</div>

@@ -18,7 +18,7 @@ def Nothing(*args):
 class GameObject():
 	def __init__(self, Parent):
 		self.Parent = Parent
-		self.ObjectConfig : dict = {"LOT":0,"ObjectID":None,"Name":""}
+		self.ObjectConfig : dict = {"LOT":0,"ObjectID":None,"Name":"","ObjectName":""}
 		self.EventHandlers : dict = {}
 		self.Tag : str = ""
 	def HandleEvent(self, EventID : str, Stream : ReadStream, address : Address, Server : GameServer):
@@ -298,6 +298,8 @@ class Character(Humanoid):
 		self.RegisterEvent("GM_0300", Nothing)#Set Ghosting Distance
 		self.RegisterEvent("GM_0352", RunCommand)#Run chat command
 		self.RegisterEvent("GM_016c", HandleInteraction)#Handles Interaction Request
+		self.RegisterEvent("GM_0e9", UnequipItem)#Unequipping Items
+		self.RegisterEvent("GM_0e7", EquipItem)#Equipping Items
 
 	def Kill(self, Server : GameServer):
 		super().Kill()
@@ -358,6 +360,14 @@ class Inventory():
 			if(item["Equipped"] == True):
 				equippedItems.append(item)
 		return equippedItems
+	def equipItem(self, itemID : int):
+		item = self.getItemByID(itemID)
+		if(item is not None):
+			self.InventoryList[self.InventoryList.index(item)]["Equipped"] = True
+	def unequipItem(self, itemID : int):
+		item = self.getItemByID(itemID)
+		if(item is not None):
+			self.InventoryList[self.InventoryList.index(item)]["Equipped"] = False
 	def getItemByID(self, ObjectID : int):
 		for item in self.InventoryList:
 			if(item["ObjectID"] == ObjectID):
