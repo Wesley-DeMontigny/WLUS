@@ -12,12 +12,12 @@
 			<div>
 				<div class="col-md-11">
 					<div class="form-group">
-						<label for="usr">	Username:</label>
-						<input type="text" id="username" class="form-control" id="usr">
+						<label for="username">	Username:</label>
+						<input type="text" id="username" class="form-control">
 					</div>
 					<div class="form-group">
-						<label for="pwd">	Password:</label>
-						<input type="password" id="password" class="form-control" id="pwd">
+						<label for="password">	Password:</label>
+						<input type="password" id="password" class="form-control">
 					</div>
 					<label><input type="checkbox" id="IsAdmin" value="">Admin Login</label>
 				</div>
@@ -42,6 +42,53 @@
 							else
 							{
 								console.log("Incorrect Login")
+								$('#submit').prop('disabled',false);
+								$("#username").css("background-color", "#ffcccc");
+								$("#password").css("background-color", "#ffcccc");
+							}
+						});
+					}
+				</script>
+				<div class="modal" id="registerModal" tabindex="-1" role="dialog">
+					<div class="modal-dialog" role="document">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title">Register Account</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+							</div>
+							<div class="modal-body">
+								<div class="form-group">
+									<label for="register_username">	Username:</label>
+									<input type="text" id="register_username" class="form-control">
+								</div>
+								<div class="form-group">
+									<label for="register_password">	Password:</label>
+									<input type="password" id="register_password" class="form-control">
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-primary" onclick="registerAccount();">Register</button>
+								<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<script>
+					function registerAccount()
+					{
+						$.ajax({
+						   url:'/registerAccount',
+						   contentType: 'application/json',
+						   type:'POST',
+						   data: JSON.stringify({'username':$("#username").val(), 'password':$("#password").val()})
+						}).done(function(data){
+							if(data == "True")
+							{
+								$("#registerModal").modal().hide();
+							}
+							else
+							{
+								console.log("Registration Failed")
 								$('#submit').prop('disabled',false);
 								$("#username").css("background-color", "#ffcccc");
 								$("#password").css("background-color", "#ffcccc");

@@ -68,6 +68,8 @@ class ServerApp():
 			content = request.get_json()
 			username = content.get('username')
 			password = content.get('password')
+			if("#" in username or "#" in password or "'" in username or "'" in password or '"' in username or '"' in password or "&" in username or "&" in password):#Just filter out the characters that might allow sql injections
+				return False
 			return str(self.RegisterAccount(username, password))
 
 		@self.app.route("/Objects/<zoneID>")
@@ -98,7 +100,7 @@ class ServerApp():
 					old_stdout = sys.stdout
 					result = StringIO()
 					sys.stdout = result
-					eval(pyCode)
+					exec(pyCode)
 					sys.stdout = old_stdout
 					return ">>" + pyCode + "<br/>" + str(result.getvalue())
 				else:
