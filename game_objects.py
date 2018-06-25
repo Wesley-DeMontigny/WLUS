@@ -27,6 +27,7 @@ class GameObject(game_types.BaseObject):
 class ReplicaObject(GameObject):
 	def __init__(self, parent, scene, name : str = "GameObject"):
 		super().__init__(parent, scene, name)
+		self.add_component(components.Transform)
 
 	def serialize(self):
 		pass

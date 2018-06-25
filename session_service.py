@@ -7,6 +7,7 @@ class Session():
 		self.account_id = 0
 		self.address = None
 		self.user_key = ""
+		self.username = ""
 
 class SessionService(services.GameService):
 	def __init__(self, parent):
@@ -15,13 +16,14 @@ class SessionService(services.GameService):
 
 		self._sessions = []
 
-	def add_session(self, scene_id = 0, player_id = 0, account_id = 0, address = None, userkey = ""):
+	def add_session(self, scene_id = 0, player_id = 0, account_id = 0, address = None, user_key = "", username = ""):
 		new_session = Session()
 		new_session.scene_id = scene_id
 		new_session.player_id = player_id
+		new_session.username = username
 		new_session.account_id = account_id
 		new_session.address = address
-		new_session.user_key = userkey
+		new_session.user_key = user_key
 		self._sessions.append(new_session)
 
 	def remove_session(self, session : Session):

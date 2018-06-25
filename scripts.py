@@ -1,6 +1,11 @@
 import game_types
 import threading
 
+'''
+Scripts can be attached to just about any object.
+They are executed in a seperate thread and have access to their script object's properties even from another file (Although PyCharm or any other editor won't realize that and will try to tell you its an error).
+'''
+
 class Script():
 	def __init__(self, parent, script_name :str = "", script_path : str = ""):
 		self._parent = parent

@@ -5,6 +5,11 @@ from pyraknet.messages import *
 import pyraknet.replicamanager
 import typing
 
+'''
+Scenes are essentially instances of any particular zone. All Game Objects are children to a scene.
+'''
+
+
 class Scene(game_types.BaseObject):
 	def __init__(self, parent, levelid: int = 0, name: str = "Scene"):
 		super().__init__(parent)

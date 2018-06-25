@@ -1,6 +1,13 @@
 import typing
 import game_types
 import ctypes
+import threading
+
+'''
+The Game class is the parent of all other objects in the game.
+Things should ALWAYS be implmented through either a service or a script
+'''
+
 
 class Game(game_types.BaseObject):
 	def __init__(self):
@@ -8,6 +15,7 @@ class Game(game_types.BaseObject):
 		self._name = "Game"
 		self._services = []
 		self._config : dict = {}
+		self._event_handlers = {}
 
 	def start(self):
 		for service in self._services:
@@ -16,6 +24,23 @@ class Game(game_types.BaseObject):
 
 	def register_service(self, service):
 		self._services.append(service)
+		self.trigger_event("ServiceRegistered", args=(service,), debug=False)
+
+	def register_event(self, event_id : str):
+		def register_handler(handler):
+			self._event_handlers[handler] = event_id
+		return register_handler
+
+	def trigger_event(self, event_id, args : typing.Tuple =(), debug : bool = True):
+		handler_activated = False
+		for handler in self._event_handlers:
+			if(self._event_handlers[handler] == event_id):
+				handler_thread = threading.Thread(target=handler, args=args)
+				handler_thread.start()
+				handler_activated = True
+		if(handler_activated != True and debug):
+			print("{} Had No Handler!".format(event_id))
+
 
 	def get_service(self, service_name : str):
 		for service in self._services:

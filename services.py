@@ -6,12 +6,20 @@ import database
 import world_server
 import scene
 
+'''
+Services are a way to implement new parts of the server architecture.
+They can each access each other through self.get_parent().get_service("SERVICE NAME").
+A service's parent should always be Game, although I'm not sure you could do it any other way even if you tried.
+'''
+
+
 class GameService(game_types.BaseObject):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Base Service"
 
 	def initialize(self):
+		self.get_parent().trigger_event("ServiceInitialized", args=(self,), debug=False)
 		print("Initializied {} Service".format(self._name))
 
 
@@ -59,6 +67,11 @@ class AuthServerService(GameService):
 
 		self.server = auth_server.AuthServer((self._address, self._port), max_connections=self._max_connections, incoming_password=b"3.25 ND1", auth_server_service=self)
 
+	def initialize(self):
+		super().initialize()
+		for handler in self.server.default_handlers:
+				self.get_parent().register_event(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
+
 	def validate_login(self, username : str, password : str):
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
 		account_table : database.DBTable = server_db.tables["Accounts"]
@@ -99,3 +112,8 @@ class WorldServerService(GameService):
 			self._max_connections = 10
 
 		self.server = world_server.WorldServer((self._address, self._port), max_connections=self._max_connections, incoming_password=b"3.25 ND1", world_server_service=self)
+
+	def initialize(self):
+		super().initialize()
+		for handler in self.server.default_handlers:
+			self.get_parent().register_event(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])

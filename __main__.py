@@ -1,20 +1,37 @@
 import game
 import services
 import scripts
-import sessions
+import session_service
+import os
 import asyncio
+import configparser
+import player_service
+import time
 
 if __name__ == "__main__":
 	game = game.Game()
 
-	game.set_config("address", "127.0.0.1")
-	game.set_config("auth_port", "1001")
-	game.set_config("world_port", "2002")
+	config = configparser.ConfigParser()
+	config.read("config.ini")
+	game_config = config["GAME_CONFIG"]
+	game.set_config("address", str(game_config["address"]))
+	game.set_config("auth_port", int(game_config["auth_port"]))
+	game.set_config("world_port", int(game_config["world_port"]))
+	game.set_config("auth_max_connections", int(game_config["auth_max_connections"]))
+	game.set_config("world_max_connections", int(game_config["world_max_connections"]))
+
+	#Append all game scripts to Game
+	for file in os.listdir("./game_scripts"):
+		if file.endswith(".py"):
+			game.add_script(scripts.Script(game, file, "./game_scripts/"+file))
 
 	database = services.DatabaseService(game)
 	game.register_service(database)
 
-	session = sessions.SessionService(game)
+	player = player_service.PlayerService(game)
+	game.register_service(player)
+
+	session = session_service.SessionService(game)
 	game.register_service(session)
 
 	auth_server = services.AuthServerService(game)
