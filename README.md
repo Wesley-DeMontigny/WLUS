@@ -10,14 +10,5 @@ And the Pyraknet folder looking something like this:</br>
 Then open up command prompt or power shell and type ```python -m pip install passlib``` and ```python -m pip install flask```.
 After all of that that just execute ```__main__.py```, The default Username is "wesley" and the default Password is "play"</br>
 
-# Current Chat Commands
-```
-/loadWorld <ZoneID>
-/fly
-/setConfig <ObjectConfigAttr> <ObjectConfigValue>
-/spawnObject <LOT>
-/togglePVP
-```
-
 # Disclaimer
 The LEGO Group has not endorsed or authorized the operation of this game and is not liable for any safety issues in relation to its operation
