@@ -2,6 +2,7 @@ import typing
 import game_types
 import ctypes
 import threading
+import random
 
 '''
 The Game class is the parent of all other objects in the game.
@@ -22,11 +23,15 @@ class Game(game_types.BaseObject):
 			service_thread = game_types.GameThread(target=service.initialize)
 			service_thread.start()
 
+	def generate_object_id(self):
+		id = random.randint(100000000000000000, 999999999999999999)
+		return id
+
 	def register_service(self, service):
 		self._services.append(service)
 		self.trigger_event("ServiceRegistered", args=(service,), debug=False)
 
-	def register_event(self, event_id : str):
+	def register_event_handler(self, event_id : str):
 		def register_handler(handler):
 			self._event_handlers[handler] = event_id
 		return register_handler

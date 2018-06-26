@@ -70,13 +70,13 @@ class AuthServerService(GameService):
 	def initialize(self):
 		super().initialize()
 		for handler in self.server.default_handlers:
-				self.get_parent().register_event(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
+				self.get_parent().register_event_handler(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
 
 	def validate_login(self, username : str, password : str):
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
 		account_table : database.DBTable = server_db.tables["Accounts"]
-		user_info = account_table.select_all("Username = '{}'".format(username))[0]
-		if (user_info is not None and user_info["Banned"] != True and passlib.hash.sha256_crypt.verify(password, user_info["Password"])):  # Success
+		user_info = account_table.select_all("username = '{}'".format(username))[0]
+		if (user_info is not None and bool(user_info["banned"]) != True and passlib.hash.sha256_crypt.verify(password, user_info["password"])):  # Success
 			return True, user_info
 		else:
 			return False, user_info
@@ -116,4 +116,4 @@ class WorldServerService(GameService):
 	def initialize(self):
 		super().initialize()
 		for handler in self.server.default_handlers:
-			self.get_parent().register_event(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
+			self.get_parent().register_event_handler(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
