@@ -19,6 +19,7 @@ if __name__ == "__main__":
 	game.set_config("world_port", int(game_config["world_port"]))
 	game.set_config("auth_max_connections", int(game_config["auth_max_connections"]))
 	game.set_config("world_max_connections", int(game_config["world_max_connections"]))
+	game.set_config("accept_custom_names", bool(game_config["accept_custom_names"]))
 
 	#Append all game scripts to Game
 	for file in os.listdir("./game_scripts"):

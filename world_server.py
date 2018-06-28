@@ -18,7 +18,8 @@ class WorldServer(pyraknet.server.Server):
 		self.default_handlers = {"world_handshake":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.HANDSHAKE.value), self.handle_handshake],
 								 "world_session_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_USER_SESSION_INFO.value), self.handle_session_info],
 								 "world_minifigure_list":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_LIST_REQUEST.value), self.handle_minifig_list_request],
-								 "world_minifig_creation":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_CREATE_REQUEST.value), self.handle_minifig_creation]}
+								 "world_minifig_creation":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_CREATE_REQUEST.value), self.handle_minifig_creation],
+								 "world_minifig_deletion:":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_DELETE_MINIFIGURE_REQUEST.value), self.handle_minifig_deletion]}
 
 	def handle_handshake(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -37,10 +38,24 @@ class WorldServer(pyraknet.server.Server):
 
 	def handle_minifig_creation(self, data: bytes, address):
 		stream = ReadStream(data)
-		name = stream.read(str, allocated_length=33)
-		predef_name1 = stream.read(c_ulong)
-		predef_name2 = stream.read(c_ulong)
-		predef_name3 = stream.read(c_ulong)
+		custom_name = stream.read(str, allocated_length=33)
+
+		firstname_file = open("./resources/minifigname_first.txt", 'r')
+		firstnames = firstname_file.readlines()
+		firstname_file.close()
+
+		middlename_file = open("./resources/minifigname_middle.txt", 'r')
+		middlenames = middlename_file.readlines()
+		middlename_file.close()
+
+		lastname_file = open("./resources/minifigname_last.txt", 'r')
+		lastnames = lastname_file.readlines()
+		lastname_file.close()
+
+		predef_name1 = firstnames[stream.read(c_ulong)]
+		predef_name2 = middlenames[stream.read(c_ulong)]
+		predef_name3 = lastnames[stream.read(c_ulong)]
+
 		stream.read(bytes, allocated_length=9)
 		shirt_color = stream.read(c_ulong)
 		shirt_style = stream.read(c_ulong)
@@ -56,15 +71,52 @@ class WorldServer(pyraknet.server.Server):
 		player_service = game.get_service("Player")
 		session_service = game.get_service("Session")
 		session = session_service.get_session_by_address(address)
-		player_service.create_player(session.account_id, name, shirt_color, shirt_style, pants_color, hair_color, hair_style, lh, rh, eyebrows, eyes, mouth)
+		if(custom_name == "" or game.get_config("accept_custom_names") == False):
+			name = str(predef_name1 + predef_name2 + predef_name3).rstrip('\n')
+		else:
+			name = custom_name
+		player_service.create_player(session.account_id, name, shirt_color, shirt_style, pants_color, hair_color, hair_style, lh, rh, eyebrows, eyes, mouth, custom_name)
 
 		packet = WriteStream()
-		packet.write(game_enums.PacketHeaderEnum.MINIFIGURE_CREATION_RESPONSE)
+		packet.write(game_enums.PacketHeaderEnum.MINIFIGURE_CREATION_RESPONSE.value)
 		packet.write(c_uint8(game_enums.MinifigureCreationResponseEnum.SUCCESS))
 		self.send(packet, address)
 
 		time.sleep(.5)
 		self.handle_minifig_list_request(data, address)
+
+	def load_world(self, player_id: int, level_id: int, spawn_at_default: bool = False):
+		packet = WriteStream()
+		player = game.get_service("Player").get_player_by_id(player_id)
+		world = game.get_service("World")
+		session = game.get_service("Session").get_session_by_player_id(player_id)
+		scene = world.get_scenes_by_level(level_id)[0]
+		print("Sending Player {} to {}".format(player_id, scene.get_name()))
+		packet.write(game_enums.PacketHeaderEnum.WORLD_INFO)
+
+		packet.write(c_uint16(level_id))
+		packet.write(c_uint16(0))  # Map Instance
+		packet.write(c_ulong(0))  # Map Clone
+		packet.write(c_ulong(game_enums.ZoneChecksums[level_id]))
+		if (spawn_at_default):
+			packet.write(c_float(game_enums.DefaultZoneSpawns[level_id][0]))
+			packet.write(c_float(game_enums.DefaultZoneSpawns[level_id][1]))
+			packet.write(c_float(game_enums.DefaultZoneSpawns[level_id][2]))
+			player["position"] = game_types.Vector3(game_enums.DefaultZoneSpawns[level_id][0], game_enums.DefaultZoneSpawns[level_id][1], game_enums.DefaultZoneSpawns[level_id][2])
+		else:
+			packet.write(c_float(player["position"].X))
+			packet.write(c_float(player["position"].Y))
+			packet.write(c_float(player["position"].Z))
+		if (scene.is_activity()):
+			packet.write(c_ulong(4))
+		else:
+			packet.write(c_ulong(0))
+		if(session.scene_id == 0):
+			scene.add_player(player_id)
+		else:
+			game.get_pyobject(session.scene_id).remove_player(player_id)
+			scene.add_player(player_id)
+		self.send(packet, session.address)
 
 	def handle_session_info(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -102,10 +154,13 @@ class WorldServer(pyraknet.server.Server):
 			packet.write(c_longlong(character["player_id"]))  # Object ID
 			packet.write(c_ulong(0))
 			packet.write(character["name"], allocated_length=33)  # Character Name
-			packet.write("", allocated_length=33)  # Name to show up in paranthesis
+			if(character["custom_name"] != ""):
+				packet.write(character["custom_name"], allocated_length=33)  # Custom Name
+			else:
+				packet.write("", allocated_length=33)
 			packet.write(c_bool(False))  # Name rejected
 			packet.write(c_bool(False))  # Free to play
-			packet.write(game_types.String("", allocated_length=10))  # Unknown
+			packet.write(game_types.String("", allocated_length=10))
 			packet.write(c_ulong(character["shirt_color"]))
 			packet.write(c_ulong(character["shirt_style"]))
 			packet.write(c_ulong(character["pants_color"]))
@@ -130,6 +185,11 @@ class WorldServer(pyraknet.server.Server):
 		except:
 			pass
 
+	def handle_minifig_deletion(self, data: bytes, address):
+		stream = ReadStream(data)
+		player_id = stream.read(c_longlong)
+		game.get_service("Player").delete_player(player_id)
+
 
 	def handle_packet(self, data : bytes, address : pyraknet.messages.Address):
-		game.trigger_event("OnPacket_World_{}".format(str(data[0:8])), args=[data[8:], address])
+		game.trigger_event("OnPacket_World_{}".format(str(data[0:8])), args=[data[8:], address], debug=True)

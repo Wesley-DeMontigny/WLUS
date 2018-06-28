@@ -34,7 +34,7 @@ class WorldService(GameService):
 
 	def get_scene_by_id(self, id : int):
 		for scene in self._scenes:
-			if(scene.get_id() == id):
+			if(scene.get_py_id() == id):
 				return scene
 		return None
 
@@ -44,6 +44,15 @@ class WorldService(GameService):
 			if(scene.get_levelid() == level):
 				scenes.append(scene)
 		return scenes
+
+	def get_scene_by_name(self, name: str):
+		for scene in self._scenes:
+			if(scene.get_name() == name):
+				return scene
+		return None
+
+	def get_scenes(self):
+		return self._scenes
 
 class AuthServerService(GameService):
 	def __init__(self, parent):

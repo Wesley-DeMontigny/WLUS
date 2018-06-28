@@ -9,7 +9,6 @@ class BaseObject():
 		self._name = "Name"
 		self._parent = parent
 		self._children = []
-		self._id = id(self)
 		self._scripts = {}
 		if(isinstance(self._parent, BaseObject)):
 			self._parent._children.append(self)
@@ -17,8 +16,8 @@ class BaseObject():
 	def get_name(self):
 		return self._name
 
-	def get_id(self):
-		return self._id
+	def get_py_id(self):
+		return id(self)
 
 	def set_name(self, name : str):
 		self._name = name
@@ -62,10 +61,15 @@ class String(Serializable):
 
 
 class Vector3():
-	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0):
+	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0, str_val:str = None):
 		self.X : float = X
 		self.Y : float = Y
 		self.Z : float = Z
+		if(str_val is not None):
+			vector_list = str_val.split(",")
+			self.X = vector_list[0]
+			self.Y = vector_list[1]
+			self.Z = vector_list[2]
 
 	def __add__(self, other):
 		return Vector3(self.X + other.X,self.Y + other.Y,self.Z + other.Z)
@@ -78,12 +82,23 @@ class Vector3():
 		self.Y = Y
 		self.Z = Z
 
+	def __str__(self):
+		return "{},{},{}".format(self.X, self.Y, self.Z)
+
+
+
 class Vector4():
-	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0, W : float = 0.0):
+	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0, W : float = 0.0, str_val: str = None):
 		self.X : float = X
 		self.Y : float = Y
 		self.Z : float = Z
 		self.W : float = W
+		if(str_val is not None):
+			vector_list = str_val.split(",")
+			self.X = vector_list[0]
+			self.Y = vector_list[1]
+			self.Z = vector_list[2]
+			self.W = vector_list[3]
 
 	def __add__(self, other):
 		return Vector4(self.X + other.X, self.Y + other.Y, self.Z + other.Z, self.W + other.W)
@@ -96,5 +111,8 @@ class Vector4():
 		self.Y = Y
 		self.Z = Z
 		self.W = W
+
+	def __str__(self):
+		return "{},{},{},{}".format(self.X, self.Y, self.Z, self.W)
 
 

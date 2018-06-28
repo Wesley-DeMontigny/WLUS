@@ -82,7 +82,7 @@ class AuthServer(pyraknet.server.Server):
 			session_service.add_session(address=address, user_key=user_key, account_id=user_info["account_id"], username=username)
 
 	def handle_packet(self, data : bytes, address : pyraknet.messages.Address):
-		game.trigger_event("OnPacket_Auth_{}".format(str(data[0:8])), args=[data[8:], address])
+		game.trigger_event("OnPacket_Auth_{}".format(str(data[0:8])), args=[data[8:], address], debug=True)
 
 
 

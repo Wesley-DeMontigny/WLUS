@@ -36,7 +36,7 @@ class Game(game_types.BaseObject):
 			self._event_handlers[handler] = event_id
 		return register_handler
 
-	def trigger_event(self, event_id, args : typing.Tuple =(), debug : bool = True):
+	def trigger_event(self, event_id, args : typing.Tuple =(), debug : bool = False):
 		handler_activated = False
 		for handler in self._event_handlers:
 			if(self._event_handlers[handler] == event_id):
