@@ -88,57 +88,57 @@ class PlayerService(services.GameService):
 				del character["CompletedMissions"]
 				current_missions = character["CurrentMissions"]
 				del character["CurrentMissions"]
-				try:
-					character_table.update(character, "player_id = {}".format(character["player_id"]))
-					character_stats_table.update(stats, "player_id = {}".format(character["player_id"]))
-					character_data_table.update(data, "player_id = {}".format(character["player_id"]))
+				character_table.update(character, "player_id = {}".format(character["player_id"]))
+				character_stats_table.update(stats, "player_id = {}".format(character["player_id"]))
+				character_data_table.update(data, "player_id = {}".format(character["player_id"]))
 
-					for mission in completed_missions:
-						check = completed_missions_table.select_all("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
-						if(check == []):
-							completed_missions_table.insert(mission)
+				for mission in completed_missions:
+					check = completed_missions_table.select_all("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+					if(check == []):
+						completed_missions_table.insert(mission)
 
-					for mission in current_missions:
-						check = current_missions_table.select_all("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
-						if(check == []):
-							current_missions_table.insert(mission)
-						else:
-							current_missions_table.update(mission, "player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+				for mission in current_missions:
+					check = current_missions_table.select_all("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+					if(check == []):
+						current_missions_table.insert(mission)
+					else:
+						current_missions_table.update(mission, "player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
 
-					db_missions = current_missions_table.select_all("player_id = {}".format(character["player_id"]))
-					for mission in db_missions:
-						keep = False
-						for server_mission in current_missions:
-							if(server_mission["mission_id"] == mission["mission_id"]):
-								keep = True
-						if(keep == False):
-							current_missions_table.delete("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+				db_missions = current_missions_table.select_all("player_id = {}".format(character["player_id"]))
+				for mission in db_missions:
+					keep = False
+					for server_mission in current_missions:
+						if(server_mission["mission_id"] == mission["mission_id"]):
+							keep = True
+					if(keep == False):
+						current_missions_table.delete("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
 
-					for item in inventory:
-						item["json"] = json.dumps(item["json"])
-						check = inventory_table.select_all("item_id = {}".format(item["item_id"]))
-						if(check == []):
-							inventory_table.insert(item)
-						else:
-							inventory_table.update(item, "item_id = {}".format(item["item_id"]))
+				for item in inventory:
+					item["json"] = json.dumps(item["json"])
+					check = inventory_table.select_all("item_id = {}".format(item["item_id"]))
+					if(check == []):
+						inventory_table.insert(item)
+					else:
+						inventory_table.update(item, "item_id = {}".format(item["item_id"]))
 
-					db_inventory = inventory_table.select_all("player_id = {}".format(character["player_id"]))
-					for item in db_inventory:
-						keep = False
-						for server_item in inventory:
-							if(server_item["item_id"] == item["item_id"]):
-								keep = True
-						if(keep == False):
-							inventory_table.delete("item_id = {}".format(item["item_id"]))
-				except Exception as e:
-					print("Error While Syncing Database: {}".format(e))
+				db_inventory = inventory_table.select_all("player_id = {}".format(character["player_id"]))
+				for item in db_inventory:
+					keep = False
+					for server_item in inventory:
+						if(server_item["item_id"] == item["item_id"]):
+							keep = True
+					if(keep == False):
+						inventory_table.delete("item_id = {}".format(item["item_id"]))
 
 
 	def delete_player(self, player_id):
 		account = self.get_account_by_player_id(player_id)
 		self.sync_database(accounts=[account])
-		self.remove_account(account["account_id"])
 		player = copy.deepcopy(self.get_player_by_id(player_id))
+
+		for character in account["Characters"]:
+			if(character["player_id"] == player_id):
+				account["Characters"].remove(character)
 
 		db = self.get_parent().get_service("Database").server_db
 		character_table : database.DBTable = db.tables["Characters"]
@@ -155,7 +155,6 @@ class PlayerService(services.GameService):
 		current_missions_table.delete("player_id = {}".format(player_id))
 		inventory_table.delete("player_id = {}".format(player_id))
 
-		self.add_account(account["account_id"])
 		self.get_parent().trigger_event("PlayerDeleted", args=(player,))
 
 	def create_player(self, account_id : int, name: str, shirt_color: int, shirt_style: int, pants_color: int, hair_color: int,
@@ -179,9 +178,15 @@ class PlayerService(services.GameService):
 		character_data_table.insert(player_data)
 		character_stats_table.insert(player_stats)
 
-		self.sync_database([self.get_account_by_id(account_id)])
-		self.remove_account(account_id)
-		self.add_account(account_id)
+		account = self.get_account_by_id(account_id)
+		self.sync_database([account])
+		player_copy = copy.deepcopy(player_base)
+		player_copy["Data"] = player_data
+		player_copy["Stats"] = player_stats
+		player_copy["CompletedMissions"] = []
+		player_copy["CurrentMissions"] = []
+		player_copy["Inventory"] = []
+		account["Characters"].append(player_copy)
 		self.get_parent().trigger_event("PlayerCreated", args=[player_id,])
 
 		shirt_id = 0

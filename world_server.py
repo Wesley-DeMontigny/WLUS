@@ -123,6 +123,7 @@ class WorldServer(pyraknet.server.Server):
 			scene.add_player(player_id)
 		session.scene_id = scene.get_py_id()
 		self.send(packet, session.address)
+		game.trigger_event("LoadWorld", args=[player_id, level_id])
 
 	def handle_detailed_user_info(self, data: bytes, address):
 		session = game.get_service("Session").get_session_by_address(address)

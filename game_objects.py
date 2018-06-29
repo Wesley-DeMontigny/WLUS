@@ -11,7 +11,7 @@ class GameObject(game_types.BaseObject):
 		super().__init__(parent)
 		self._name = name
 		self._components = []
-		self._scene = scene
+		self.scene = scene
 		global game
 		game = scene.get_parent().get_parent().get_parent()
 		if(object_id is None):
@@ -31,11 +31,14 @@ class GameObject(game_types.BaseObject):
 		return self._object_id
 
 	def update(self):
-		self._scene.update(self)
+		self.scene.update(self)
 
 class ReplicaObject(GameObject):
-	def __init__(self, parent, scene, object_id : int = None, name : str = "GameObject"):
+	def __init__(self, parent, scene, object_id : int = None, name : str = "GameObject", lot : int = 0, spawner_id : int = None, spawner_node_id  : int = None):
 		super().__init__(parent, scene, object_id, name)
+		self.lot = lot
+		self.spawner_id = spawner_id
+		self.spawner_node_id = None
 		self.add_component(components.Transform)
 
 	def serialize(self):
