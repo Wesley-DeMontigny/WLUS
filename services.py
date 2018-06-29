@@ -29,8 +29,11 @@ class WorldService(GameService):
 		self._name = "World"
 		self._scenes : typing.List[scene.Scene] = []
 
-	def add_scene(self, level : int, name : str = "Scene"):
-		self._scenes.append(scene.Scene(self, level, name))
+	def register_scene(self, level : int, name : str = "Scene"):
+		new_scene = scene.Scene(self, level, name)
+		self._scenes.append(new_scene)
+		self.get_parent().trigger_event("SceneRegistered", args=(new_scene,))
+
 
 	def get_scene_by_id(self, id : int):
 		for scene in self._scenes:
@@ -45,11 +48,12 @@ class WorldService(GameService):
 				scenes.append(scene)
 		return scenes
 
-	def get_scene_by_name(self, name: str):
+	def get_scenes_by_name(self, name: str):
+		scenes = []
 		for scene in self._scenes:
 			if(scene.get_name() == name):
-				return scene
-		return None
+				scenes.append(scene)
+		return scene
 
 	def get_scenes(self):
 		return self._scenes

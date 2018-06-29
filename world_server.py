@@ -5,6 +5,8 @@ import game_enums
 import os
 import game_types
 from pyraknet.bitstream import *
+import zlib
+from xml.etree import ElementTree
 
 
 class WorldServer(pyraknet.server.Server):
@@ -19,7 +21,9 @@ class WorldServer(pyraknet.server.Server):
 								 "world_session_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_USER_SESSION_INFO.value), self.handle_session_info],
 								 "world_minifigure_list":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_LIST_REQUEST.value), self.handle_minifig_list_request],
 								 "world_minifig_creation":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_CREATE_REQUEST.value), self.handle_minifig_creation],
-								 "world_minifig_deletion:":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_DELETE_MINIFIGURE_REQUEST.value), self.handle_minifig_deletion]}
+								 "world_minifig_deletion:":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_DELETE_MINIFIGURE_REQUEST.value), self.handle_minifig_deletion],
+								 "world_join_world":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLINET_ENTER_WORLD.value), self.handle_join_world],
+								 "world_detailed_user_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOAD_COMPLETE.value), self.handle_detailed_user_info]}
 
 	def handle_handshake(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -85,24 +89,25 @@ class WorldServer(pyraknet.server.Server):
 		time.sleep(.5)
 		self.handle_minifig_list_request(data, address)
 
-	def load_world(self, player_id: int, level_id: int, spawn_at_default: bool = False):
+	def load_world(self, player_id: int, level_id: int, address, spawn_at_default: bool = False):
 		packet = WriteStream()
 		player = game.get_service("Player").get_player_by_id(player_id)
 		world = game.get_service("World")
-		session = game.get_service("Session").get_session_by_player_id(player_id)
+		session = game.get_service("Session").get_session_by_address(address)
+		session.player_id = player_id
 		scene = world.get_scenes_by_level(level_id)[0]
 		print("Sending Player {} to {}".format(player_id, scene.get_name()))
-		packet.write(game_enums.PacketHeaderEnum.WORLD_INFO)
+		packet.write(game_enums.PacketHeaderEnum.WORLD_INFO.value)
 
 		packet.write(c_uint16(level_id))
 		packet.write(c_uint16(0))  # Map Instance
 		packet.write(c_ulong(0))  # Map Clone
-		packet.write(c_ulong(game_enums.ZoneChecksums[level_id]))
+		packet.write(c_ulong(game_enums.zone_checksums[level_id]))
 		if (spawn_at_default):
-			packet.write(c_float(game_enums.DefaultZoneSpawns[level_id][0]))
-			packet.write(c_float(game_enums.DefaultZoneSpawns[level_id][1]))
-			packet.write(c_float(game_enums.DefaultZoneSpawns[level_id][2]))
-			player["position"] = game_types.Vector3(game_enums.DefaultZoneSpawns[level_id][0], game_enums.DefaultZoneSpawns[level_id][1], game_enums.DefaultZoneSpawns[level_id][2])
+			packet.write(c_float(game_enums.default_zone_spawns[level_id][0]))
+			packet.write(c_float(game_enums.default_zone_spawns[level_id][1]))
+			packet.write(c_float(game_enums.default_zone_spawns[level_id][2]))
+			player["position"] = game_types.Vector3(game_enums.default_zone_spawns[level_id][0], game_enums.default_zone_spawns[level_id][1], game_enums.default_zone_spawns[level_id][2])
 		else:
 			packet.write(c_float(player["position"].X))
 			packet.write(c_float(player["position"].Y))
@@ -116,7 +121,91 @@ class WorldServer(pyraknet.server.Server):
 		else:
 			game.get_pyobject(session.scene_id).remove_player(player_id)
 			scene.add_player(player_id)
+		session.scene_id = scene.get_py_id()
 		self.send(packet, session.address)
+
+	def handle_detailed_user_info(self, data: bytes, address):
+		session = game.get_service("Session").get_session_by_address(address)
+		player = game.get_service("Player").get_player_by_id(session.player_id)
+
+		ldf = game_types.LDF()
+		ldf.register_key("levelid", player["zone"], 1)
+		ldf.register_key("objid", player["player_id"], 9)
+		ldf.register_key("template", 1, 1)
+		ldf.register_key("name", player["name"], 0)
+
+		root = ElementTree.Element("obj")
+		root.set("v", "1")
+		buff = ElementTree.SubElement(root, "buff")
+		skill = ElementTree.SubElement(root, "skill")
+
+		inv = ElementTree.SubElement(root, "inv")
+		bag = ElementTree.SubElement(inv, "bag")
+		bag_info = ElementTree.SubElement(bag, "b")
+		bag_info.set("t", "0")
+		bag_info.set("m", str(player["Data"]["backpack_space"]))
+		items = ElementTree.SubElement(inv, "items")
+		item_in = ElementTree.SubElement(items, "in")
+		for item in player["Inventory"]:
+			i = ElementTree.SubElement(item_in, "i")
+			i.set("l", str(item["lot"]))
+			i.set("id", str(item["item_id"]))
+			i.set("s", str(item["lot"]))
+			i.set("c", str(item["quantity"]))
+			i.set("b", str(int(item["linked"])))
+			i.set("eq", str(int(item["equipped"])))
+
+		mf = ElementTree.SubElement(root, "mf")
+		char = ElementTree.SubElement(root, "char")
+		char.set("cc", str(player["currency"]))
+		char.set("ls", str(player["universe_score"]))
+		lvl = ElementTree.SubElement(root, "lvl")
+		lvl.set("l", str(player["level"]))
+
+		pets = ElementTree.SubElement(root, "pet")
+
+		mis = ElementTree.SubElement(root, "mis")
+		done = ElementTree.SubElement(mis, "done")
+		for mission in player["CompletedMissions"]:
+			m = ElementTree.SubElement(done, "m")
+			m.set("id", str(mission["mission_id"]))
+			m.set("cct", "1")
+			m.set("cts", "0")
+		cur = ElementTree.SubElement(mis, "cur")
+		for mission in player["CurrentMissions"]:
+			m = ElementTree.SubElement(cur, "m")
+			m.set("id", str(mission["mission_id"]))
+			sv = ElementTree.SubElement(m, "sv")
+			sv.set("v", str(mission["progress"]))
+
+		ldf.register_key("xmlData", root, 13)
+
+		lego_data = WriteStream()
+		ldf.write_to_stream(lego_data)
+		ldf_bytes = bytes(lego_data)
+		compressed = zlib.compress(ldf_bytes)
+
+		packet = WriteStream()
+		packet.write(game_enums.PacketHeaderEnum.DETAILED_USER_INFO)
+		packet.write(c_ulong(len(compressed) + 9))
+		packet.write(c_bool(True))
+		packet.write(c_ulong(len(ldf_bytes)))
+		packet.write(c_ulong(len(compressed)))
+		packet.write(compressed)
+
+		self.send(packet, address)
+		print("Sent Detailed User Info To {}".format(player["name"]))
+
+	def handle_join_world(self, data: bytes, address):
+		stream = ReadStream(data)
+		player_id = stream.read(c_longlong)
+		player = game.get_service("Player").get_player_by_id(player_id)
+		if (player["zone"] == 0):
+			player["zone"] = 1000
+		spawn_at_default = False
+		if (player["Data"]["position"].X < 2 and player["Data"]["position"].Y < 2 and player["Data"]["position"].Z < 2):
+			spawn_at_default = True
+		self.load_world(player_id, player["zone"], address, spawn_at_default=spawn_at_default)
 
 	def handle_session_info(self, data: bytes, address):
 		stream = ReadStream(data)

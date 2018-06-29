@@ -38,11 +38,11 @@ if __name__ == "__main__":
 	auth_server = services.AuthServerService(game)
 	game.register_service(auth_server)
 
-	world = services.WorldService(game)
-	game.register_service(world)
-
 	world_server = services.WorldServerService(game)
 	game.register_service(world_server)
+
+	world = services.WorldService(game)
+	game.register_service(world)
 
 	game.start()
 

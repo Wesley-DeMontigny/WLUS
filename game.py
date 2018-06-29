@@ -22,6 +22,7 @@ class Game(game_types.BaseObject):
 		for service in self._services:
 			service_thread = game_types.GameThread(target=service.initialize)
 			service_thread.start()
+		self.trigger_event("GameStarted")
 
 	def generate_object_id(self):
 		id = random.randint(100000000000000000, 999999999999999999)

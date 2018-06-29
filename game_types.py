@@ -3,6 +3,7 @@ import typing
 from pyraknet.bitstream import *
 import pyraknet.replicamanager
 from pyraknet.messages import *
+from xml.etree import ElementTree
 
 class BaseObject():
 	def __init__(self, parent):
@@ -67,9 +68,9 @@ class Vector3():
 		self.Z : float = Z
 		if(str_val is not None):
 			vector_list = str_val.split(",")
-			self.X = vector_list[0]
-			self.Y = vector_list[1]
-			self.Z = vector_list[2]
+			self.X = float(vector_list[0])
+			self.Y = float(vector_list[1])
+			self.Z = float(vector_list[2])
 
 	def __add__(self, other):
 		return Vector3(self.X + other.X,self.Y + other.Y,self.Z + other.Z)
@@ -85,7 +86,46 @@ class Vector3():
 	def __str__(self):
 		return "{},{},{}".format(self.X, self.Y, self.Z)
 
+	def __eq__(self, other):
+		if(self.X == other.X and self.Y == other.Y and self.Z == other.Z):
+			return True
+		else:
+			return False
 
+class LDF():
+	def __init__(self):
+		self._keys : list = []
+	def register_key(self, key_name : str, value : any, type : int):
+		self._keys.append([key_name, value, type])
+	def write_to_stream(self, stream : WriteStream):
+		key_num = len(self._keys)
+		stream.write(c_uint(key_num))
+		for key in self._keys:
+			name = key[0]
+			value = key[1]
+			type = key[2]
+			stream.write(c_uint8(len(name) * 2))
+			for char in name:
+				stream.write(char.encode('latin1'))
+				stream.write(b'\0')
+			stream.write(c_ubyte(type))
+			if(type == 0):
+				stream.write(value, length_type=c_uint)
+			elif(type == 1):
+				stream.write(c_int(value))
+			elif(type == 3):
+				stream.write(c_float(value))
+			elif(type == 5):
+				stream.write(c_uint(value))
+			elif(type == 7):
+				stream.write(c_bool(value))
+			elif(type == 8 or type == 9):
+				stream.write(c_int64(value))
+			elif(type == 13):
+				xml_str = bytes(ElementTree.tostring(value))
+				xml_str = b'<?xml version="1.0">' + xml_str
+				stream.write(c_ulong(xml_str.__len__()))
+				stream.write(xml_str)
 
 class Vector4():
 	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0, W : float = 0.0, str_val: str = None):
@@ -95,10 +135,10 @@ class Vector4():
 		self.W : float = W
 		if(str_val is not None):
 			vector_list = str_val.split(",")
-			self.X = vector_list[0]
-			self.Y = vector_list[1]
-			self.Z = vector_list[2]
-			self.W = vector_list[3]
+			self.X = float(vector_list[0])
+			self.Y = float(vector_list[1])
+			self.Z = float(vector_list[2])
+			self.W = float(vector_list[3])
 
 	def __add__(self, other):
 		return Vector4(self.X + other.X, self.Y + other.Y, self.Z + other.Z, self.W + other.W)

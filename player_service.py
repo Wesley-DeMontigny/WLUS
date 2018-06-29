@@ -39,9 +39,10 @@ class PlayerService(services.GameService):
 		account = account_table.select(["account_id", "username", "banned", "is_admin"], "account_id = {}".format(account_id))[0]
 		characters = character_table.select_all("account_id = {}".format(account_id))
 		for character in characters:
-			character["Data"] = character_data_table.select_all("player_id = {}".format(character["player_id"]))[0]
-			character["Data"]["position"] = game_types.Vector3(str_val=character["Data"]["position"])
-			character["Data"]["rotation"] = game_types.Vector4(str_val=character["Data"]["rotation"])
+			data = character_data_table.select_all("player_id = {}".format(character["player_id"]))[0]
+			data["position"] = game_types.Vector3(str_val=data["position"])
+			data["rotation"] = game_types.Vector4(str_val=data["rotation"])
+			character["Data"] = data
 			character["Stats"] = character_stats_table.select_all("player_id = {}".format(character["player_id"]))[0]
 			character["CompletedMissions"] = completed_missions_table.select_all("player_id = {}".format(character["player_id"]))
 			character["CurrentMissions"] = current_missions_table.select_all("player_id = {}".format(character["player_id"]))
