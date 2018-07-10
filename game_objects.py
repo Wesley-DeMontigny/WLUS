@@ -7,13 +7,13 @@ GameObjects are objects placed inside scenes
 '''
 
 class GameObject(game_types.BaseObject):
-	def __init__(self, parent, scene, object_id : int = None, name : str = "GameObject"):
+	def __init__(self, parent, zone, object_id : int = None, name : str = "GameObject"):
 		super().__init__(parent)
 		self._name = name
 		self._components = []
-		self.scene = scene
+		self.zone = zone
 		global game
-		game = scene.get_parent().get_parent().get_parent()
+		game = zone.get_parent().get_parent().get_parent()
 		if(object_id is None):
 			self._object_id = game.generate_object_id()
 		else:
@@ -31,18 +31,31 @@ class GameObject(game_types.BaseObject):
 		return self._object_id
 
 	def update(self):
-		self.scene.update(self)
+		self.zone.update(self)
 
 class ReplicaObject(GameObject):
-	def __init__(self, parent, scene, object_id : int = None, name : str = "GameObject", lot : int = 0, spawner_id : int = None, spawner_node_id  : int = None):
-		super().__init__(parent, scene, object_id, name)
-		self.lot = lot
-		self.spawner_id = spawner_id
+	def __init__(self, parent, zone, config : dict):
+		object_id = None
+		name = ""
+		if("object_id" in config):
+			object_id = config["object_id"]
+		if ("name" in config):
+			name = config["name"]
+		super().__init__(parent, zone, object_id, name)
+		self.lot = 0
+		self.spawner_id = None
 		self.spawner_node_id = None
+		self.world_state = None
+		self.gm_level = None
+		self.json = {}
 		self.add_component(components.Transform)
-
-	def serialize(self):
-		pass
-
-	def construct(self):
-		pass
+		if("gm_level" in config):
+			self.gm_level = config["gm_level"]
+		if("world_state" in config):
+			self.world_state = config["world_state"]
+		if("lot" in config):
+			self.lot = config["lot"]
+		if("spawner_id" in config):
+			self.spawner_id = config["spawner_id"]
+		if("spawner_node_id" in config):
+			self.spawner_node_id = config["spawner_node_id"]

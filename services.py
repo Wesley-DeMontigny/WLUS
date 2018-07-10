@@ -4,7 +4,7 @@ import auth_server
 import passlib.hash
 import database
 import world_server
-import scene
+import zone
 
 '''
 Services are a way to implement new parts of the server architecture.
@@ -27,36 +27,21 @@ class WorldService(GameService):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "World"
-		self._scenes : typing.List[scene.Scene] = []
+		self._zones : typing.List[zone.Zone] = []
 
-	def register_scene(self, level : int, name : str = "Scene"):
-		new_scene = scene.Scene(self, level, name)
-		self._scenes.append(new_scene)
-		self.get_parent().trigger_event("SceneRegistered", args=(new_scene,))
+	def register_zone(self, zone_id : int, load_id : int, checksum : int, activity : bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), name : str = "Zone"):
+		new_zone = zone.Zone(self, zone_id, load_id, checksum, name, activity, spawn_loc)
+		self._zones.append(new_zone)
+		self.get_parent().trigger_event("ZoneRegistered", args=(new_zone,))
 
-
-	def get_scene_by_id(self, id : int):
-		for scene in self._scenes:
-			if(scene.get_py_id() == id):
-				return scene
+	def get_zone_by_id(self, id : int):
+		for zone in self._zones:
+			if(zone.get_zone_id() == id):
+				return zone
 		return None
 
-	def get_scenes_by_level(self, level : int):
-		scenes = []
-		for scene in self._scenes:
-			if(scene.get_levelid() == level):
-				scenes.append(scene)
-		return scenes
-
-	def get_scenes_by_name(self, name: str):
-		scenes = []
-		for scene in self._scenes:
-			if(scene.get_name() == name):
-				scenes.append(scene)
-		return scene
-
 	def get_scenes(self):
-		return self._scenes
+		return self._zones
 
 class AuthServerService(GameService):
 	def __init__(self, parent):

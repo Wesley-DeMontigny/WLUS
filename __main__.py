@@ -24,7 +24,8 @@ if __name__ == "__main__":
 	#Append all game scripts to Game
 	for file in os.listdir("./game_scripts"):
 		if file.endswith(".py"):
-			game.add_script(scripts.Script(game, file, "./game_scripts/"+file))
+			mod = __import__(f'game_scripts.{file[:-3]}', fromlist=["Main"])
+			game.add_script(getattr(mod, 'Main')(game))
 
 	database = services.DatabaseService(game)
 	game.register_service(database)

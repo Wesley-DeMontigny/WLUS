@@ -12,11 +12,11 @@ from xml.etree import ElementTree
 class WorldServer(pyraknet.server.Server):
 	def __init__(self, address: pyraknet.messages.Address, max_connections: int, incoming_password: bytes, world_server_service):
 		super().__init__(address, max_connections, incoming_password)
-		self._world_server_service = world_server_service
+		self.world_server_service = world_server_service
 		self.add_handler(pyraknet.server.Event.UserPacket, self.handle_packet)
 		self._userpacket_handlers = {}
 		global game
-		game = self._world_server_service.get_parent()
+		game = self.world_server_service.get_parent()
 		self.default_handlers = {"world_handshake":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.HANDSHAKE.value), self.handle_handshake],
 								 "world_session_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_USER_SESSION_INFO.value), self.handle_session_info],
 								 "world_minifigure_list":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_LIST_REQUEST.value), self.handle_minifig_list_request],
@@ -95,33 +95,34 @@ class WorldServer(pyraknet.server.Server):
 		world = game.get_service("World")
 		session = game.get_service("Session").get_session_by_address(address)
 		session.player_id = player_id
-		scene = world.get_scenes_by_level(level_id)[0]
-		print("Sending Player {} to {}".format(player_id, scene.get_name()))
+		zone = world.get_zone_by_id(level_id)
+		load_id, checksum, activity, spawn_loc, name = zone.get_load_info()
+		print("Sending Player {} to {}".format(player_id, name))
 		packet.write(game_enums.PacketHeaderEnum.WORLD_INFO.value)
 
-		packet.write(c_uint16(level_id))
+		packet.write(c_uint16(load_id))
 		packet.write(c_uint16(0))  # Map Instance
 		packet.write(c_ulong(0))  # Map Clone
-		packet.write(c_ulong(game_enums.zone_checksums[level_id]))
+		packet.write(c_ulong(checksum))
 		if (spawn_at_default):
-			packet.write(c_float(game_enums.default_zone_spawns[level_id][0]))
-			packet.write(c_float(game_enums.default_zone_spawns[level_id][1]))
-			packet.write(c_float(game_enums.default_zone_spawns[level_id][2]))
-			player["position"] = game_types.Vector3(game_enums.default_zone_spawns[level_id][0], game_enums.default_zone_spawns[level_id][1], game_enums.default_zone_spawns[level_id][2])
+			packet.write(c_float(spawn_loc.X))
+			packet.write(c_float(spawn_loc.Y))
+			packet.write(c_float(spawn_loc.Z))
+			player["position"] = spawn_loc
 		else:
 			packet.write(c_float(player["position"].X))
 			packet.write(c_float(player["position"].Y))
 			packet.write(c_float(player["position"].Z))
-		if (scene.is_activity()):
+		if (activity):
 			packet.write(c_ulong(4))
 		else:
 			packet.write(c_ulong(0))
-		if(session.scene_id == 0):
-			scene.add_player(player_id)
+		if(session.zone_id == 0):
+			zone.add_player(player_id)
 		else:
-			game.get_pyobject(session.scene_id).remove_player(player_id)
-			scene.add_player(player_id)
-		session.scene_id = scene.get_py_id()
+			world.get_zone_by_id(session.zone_id).remove_player(player_id)
+			zone.add_player(player_id)
+		session.zone_id = zone.get_py_id()
 		self.send(packet, session.address)
 		game.trigger_event("LoadWorld", args=[player_id, level_id])
 

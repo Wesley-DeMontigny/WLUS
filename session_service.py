@@ -2,7 +2,7 @@ import services
 
 class Session():
 	def __init__(self):
-		self.scene_id = 0
+		self.zone_id = 0
 		self.player_id = 0
 		self.account_id = 0
 		self.address = None
@@ -18,7 +18,7 @@ class SessionService(services.GameService):
 
 	def add_session(self, scene_id = 0, player_id = 0, account_id = 0, address = None, user_key = "", username = ""):
 		new_session = Session()
-		new_session.scene_id = scene_id
+		new_session.zone_id = scene_id
 		new_session.player_id = player_id
 		new_session.username = username
 		new_session.account_id = account_id

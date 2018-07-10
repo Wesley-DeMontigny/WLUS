@@ -12,10 +12,10 @@ import os
 class AuthServer(pyraknet.server.Server):
 	def __init__(self, address: pyraknet.messages.Address, max_connections: int, incoming_password: bytes, auth_server_service):
 		super().__init__(address, max_connections, incoming_password)
-		self._auth_server_service = auth_server_service
+		self.auth_server_service = auth_server_service
 		self.add_handler(pyraknet.server.Event.UserPacket, self.handle_packet)
 		global game
-		game = self._auth_server_service.get_parent()
+		game = self.auth_server_service.get_parent()
 		self.default_handlers = {"auth_handshake":["OnPacket_Auth_{}".format(game_enums.PacketHeaderEnum.HANDSHAKE.value), self.handle_handshake],
 								 "auth_login":["OnPacket_Auth_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOGIN_INFO.value), self.handle_login]}
 
@@ -42,7 +42,7 @@ class AuthServer(pyraknet.server.Server):
 
 		packet = WriteStream()
 		print("Attempted Login With Username '{}' And Password '{}'".format(username, password))
-		login, user_info = self._auth_server_service.validate_login(username, password)
+		login, user_info = self.auth_server_service.validate_login(username, password)
 		if (login):
 			response = game_enums.LoginResponseEnum.SUCCESS.value
 			print("Login Accepted!")

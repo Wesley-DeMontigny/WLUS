@@ -1,0 +1,70 @@
+
+#### Test comment
+
+## all the coins
+L:163
+L:164
+L:165
+L:166
+L:1635
+L:1636
+L:1657
+L:1658
+
+## thinking hat
+L:6086
+
+## classic rocket
+L:4713
+L:4714
+L:4715
+
+## steampunk rocket
+L:4716
+L:4717
+L:4718
+
+## pod rocket
+L:4719
+L:4720
+L:4721
+
+
+
+## the basic attack animations
+A:animations\minifig\attack\mf_a_g_move-unarmed-punch.kf
+A:animations\minifig\attack\mf_a_g_move-unarmed-punch.etk
+A:animations\minifig\attack\mf_a_g_move-unarmed-punch_02.etk
+A:animations\minifig\attack\mf_a_g_move-unarmed-punch_03.etk
+A:animations\minifig\attack\mf_a_g_move-unarmed-punch-upperbody.kf
+A:animations\minifig\attack\mf_a_g_unarmed-punch.kf
+A:animations\minifig\attack\mf_a_g_unarmed_punching.kf
+A:animations\minifig\attack\mf_a_g_unarmed_punching-upperbody.kf
+A:animations\minifig\attack\mf_a_g_unarmed_punch-upperbody.kf
+A:animations\minifig\attack\mf_a_g_unarmed-punch.etk
+A:animations\minifig\attack\mf_a_g_unarmed-punch_02.etk
+A:animations\minifig\attack\mf_a_g_unarmed-punch_03.etk
+A:animations\minifig\attack\mf_a_g_unarmed-punch_02-upperbody.etk
+A:animations\minifig\attack\mf_a_g_unarmed-punch_03-upperbody.etk
+A:animations\minifig\attack\mf_a_g_unarmed-punch-upperbody.etk
+A:animations\minifig\attack\mf_a_g_unarmed_hurricane-kick.kf
+A:animations\minifig\attack\mf_a_g_unarmed-air-attack.kf
+
+## some overhead icons
+A:mesh\overhead_indicators\3D_offset_rectangle.nif
+A:mesh\overhead_indicators\CTRLclickTexNew.dds
+A:mesh\overhead_indicators\mouseclick_right.nif
+A:mesh\overhead_indicators\pet_bouncer.nif
+A:mesh\overhead_indicators\property_Indicator.nif
+A:mesh\overhead_indicators\Racing_Indicator.nif
+A:mesh\overhead_indicators\req_legoclub.nif
+A:mesh\overhead_indicators\rocket.nif
+A:mesh\overhead_indicators\rocket2.nif
+A:mesh\overhead_indicators\SG_Indicator.nif
+A:mesh\overhead_indicators\shiftclick.nif
+A:mesh\overhead_indicators\Survival_Indicator.nif
+
+A:res\audio\NDAudio\Music\Music_Global\Music_Global_Spaceship_Streaming.fsb
+A:res\audio\NDAudio\Ambience\Ambience_Spaceship\Ambience_Spaceship_Streaming.fsb
+A:res\audio\NDAudio\Ambience\Ambience_Spaceship\Ambience_Spaceship_Non-Streaming.fsb
+A:res\audio\NDAudio\Ambience\Ambience_Spaceship\Ambience_Spaceship_2_Non-Streaming.fsb
