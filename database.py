@@ -37,6 +37,8 @@ class DBTable():
 		field_result = field_query.fetchone()[0]
 		adj_fields = str(field_result).split("(")
 		fields = re.findall(r'`(.*?)`', adj_fields[1])
+		if(fields == []):
+			fields = re.findall(r"'(.*?)'", adj_fields[1])
 		for i in range(len(result)):
 			dictionary = {}
 			for x in range(len(result[i])):

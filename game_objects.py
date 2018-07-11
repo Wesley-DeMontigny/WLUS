@@ -1,6 +1,6 @@
 import game_types
 import components
-from pyraknet.bitstream import *
+import inspect
 
 '''
 GameObjects are objects placed inside scenes
@@ -24,7 +24,7 @@ class GameObject(game_types.BaseObject):
 
 	def get_component(self, component):
 		for object_component in self._components:
-			if(object_component.__class__ == component.__class__):
+			if(isinstance(object_component, component)):
 				return object_component
 
 	def get_object_id(self):
@@ -48,7 +48,8 @@ class ReplicaObject(GameObject):
 		self.world_state = None
 		self.gm_level = None
 		self.json = {}
-		self.add_component(components.Transform)
+		transform = components.Transform(self)
+		self.add_component(transform)
 		if("gm_level" in config):
 			self.gm_level = config["gm_level"]
 		if("world_state" in config):

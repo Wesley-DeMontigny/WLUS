@@ -78,6 +78,10 @@ class ItemLOTs(IntEnum):
 	PANTS_REDDISH_BROWN = 2526
 	PANTS_DARK_RED = 2527
 
+class GameMessages(IntEnum):
+	SERVER_DONE_LOADING_OBJECTS = 0x066a
+	PLAYER_READY = 0x01fd
+
 class MinifigureCreationResponseEnum(IntEnum):
 	SUCCESS = 0x00
 	ID_NOT_WORKING = 0x01

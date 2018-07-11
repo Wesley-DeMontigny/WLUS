@@ -4,8 +4,8 @@ import scripts
 import game_types
 
 
-zone_checksums = {
-	1000: 0x20b8087c,
+
+zone_checksums = {1000: 0x20b8087c,
 	1001: 0x26680a3c,
 	1100: 0x49525511,
 	1101: 0x538214e2,

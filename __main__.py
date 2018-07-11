@@ -7,6 +7,7 @@ import asyncio
 import configparser
 import player_service
 import time
+import replica_service
 
 if __name__ == "__main__":
 	game = game.Game()
@@ -41,6 +42,9 @@ if __name__ == "__main__":
 
 	world_server = services.WorldServerService(game)
 	game.register_service(world_server)
+
+	replica = replica_service.ReplicaService(game)
+	game.register_service(replica)
 
 	world = services.WorldService(game)
 	game.register_service(world)

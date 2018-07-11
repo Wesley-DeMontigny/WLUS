@@ -25,6 +25,15 @@ class WorldServer(pyraknet.server.Server):
 								 "world_join_world":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLINET_ENTER_WORLD.value), self.handle_join_world],
 								 "world_detailed_user_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOAD_COMPLETE.value), self.handle_detailed_user_info]}
 
+	def send_game_msg(self, object_id, msg_id, recipients : list, additional_parameters : list = None):
+		msg = WriteStream()
+		msg.write(c_longlong(object_id))
+		msg.write(c_ushort(msg_id))
+		if(additional_parameters is not None):
+			for param in additional_parameters:
+				msg.write(param)
+		self.send(msg, recipients)
+
 	def handle_handshake(self, data: bytes, address):
 		stream = ReadStream(data)
 		client_version = stream.read(c_ulong)
@@ -108,11 +117,11 @@ class WorldServer(pyraknet.server.Server):
 			packet.write(c_float(spawn_loc.X))
 			packet.write(c_float(spawn_loc.Y))
 			packet.write(c_float(spawn_loc.Z))
-			player["position"] = spawn_loc
+			player["Data"]["position"] = spawn_loc
 		else:
-			packet.write(c_float(player["position"].X))
-			packet.write(c_float(player["position"].Y))
-			packet.write(c_float(player["position"].Z))
+			packet.write(c_float(player["Data"]["position"].X))
+			packet.write(c_float(player["Data"]["position"].Y))
+			packet.write(c_float(player["Data"]["position"].Z))
 		if (activity):
 			packet.write(c_ulong(4))
 		else:
@@ -122,13 +131,15 @@ class WorldServer(pyraknet.server.Server):
 		else:
 			world.get_zone_by_id(session.zone_id).remove_player(player_id)
 			zone.add_player(player_id)
-		session.zone_id = zone.get_py_id()
+		session.zone_id = level_id
 		self.send(packet, session.address)
 		game.trigger_event("LoadWorld", args=[player_id, level_id])
 
 	def handle_detailed_user_info(self, data: bytes, address):
 		session = game.get_service("Session").get_session_by_address(address)
 		player = game.get_service("Player").get_player_by_id(session.player_id)
+		world = game.get_service("World")
+		zone = world.get_zone_by_id(session.zone_id)
 
 		ldf = game_types.LDF()
 		ldf.register_key("levelid", player["zone"], 1)
@@ -159,10 +170,10 @@ class WorldServer(pyraknet.server.Server):
 
 		mf = ElementTree.SubElement(root, "mf")
 		char = ElementTree.SubElement(root, "char")
-		char.set("cc", str(player["currency"]))
-		char.set("ls", str(player["universe_score"]))
+		char.set("cc", str(player["Data"]["currency"]))
+		char.set("ls", str(player["Data"]["universe_score"]))
 		lvl = ElementTree.SubElement(root, "lvl")
-		lvl.set("l", str(player["level"]))
+		lvl.set("l", str(player["Data"]["level"]))
 
 		pets = ElementTree.SubElement(root, "pet")
 
@@ -188,7 +199,7 @@ class WorldServer(pyraknet.server.Server):
 		compressed = zlib.compress(ldf_bytes)
 
 		packet = WriteStream()
-		packet.write(game_enums.PacketHeaderEnum.DETAILED_USER_INFO)
+		packet.write(game_enums.PacketHeaderEnum.DETAILED_USER_INFO.value)
 		packet.write(c_ulong(len(compressed) + 9))
 		packet.write(c_bool(True))
 		packet.write(c_ulong(len(ldf_bytes)))
@@ -197,6 +208,14 @@ class WorldServer(pyraknet.server.Server):
 
 		self.send(packet, address)
 		print("Sent Detailed User Info To {}".format(player["name"]))
+
+		zone.construct_zone_objects(address)
+		player_data = player["Data"]
+		player_config = {"lot":1, "object_id":player["player_id"], "name":player["name"], "position":player_data["position"], "rotation":player_data["rotation"], "health":player_data["health"], "max_health":player_data["max_health"],
+						 "armor":player_data["armor"], "max_armor":player_data["max_armor"], "imagination":player_data["imagination"], "max_imagination":player_data["max_imagination"]}
+		zone.create_object(zone, player_config)
+		self.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
+		self.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value,recipients=[address])
 
 	def handle_join_world(self, data: bytes, address):
 		stream = ReadStream(data)

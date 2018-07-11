@@ -17,49 +17,51 @@ class Component():
 	def get_parent(self):
 		return self._parent
 
+	def __setattr__(self, key, value):
+		super().__setattr__(key, value)
+		self.get_parent().update()
+
 
 class Transform(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Transform"
-		self.position = ComponentProperty(self, game_types.Vector3(), read_only=False,  expected_type=game_types.Vector3)
-		self.rotation = ComponentProperty(self, game_types.Vector4(), read_only=False, expected_type=game_types.Vector4)
-		self.velocity = ComponentProperty(self, game_types.Vector3(), read_only=False, expected_type=game_types.Vector3)
-		self.on_ground = ComponentProperty(self, True, read_only=False, expected_type=bool)
-		self.angular_velocity = ComponentProperty(self, game_types.Vector3(), read_only=False, expected_type=game_types.Vector3)
-		self.scale = ComponentProperty(self, 1, read_only=False, expected_type=int)
+		self.scale : int = 1
+		self.position : game_types.Vector3 = game_types.Vector3()
+		self.rotation : game_types.Vector4 = game_types.Vector4()
+		self.velocity : game_types.Vector3 = game_types.Vector3()
+		self.on_ground : bool = True
+		self.angular_velocity : game_types.Vector3 = game_types.Vector3()
 
 class Collectible(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Collectible"
-		self.collectible_id = ComponentProperty(self, 0, read_only=False, expected_type=int)
+		self.collectible_id : int = 0
 
 class Bouncer(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Bouncer"
-		self.pet_required = ComponentProperty(self, False, read_only=False, expected_type=bool)
+		self.pet_required : bool = False
 
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class Component107(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Component107"
-		self.flag_1 = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.data_1_1 = ComponentProperty(self, 0, read_only=False, expected_type=int)
 
 class Character(Component):
 	def __init__(self, parent, player_id : int = 0):
 		super().__init__(parent)
 		self._name = "Character"
-		self.player_id = ComponentProperty(self, player_id, read_only=False, expected_type=int)
-		self.pvp_enabled = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.vehicle_id = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.head_glow = ComponentProperty(self, 0, read_only=False, expected_type=bool)
-		self.gm_level = ComponentProperty(self, 0, read_only=False, expected_type=int)
+		self.player_id : int = player_id
+		self.vehicle_id : int = 0
+		self.head_glow : int = 0
+		self.gm_level : int = 0
 
 	def get_player_info(self):
-		game = self.get_parent().scene.get_parent().get_parent()
+		game = self.get_parent().zone.get_parent().get_parent()
 		player = game.get_service("Player").get_player_by_id(self.player_id)
 		account = game.get_service("Player").get_account_by_player_id(self.player_id)
 		return copy.deepcopy(player), copy.deepcopy(account)
@@ -68,195 +70,170 @@ class Minifig(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Minfig"
-		self.head = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.chest = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.legs = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.hair_style = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.hair_color = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.chest_decal = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.head_color = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.left_hand = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.right_hand = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.eyebrows = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.eyes = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.mouth = ComponentProperty(self, 0, read_only=False, expected_type=int)
+		self.head : int = 0
+		self.chest : int = 0
+		self.legs : int = 0
+		self.hair_style : int = 0
+		self.hair_color : int = 0
+		self.chest_decal : int = 0
+		self.head_color : int = 0
+		self.left_hand : int = 0
+		self.right_hand : int = 0
+		self.eyebrows : int = 0
+		self.eyes : int = 0
+		self.mouth : int = 0
 
 class Possessable(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Possessable"
-		self.driver_object_id = ComponentProperty(self, 0, read_only=False, expected_type=int)
+		self.driver_object_id : int = 0
 
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class Vendor(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Vendor"
-		self.flag_1 = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.flag_1_1 = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.flag_1_2 = ComponentProperty(self, False, read_only=False, expected_type=bool)
+
 
 class PhysicsEffect(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "PhysicsEffect"
-		self.effect_type = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.effect_amount = ComponentProperty(self, 0.0, read_only=False, expected_type=float)
-		self.effect_direction = ComponentProperty(self, game_types.Vector3(), read_only=False, expected_type=game_types.Vector3)
+		self.effect_type : int = 0
+		self.effect_amount : float = 0.0
+		self.effect_direction : game_types.Vector3 = game_types.Vector3()
 
 class VehiclePhysics(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "VehiclePhysics"
-		self.data_1 = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.flag_1 = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.flag_2 = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.flag_2_1 = ComponentProperty(self, False, read_only=False, expected_type=bool)
+		self.data_1 : int = 0
+		self.flag_1 : bool = False
+		self.flag_2 : bool = False
+		self.flag_2_1 : bool = False
 
-#TODO: Implement this
+
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class RacingControl(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "RacingControl"
-		self.flag_1 = ComponentProperty(self, False, read_only=True, expected_type=bool)
-		self.flag_2 = ComponentProperty(self, False, read_only=True, expected_type=bool)
-		self.flag_3 = ComponentProperty(self, False, read_only=True, expected_type=bool)
-		self.flag_4 = ComponentProperty(self, False, read_only=True, expected_type=bool)
-		self.flag_5 = ComponentProperty(self, False, read_only=True, expected_type=bool)
 
 
-#TODO: Implment this
+# TODO: Implement This Component, It Doesn't Do Anything Now
 class ScriptedActivity(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "ScriptedActivity"
-		self.flag_1 = ComponentProperty(self, False, read_only=True, expected_type=bool)
 
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class Skill(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Skill"
-		self.flag_1 = ComponentProperty(self, False, read_only=False, expected_type=bool)
 
 class Switch(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Switch"
-		self.state = ComponentProperty(self, False, read_only=False, expected_type=bool)
+		self.state : bool = False
 
 class Trigger(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.tigger_id = ComponentProperty(self, 0, read_only=False, expected_type=int)
+		self.tigger_id : int = 0
 
 class ModelData(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "ModelData"
-		self.ldf = game_types.LDF()
+		self.ldf : game_types.LDF = game_types.LDF()
 
 class Render(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Render"
-		self.render_disabled = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.fx_effects = ComponentProperty(self, [], read_only=False, expected_type=list)
+		self.render_disabled : bool = False
+		self.fx_effects : list = []
 
 	def add_fx_effect(self, name, effect_id, effect_type, scale, secondary):
-		self.fx_effects = self.fx_effects.append(({"name":name, "effect_id":effect_id, "effect_type":effect_type, "scale":scale, "secondary":secondary}))
+		self.fx_effects.append(({"name":name, "effect_id":effect_id, "effect_type":effect_type, "scale":scale, "secondary":secondary}))
 
-#TODO: Implement
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class ModuleAssembly(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "ModuleAssembly"
-		self.flag_1 = ComponentProperty(self, False, read_only=True, expected_type=bool)
 
 class LUPExhibit(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "LUPExhibit"
-		self.exhibited_lot = ComponentProperty(self, 10781, read_only=False, expected_type=int)
+		self.exhibited_lot : int = 10781
 
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class ScriptComponent(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "ScriptComponent"
-		self.flag_1 = ComponentProperty(self, False, read_only=True, expected_type=bool)#Just force this as False for now
 
 class Pet(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Pet"
-		self.owner_id = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.pet_name = ComponentProperty(self, "Petty The Pet", read_only=False, expected_type=str)
+		self.owner_id : int= 0
+		self.pet_name : str = "Petty The Pet"
 
 class Stats(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Stats"
-		self.health = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.max_health = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.armor = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.max_armor = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.imagination = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.max_imagination = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.faction = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.is_smashable = ComponentProperty(self, False, read_only=False, expected_type=bool)
+		self.health : int = 0
+		self.max_health : int = 0
+		self.armor : int = 0
+		self.max_armor : int = 0
+		self.imagination : int = 0
+		self.max_imagination : int = 0
+		self.faction : int = 0
+		self.is_smashable : bool = False
+		self.level : int = 1
 
+#TODO: Implement This Component, It Doesn't Do Anything Now
 class Destructible(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Destructible"
-		self.flag_1 = ComponentProperty(self, False, read_only=True, expected_type=bool)#Just force these two as False until the structure is researched more
-		self.flag_2 = ComponentProperty(self, False, read_only=True, expected_type=bool)
 
 class Inventory(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Inventory"
-		self.items = ComponentProperty(self, [], read_only=False, expected_type=list)
+		self.items : list = []
+
+	def add_item(self, item):
+		self.items.append(item)
 
 class BaseCombatAI(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "BaseCombatAI"
-		self.action = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.target_id = ComponentProperty(self, 0, read_only=False, expected_type=int)
+		self.action : int = 0
+		self.target_id : int = 0
 
 class Rebuild(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Rebuild"
-		self.rebuild_state = ComponentProperty(self, 0, read_only=False, expected_type=int)
-		self.success = ComponentProperty(self, False, read_only=False, expected_type=bool)
-		self.enabled = ComponentProperty(self, True, read_only=False, expected_type=bool)
-		self.time_since_start = ComponentProperty(self, 0.0, read_only=False, expected_type=float)
-		self.reset_time = ComponentProperty(self, 0.0, read_only=False, expected_type=float)
-		self.build_activator_pos = ComponentProperty(self, game_types.Vector3(), read_only=False, expected_type=game_types.Vector3)
+		self.rebuild_state : int = 0
+		self.success : bool = False
+		self.enabled : bool = True
+		self.time_since_start :float = 0.0
+		self.reset_time : float = 0.0
+		self.build_activator_pos : game_types.Vector3 = game_types.Vector3()
 
 #TODO: Implement this component
 class MovingPlatform(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "MovingPLatform"
-		self.flag_1 = ComponentProperty(self, False, read_only=True, expected_type=bool)
-
-class ComponentProperty():
-	def __init__(self, component : Component, value : typing.Any, read_only : bool = False, expected_type = typing.Any):
-		self._component : Component = component
-		self._value = value
-		self._read_only = read_only
-		self._expected_type = expected_type
-
-	def __get__(self, instance, owner):
-		return self._value
-
-	def __set__(self, instance, value):
-		if(self._read_only == False):
-			if(self._expected_type == typing.Any or isinstance(value, self._expected_type)):
-				self._component.get_parent().update()
-				self._value = value
-			else:
-				raise Exception("{} expected type {}".format(self, self._expected_type))
-		else:
-			raise Exception("{} is read only".format(self))

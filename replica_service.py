@@ -17,7 +17,7 @@ class ReplicaService(services.GameService):
 			raise Exception("'create_replica_object' Requires A LOT In The Conifg!")
 		replica = game_objects.ReplicaObject(parent, zone, config)
 
-		transform : components.Transform = replica.get_component("Transform")
+		transform : components.Transform = replica.get_component(components.Transform)
 		if("position" in config):
 			transform.position = config["position"]
 		if("rotation" in config):
@@ -73,6 +73,7 @@ class ReplicaService(services.GameService):
 				stats.faction = config["faction"]
 			if("is_smashable" in config):
 				stats.is_smashable = config["is_smashable"]
+			replica.add_component(stats)
 		if(23 in object_components):
 			if(replica.get_component(components.Stats) is None):
 				stats = components.Stats(replica)
@@ -103,7 +104,7 @@ class ReplicaService(services.GameService):
 				new_item["linked"] = 0
 				new_item["slot"] = 0
 				new_item["json"] = {"from_db":1}
-				inventory.items.append(new_item)
+				inventory.add_item(new_item)
 			replica.add_component(inventory)
 		if(5 in object_components):
 			script_comp = components.ScriptComponent(replica)
@@ -242,7 +243,7 @@ class ReplicaService(services.GameService):
 		if(61 in object_components):
 			module_assembly = replica.get_component(components.ModuleAssembly)
 			#TODO: Figure out what this is and implement it
-			stream.write(c_bit(module_assembly.flag_1))
+			stream.write(c_bit(False))
 		if(1 in object_components):
 			transform = replica.get_component(components.Transform)
 			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
@@ -265,7 +266,7 @@ class ReplicaService(services.GameService):
 			stream.write(c_float(transform.velocity.X))
 			stream.write(c_float(transform.velocity.Y))
 			stream.write(c_float(transform.velocity.Z))
-			stream.write(True)
+			stream.write(c_bit(True))
 			stream.write(c_float(transform.angular_velocity.X))
 			stream.write(c_float(transform.angular_velocity.Y))
 			stream.write(c_float(transform.angular_velocity.Z))
@@ -329,8 +330,8 @@ class ReplicaService(services.GameService):
 		if(7 in object_components):
 			destructible = replica.get_component(components.Destructible)
 			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(destructible.flag_1))
-				stream.write(c_bit(destructible.flag_2))
+				stream.write(c_bit(False))
+				stream.write(c_bit(False))
 
 
 			stats = replica.get_component(components.Stats)
