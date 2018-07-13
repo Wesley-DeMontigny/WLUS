@@ -268,8 +268,6 @@ class ReplicaService(services.GameService):
 			exec(self.parse_struct("replica/components/RacingControl.structs"))
 		if(75 in object_components):
 			exec(self.parse_struct("replica/components/Exhibit.structs"))
-		if(42 in object_components):
-			exec(self.parse_struct("replica/components/Model.structs"))
 		if(2 in object_components):
 			exec(self.parse_struct("replica/components/Render.structs"))
 		if(50 in object_components):
