@@ -1,0 +1,99 @@
+<4>
+{character = replica.get_component(components.Character)}
+{player, account = character.get_player_info()}
+{minifig_comp = replica.get_component(components.Minifig)}
+{stats = player["Stats"]}
+[bit] - {character.vehicle_id != 0}
+	{%if previous == True%}
+	[bit] - {True}
+		[s64] - {character.vehicle_id}
+	[u8] - {0}
+	{%end%}
+[bit] - {True}
+	[u32] - {player["Data"]["level"]}
+[bit] - {False}
+	#[bit] - ???
+	#[bit] - ???
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[bit] - {False}
+		#[u64] - ???, could be "co" from xml data
+	[bit] - {False}
+		#[u64] - ???
+	[bit] - {False}
+		#[u64] - ???
+	[bit] - {False}
+		#[u64] - ???
+	{%if minifig_comp is not None%}
+		[u32] - {minifig_comp.hair_color}
+		[u32] - {minifig_comp.hair_style}
+		[u32] - {0}
+		[u32] - {minifig_comp.chest}
+		[u32] - {minifig_comp.legs}
+		[u32] - {0}
+		[u32] - {0}
+		[u32] - {minifig_comp.eyebrows}
+		[u32] - {minifig_comp.eyes}
+		[u32] - {minifig_comp.mouth}
+	{%end%}
+	{%else%}
+		[u32] - {player["hair_color"]}
+		[u32] - {player["hair_style"]}
+		[u32] - {0}
+		[u32] - {player["shirt_color"]}
+		[u32] - {player["pants_color"]}
+		[u32] - {0}
+		[u32] - {0}
+		[u32] - {player["eyebrows"]}
+		[u32] - {player["eyes"]}
+		[u32] - {player["mouth"]}
+	{%end%}
+	[u64] - {player["account_id"]}
+	[u64] - {0}
+	[u64] - {0}
+	[u64] - {player["Data"]["universe_score"]}
+	[bit] - {False}
+	[u64] - {stats["currency_collected"]}
+	[u64] - {stats["bricks_collected"]}
+	[u64] - {stats["smashables_smashed"]}
+	[u64] - {stats["quick_builds_done"]}
+	[u64] - {stats["enemies_smashed"]}
+	[u64] - {stats["rockets_used"]}
+	[u64] - {len(player["CompletedMissions"])}
+	[u64] - {stats["pets_tamed"]}
+	[u64] - {stats["imagination_collected"]}
+	[u64] - {stats["health_collected"]}
+	[u64] - {stats["armor_collected"]}
+	[u64] - {stats["distance_traveled"]}
+	[u64] - {stats["times_died"]}
+	[u64] - {stats["damage_taken"]}
+	[u64] - {stats["damage_healed"]}
+	[u64] - {stats["armor_repaired"]}
+	[u64] - {stats["imagination_restored"]}
+	[u64] - {stats["imagination_used"]}
+	[u64] - {stats["distance_driven"]}
+	[u64] - {stats["time_airborne_in_car"]}
+	[u64] - {stats["racing_imagination_collected"]}
+	[u64] - {stats["racing_imagination_crates_smashed"]}
+	[u64] - {stats["race_car_boosts"]}
+	[u64] - {stats["car_wrecks"]}
+	[u64] - {stats["racing_smashables_smashed"]}
+	[u64] - {stats["races_finished"]}
+	[u64] - {stats["races_won"]}
+	[bit] - {False}
+	[bit] - {False}#This needs to be implemented for rockets
+		#[u16-wstring] - LDF info of rocket modules
+[bit] - {True}
+	[bit] - {replica.zone.pvp_enabled}
+	[bit] - {False}
+	[u8] - {character.gm_level}
+	[bit] - {False}
+	[u8] - {0}
+[bit] - {True}
+	[u32] - {character.head_glow}
+[bit] - {False}
+	#TODO: Implement Guilds
+	#[s64] - guild (leader?) id, assert == 0
+	#[u8-wstring] - guild name, assert == ""
+	#[bit] - ???
+	#[s32] - ???
+{%end%}

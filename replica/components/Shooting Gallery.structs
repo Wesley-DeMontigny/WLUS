@@ -1,0 +1,37 @@
+<19>
+[bit] - {False}
+	#[u32] - count
+		#[s64] - player object id
+		#constant size 10 loop
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[float] - {0}
+	[float] - {0}
+	[float] - {0}
+	[float] - {0}
+	[float] - {0}
+	[float] - {0}
+{%end%}
+[bit] - {False}
+	#[double] - Cannon Velocity
+	#[double] - Cannon Refire Rate
+	#[double] - Cannon Min Distance
+	#[float] - Cannon Barrel Offset X
+	#[float] - Cannon Barrel Offset Y
+	#[float] - Cannon Barrel Offset Z
+	#[float] - Cannon Angle
+	#[float] - Facing X
+	#[float] - Facing Y
+	#[float] - Facing Z
+	#[u64] - ???
+	#[float] - ???, expect == -1
+	#[float] - Cannon FOV

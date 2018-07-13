@@ -1,0 +1,2 @@
+<49>
+[bit] - {replica.get_component(components.Switch).state}

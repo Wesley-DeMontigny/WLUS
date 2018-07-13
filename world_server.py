@@ -65,9 +65,9 @@ class WorldServer(pyraknet.server.Server):
 		lastnames = lastname_file.readlines()
 		lastname_file.close()
 
-		predef_name1 = firstnames[stream.read(c_ulong)]
-		predef_name2 = middlenames[stream.read(c_ulong)]
-		predef_name3 = lastnames[stream.read(c_ulong)]
+		predef_name1 = firstnames[stream.read(c_ulong)].rstrip('\n')
+		predef_name2 = middlenames[stream.read(c_ulong)].rstrip('\n')
+		predef_name3 = lastnames[stream.read(c_ulong)].rstrip('\n')
 
 		stream.read(bytes, allocated_length=9)
 		shirt_color = stream.read(c_ulong)
@@ -194,7 +194,7 @@ class WorldServer(pyraknet.server.Server):
 		ldf.register_key("xmlData", root, 13)
 
 		lego_data = WriteStream()
-		ldf.write_to_stream(lego_data)
+		lego_data.write(ldf)
 		ldf_bytes = bytes(lego_data)
 		compressed = zlib.compress(ldf_bytes)
 

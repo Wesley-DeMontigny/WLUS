@@ -1,0 +1,5 @@
+#Trigger Component
+#Seems like this component is append when there is a trigger_id entry in the luz
+#See also .lutriggers files in the client
+[bit] - {False}
+	#[s32] - ???, expect == -1

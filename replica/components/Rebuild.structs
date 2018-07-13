@@ -1,0 +1,28 @@
+[bit] - {False}
+	#[u32] - count
+		#[u64] - player object id
+		#constant size 10 loop
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+#end of ScriptedActivity
+[bit] - {False}
+	#[u32] - rebuild state
+	#[bit] - success
+	#[bit] - enabled
+	#[float] - rebuild time
+	#[float] - a time related to paused rebuilds, expect == 0
+	#if creation:
+		#[bit] - ???
+			#[u32] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[bit] - ???

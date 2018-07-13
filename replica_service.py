@@ -3,6 +3,7 @@ import game_objects
 import game_types
 import components
 import game_enums
+import re
 from pyraknet.bitstream import *
 
 class ReplicaService(services.GameService):
@@ -164,64 +165,50 @@ class ReplicaService(services.GameService):
 		return replica
 
 
+	def parse_struct(self, file_path):
+		write_methods = {"bit":"c_bit", "float":"c_float", "double":"c_double", "s8":"c_int8", "u8":"c_uint8", "s16":"c_int16", "u16":"c_uint16", "s32":"c_int32", "u32":"c_uint32", "s64":"c_int64", "u64":"c_uint64",
+						 "lot":"c_long"}
+		execute_string = ""
+		indent_level = 0
+		def format_line(string, indentation_level):
+			indent_string = ""
+			for i in range(indentation_level):
+				indent_string += "    "
+			return indent_string + string + "\n"
+		with open(file_path, "r") as file:
+			for line in file:
+				line = line.split("#")[0]#Filter out comments
+				line = line.strip()
+				if(line[:1] == "["):#Line is trying to write something to the stream
+					data_type = line[line.find("[")+1:line.find("]")]
+					write_value = line[line.find("{")+1:line.find("}")]
+					write_str = ""
+					if(data_type in write_methods):
+						write_str = "stream.write({}({}))".format(write_methods[data_type], write_value)
+					else:
+						if(len(data_type.split("-")) == 2 and data_type.split("-")[1] == "string"):#If it says string at the start then write it via the String data type in game_types
+							write_str = "stream.write(game_types.String({}, length_type={}))".format(write_value, write_methods[data_type.split("-")[0]])
+						elif(len(data_type.split("-")) == 2 and data_type.split("-")[1] == "wstring"):
+							write_str = "stream.write({}, length_type={})".format(write_value, write_methods[data_type.split("-")[0]])
+						elif(data_type == "ldf"):
+							write_str = "stream.write({})".format(write_value)
+					execute_string += format_line(write_str, indent_level)
+					execute_string += format_line("previous = {}".format(write_value), indent_level)
+				elif(line[:2] == "{%"):#Line is setting a condition or ending one
+					conditional = line[line.find("{%")+2:line.find("%}")]
+					if(conditional == "end"):
+						indent_level -= 1
+					else:
+						execute_string += format_line(conditional+":", indent_level)
+						indent_level += 1
+				elif(line[:1] == "{"):
+					write_value = line[line.find("{")+1:line.find("}")]
+					execute_string += format_line(write_value, indent_level)
+		return execute_string
 
-
-	def write_to_stream(self, replica : game_objects.ReplicaObject, stream : WriteStream, type):
-		#TODO: Add Component Whitelist
-		#Base Data
-		if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-			stream.write(c_longlong(replica.get_object_id()))
-			stream.write(c_long(replica.lot))
-			stream.write(replica.get_name(), length_type=c_ubyte)
-			stream.write(c_ulong(0))
-			if(replica.get_component(components.ModelData) is not None):
-				stream.write(c_bit(True))
-				replica.get_component(components.ModelData).ldf.write_to_stream(stream)
-			else:
-				stream.write(c_bit(False))
-			stream.write(c_bit(replica.get_component(components.Trigger) is not None))
-			if(replica.spawner_id is not None):
-				stream.write(c_bit(True))
-				stream.write(c_longlong(replica.spawner_id))
-			else:
-				stream.write(c_bit(False))
-			if(replica.spawner_node_id is not None):
-				stream.write(c_bit(True))
-				stream.write(c_ulong(replica.spawner_node_id))
-			else:
-				stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			stream.write(c_float(replica.get_component(components.Transform).scale))
-			if(replica.world_state is not None):
-				stream.write(c_bit(True))
-				stream.write(c_ubyte(replica.world_state))
-			else:
-				stream.write(c_bit(False))
-			if(replica.gm_level is not None):
-				stream.write(c_bit(True))
-				stream.write(c_ubyte(replica.gm_level))
-			else:
-				stream.write(c_bit(False))
-
-		#Children/Parent Info
-		if(self.get_children() != [] or isinstance(self.get_parent(), game_objects.ReplicaObject)):
-			stream.write(c_bit(True))
-			if(isinstance(self.get_parent(), game_objects.ReplicaObject)):
-				stream.write(c_bit(True))
-				stream.write(c_longlong(self.get_parent().get_object_id()))
-				stream.write(c_bit(False))
-			else:
-				stream.write(c_bit(False))
-			if(self.get_children() != []):
-				stream.write(c_bit(True))
-				stream.write(c_ushort(len(replica.get_children())))
-				for child in self.get_children():
-					stream.write(c_longlong(child.get_object_id()))
-			else:
-				stream.write(c_bit(False))
-		else:
-			stream.write(c_bit(False))
-
+	def write_to_stream(self, replica : game_objects.ReplicaObject, stream : WriteStream, replica_type):
+		exec(self.parse_struct("replica/creation_header.structs"))
+		exec(self.parse_struct("replica/serialization_header.structs"))
 
 		cdclient_db = game.get_service("Database").cdclient_db
 		component_list = cdclient_db.tables["ComponentsRegistry"].select(["component_type", "component_id"], "id = {}".format(replica.lot))
@@ -231,348 +218,66 @@ class ReplicaService(services.GameService):
 
 
 		if(108 in object_components):
-			possesable = replica.get_component(components.Possessable)
-			if(possesable.driver_object_id is not None and possesable.driver_object_id != 0):
-				stream.write(c_bit(True))
-				stream.write(c_bit(True))
-				stream.write(c_longlong(possesable.driver_object_id))
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-			else:
-				stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Component 108.structs"))
 		if(61 in object_components):
-			module_assembly = replica.get_component(components.ModuleAssembly)
-			#TODO: Figure out what this is and implement it
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/ModuleAssembly.structs"))
 		if(1 in object_components):
-			transform = replica.get_component(components.Transform)
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			stream.write(c_float(transform.position.X))
-			stream.write(c_float(transform.position.Y))
-			stream.write(c_float(transform.position.Z))
-			stream.write(c_float(transform.rotation.X))
-			stream.write(c_float(transform.rotation.Y))
-			stream.write(c_float(transform.rotation.Z))
-			stream.write(c_float(transform.rotation.W))
-			stream.write(c_bit(transform.on_ground))
-			stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			stream.write(c_float(transform.velocity.X))
-			stream.write(c_float(transform.velocity.Y))
-			stream.write(c_float(transform.velocity.Z))
-			stream.write(c_bit(True))
-			stream.write(c_float(transform.angular_velocity.X))
-			stream.write(c_float(transform.angular_velocity.Y))
-			stream.write(c_float(transform.angular_velocity.Z))
-			stream.write(c_bit(False))
-			if(type == game_enums.ReplicaTypes.SERIALIZATION):
-				stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/ControllablePhysics.structs"))
 		if(3 in object_components):
-			if(type == game_enums.ReplicaTypes.SERIALIZATION):
-				stream.write(c_bit(False))
-				stream.write(c_float(0))
-			stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			transform = replica.get_component(components.Transform)
-			stream.write(c_float(transform.position.X))
-			stream.write(c_float(transform.position.Y))
-			stream.write(c_float(transform.position.Z))
-			stream.write(c_float(transform.rotation.X))
-			stream.write(c_float(transform.rotation.Y))
-			stream.write(c_float(transform.rotation.Z))
-			stream.write(c_float(transform.rotation.W))
+			exec(self.parse_struct("replica/components/SimplePhysics.structs"))
 		if(20 in object_components):
-			stream.write(c_bit(True))
-			transform = replica.get_component(components.Transform)
-			stream.write(c_float(transform.position.X))
-			stream.write(c_float(transform.position.Y))
-			stream.write(c_float(transform.position.Z))
-			stream.write(c_float(transform.rotation.X))
-			stream.write(c_float(transform.rotation.Y))
-			stream.write(c_float(transform.rotation.Z))
-			stream.write(c_float(transform.rotation.W))
+			exec(self.parse_struct("replica/components/RigidBodyPhantomPhysics.structs"))
 		if(30 in object_components):
-			vehicle_physics = replica.get_component(components.VehiclePhysics)
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_ubyte(vehicle_physics.data_1))
-				stream.write(c_bit(vehicle_physics.flag_1))
-			stream.write(c_bit(vehicle_physics.flag_2))
-			if(vehicle_physics.flag_2 == True):
-				stream.write(c_bit(vehicle_physics.flag_2_1))
+			exec(self.parse_struct("replica/components/VehiclePhysics.structs"))
 		if(40 in object_components):
-			stream.write(c_bit(True))
-			transform = replica.get_component(components.Transform)
-			stream.write(c_float(transform.position.X))
-			stream.write(c_float(transform.position.Y))
-			stream.write(c_float(transform.position.Z))
-			stream.write(c_float(transform.rotation.X))
-			stream.write(c_float(transform.rotation.Y))
-			stream.write(c_float(transform.rotation.Z))
-			stream.write(c_float(transform.rotation.W))
-			physics_effect = replica.get_component(components.PhysicsEffect)
-			if(physics_effect is not None):
-				stream.write(c_bit(True))
-				stream.write(c_ulong(physics_effect.effect_type))
-				stream.write(c_float(physics_effect.effect_amount))
-				stream.write(c_bit(False))
-				stream.write(c_bit(True))
-				stream.write(c_float(physics_effect.effect_direction.X))
-				stream.write(c_float(physics_effect.effect_direction.Y))
-				stream.write(c_float(physics_effect.effect_direction.Z))
-			else:
-				stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/PhantomPhysics.structs"))
 		if(7 in object_components):
-			destructible = replica.get_component(components.Destructible)
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-
-
-			stats = replica.get_component(components.Stats)
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			stream.write(c_ulong(stats.health))
-			stream.write(c_float(stats.max_health))
-			stream.write(c_ulong(stats.armor))
-			stream.write(c_float(stats.max_armor))
-			stream.write(c_ulong(stats.imagination))
-			stream.write(c_float(stats.max_imagination))
-			stream.write(c_ulong(0))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_float(stats.max_health))
-			stream.write(c_float(stats.max_armor))
-			stream.write(c_float(stats.max_imagination))
-			stream.write(c_ulong(1))
-			stream.write(c_long(stats.faction))
-			stream.write(c_bit(stats.is_smashable))
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-				if(stats.is_smashable == True):
-					stream.write(c_bit(False))
-					stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Destructible.structs"))
+			exec(self.parse_struct("replica/components/Stats.structs"))
 		if(23 in object_components):
-			stats = replica.get_component(components.Stats)
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			stream.write(c_ulong(stats.health))
-			stream.write(c_float(stats.max_health))
-			stream.write(c_ulong(stats.armor))
-			stream.write(c_float(stats.max_armor))
-			stream.write(c_ulong(stats.imagination))
-			stream.write(c_float(stats.max_imagination))
-			stream.write(c_ulong(0))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_float(stats.max_health))
-			stream.write(c_float(stats.max_armor))
-			stream.write(c_float(stats.max_imagination))
-			stream.write(c_ulong(1))
-			stream.write(c_long(stats.faction))
-			stream.write(c_bit(stats.is_smashable))
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-				if(stats.is_smashable == True):
-					stream.write(c_bit(False))
-					stream.write(c_bit(False))
-
-			collectible = replica.get_component(components.Collectible)
-			stream.write(c_ushort(collectible.collectible_id))
+			exec(self.parse_struct("replica/components/Stats.structs"))
+			exec(self.parse_struct("replica/components/Collectible.structs"))
 		if(26 in object_components):
-			pet = replica.get_component(components.Pet)
-			#TODO: Implement structure
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Pet.structs"))
 		if(4 in object_components):
-			character = replica.get_component(components.Character)
-			minifig_comp = replica.get_component(components.Minifig)
-			player, account = character.get_player_info()
-			if(character.vehicle_id != 0):
-				stream.write(c_bit(True))
-				stream.write(c_bit(True))
-				stream.write(c_longlong(character.vehicle_id))
-				stream.write(c_ubyte(0))
-			else:
-				stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-				if(minifig_comp is not None):
-					stream.write(c_ulong(minifig_comp.hair_color))
-					stream.write(c_ulong(minifig_comp.hair_style))
-					stream.write(c_ulong(0))
-					stream.write(c_ulong(minifig_comp.chest))
-					stream.write(c_ulong(minifig_comp.legs))
-					stream.write(c_ulong(0))
-					stream.write(c_ulong(0))
-					stream.write(c_ulong(minifig_comp.eyebrows))
-					stream.write(c_ulong(minifig_comp.eyes))
-					stream.write(c_ulong(minifig_comp.mouth))
-					stream.write(c_ulonglong(player["account_id"]))
-					stream.write(c_ulonglong(0))
-					stream.write(c_ulonglong(0))
-					stream.write(c_ulonglong(player["Data"]["universe_score"]))
-				else:
-					stream.write(c_ulong(player["hair_color"]))
-					stream.write(c_ulong(player["hair_style"]))
-					stream.write(c_ulong(0))
-					stream.write(c_ulong(player["shirt_color"]))
-					stream.write(c_ulong(player["pants_color"]))
-					stream.write(c_ulong(0))
-					stream.write(c_ulong(0))
-					stream.write(c_ulong(player["eyebrows"]))
-					stream.write(c_ulong(player["eyes"]))
-					stream.write(c_ulong(player["mouth"]))
-					stream.write(c_ulonglong(player["account_id"]))
-					stream.write(c_ulonglong(0))
-					stream.write(c_ulonglong(0))
-					stream.write(c_ulonglong(player["Data"]["universe_score"]))
-				stream.write(c_bit(False))
-				stats = player["Stats"]
-				stream.write(c_longlong(stats["currency_collected"]))
-				stream.write(c_longlong(stats["bricks_collected"]))
-				stream.write(c_longlong(stats["smashables_smashed"]))
-				stream.write(c_longlong(stats["quick_builds_done"]))
-				stream.write(c_longlong(stats["enemies_smashed"]))
-				stream.write(c_longlong(stats["rockets_used"]))
-				stream.write(c_longlong(len(player["CompletedMissions"])))
-				stream.write(c_longlong(stats["pets_tamed"]))
-				stream.write(c_longlong(stats["imagination_collected"]))
-				stream.write(c_longlong(stats["health_collected"]))
-				stream.write(c_longlong(stats["armor_collected"]))
-				stream.write(c_longlong(stats["distance_traveled"]))
-				stream.write(c_longlong(stats["times_died"]))
-				stream.write(c_longlong(stats["damage_taken"]))
-				stream.write(c_longlong(stats["damage_healed"]))
-				stream.write(c_longlong(stats["armor_repaired"]))
-				stream.write(c_longlong(stats["imagination_restored"]))
-				stream.write(c_longlong(stats["imagination_used"]))
-				stream.write(c_longlong(stats["distance_driven"]))
-				stream.write(c_longlong(stats["time_airborne_in_car"]))
-				stream.write(c_longlong(stats["racing_imagination_collected"]))
-				stream.write(c_longlong(stats["racing_imagination_crates_smashed"]))
-				stream.write(c_longlong(stats["race_car_boosts"]))
-				stream.write(c_longlong(stats["car_wrecks"]))
-				stream.write(c_longlong(stats["racing_smashables_smashed"]))
-				stream.write(c_longlong(stats["races_finished"]))
-				stream.write(c_longlong(stats["races_won"]))
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))#TODO: This is "is player landing by rocket", you need to implement it dummy
-			stream.write(c_bit(True))
-			stream.write(c_bit(replica.zone.pvp_enabled))
-			stream.write(c_bit(bool(account["is_admin"])))
-			stream.write(c_ubyte(character.gm_level))
-			stream.write(c_bit(False))
-			stream.write(c_ubyte(0))
-			stream.write(c_bit(True))
-			stream.write(c_ulong(character.head_glow))
-			stream.write(c_bit(False))#TODO: This has to do with guilds, should eventually be implemented
+			exec(self.parse_struct("replica/components/Character.structs"))
 		if(19 in object_components):
-			pass
+			exec(self.parse_struct("replica/components/Shooting Gallery.structs"))
 		if(17 in object_components):
-			inventory = replica.get_component(components.Inventory)
-			stream.write(c_bit(True))
-			stream.write(c_ulong(len(inventory.items)))
-			for item in inventory.items:
-				stream.write(c_longlong(item["item_id"]))
-				stream.write(c_long(item["lot"]))
-				stream.write(c_bit(False))
-				stream.write(c_bit(True))
-				stream.write(c_ulong(item["quantity"]))
-				stream.write(c_bit(True))
-				stream.write(c_ulong(item["slot"]))
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))#TODO: Implement this, not entirely sure what its for
-				stream.write(c_bit(True))
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Inventory.structs"))
 		if(5 in object_components):
-			stream.write(c_bit(False))#TODO: Implement Script Component
+			exec(self.parse_struct("replica/components/Script.structs"))
 		if(9 in object_components):
-			stream.write(c_bit(False))#TODO: Implement Skill Component
+			exec(self.parse_struct("replica/components/Skill.structs"))
 		if(60 in object_components):
-			base_combat_ai = replica.get_component(components.BaseCombatAI)
-			stream.write(c_bit(True))
-			stream.write(c_ulong(base_combat_ai.action))
-			stream.write(c_longlong(base_combat_ai.target_id))
-		if(48 in object_components):#TODO: Implment Rebuild Component
-			stream.write(c_bit(False))
-
-			stats = replica.get_component(components.Stats)
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-			stream.write(c_bit(True))
-			stream.write(c_ulong(stats.health))
-			stream.write(c_float(stats.max_health))
-			stream.write(c_ulong(stats.armor))
-			stream.write(c_float(stats.max_armor))
-			stream.write(c_ulong(stats.imagination))
-			stream.write(c_float(stats.max_imagination))
-			stream.write(c_ulong(0))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_float(stats.max_health))
-			stream.write(c_float(stats.max_armor))
-			stream.write(c_float(stats.max_imagination))
-			stream.write(c_ulong(1))
-			stream.write(c_long(stats.faction))
-			stream.write(c_bit(stats.is_smashable))
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_bit(False))
-				stream.write(c_bit(False))
-				if(stats.is_smashable == True):
-					stream.write(c_bit(False))
-					stream.write(c_bit(False))
-		if(25 in object_components):#TODO: Implement Moving Platforms
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/BaseCombatAI.structs"))
+		if(48 in object_components):
+			exec(self.parse_struct("replica/components/Stats.structs"))
+			exec(self.parse_struct("replica/components/Rebuild.structs"))
+		if(25 in object_components):
+			exec(self.parse_struct("replica/components/MovingPlatform.structs"))
 		if(49 in object_components):
-			switch = replica.get_component(components.Switch)
-			stream.write(c_bit(switch.state))
-		if(16 in object_components):#TODO: Implement Vendors
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Switch.structs"))
+		if(16 in object_components):
+			exec(self.parse_struct("replica/components/Vendor.structs"))
 		if(6 in object_components):
-			bouncer = replica.get_component(components.Bouncer)
-			stream.write(c_bit(True))
-			stream.write(c_bit(not bouncer.pet_required))
-		if(39 in object_components):#TODO Implement Scripted Activity
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Bouncer.structs"))
+		if(39 in object_components):
+			exec(self.parse_struct("replica/components/ScriptedActivity.structs"))
 		if(71 in object_components):
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/RacingControl.structs"))
 		if(75 in object_components):
-			exhibit = replica.get_component(components.LUPExhibit)
-			stream.write(c_bit(True))
-			stream.write(c_long(exhibit.exhibited_lot))
+			exec(self.parse_struct("replica/components/Exhibit.structs"))
 		if(42 in object_components):
-			pass#This is apparently not even needed?
+			exec(self.parse_struct("replica/components/Model.structs"))
 		if(2 in object_components):
-			if(type == game_enums.ReplicaTypes.CONSTRUCTION):
-				stream.write(c_ulong(0))#TODO: Implement render component
+			exec(self.parse_struct("replica/components/Render.structs"))
+		if(50 in object_components):
+			pass#Minigame?
 		if(107 in object_components):
-			stream.write(c_bit(False))
+			exec(self.parse_struct("replica/components/Component 107.structs"))
 		if(69 in object_components):
-			trigger = replica.get_component(components.Trigger)
-			stream.write(c_bit(True))
-			stream.write(c_long(trigger.trigger_id))
-
+			exec(self.parse_struct("replica/components/Trigger.structs"))
 
 
 

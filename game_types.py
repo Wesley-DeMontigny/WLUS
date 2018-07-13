@@ -92,12 +92,12 @@ class Vector3():
 		else:
 			return False
 
-class LDF():
+class LDF(Serializable):
 	def __init__(self):
 		self._keys : list = []
 	def register_key(self, key_name : str, value : any, type : int):
 		self._keys.append([key_name, value, type])
-	def write_to_stream(self, stream : WriteStream):
+	def serialize(self, stream):
 		key_num = len(self._keys)
 		stream.write(c_uint(key_num))
 		for key in self._keys:
@@ -126,6 +126,8 @@ class LDF():
 				xml_str = b'<?xml version="1.0">' + xml_str
 				stream.write(c_ulong(xml_str.__len__()))
 				stream.write(xml_str)
+	def deserialize(self, stream):
+		return "Not Implemented"
 
 class Vector4():
 	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0, W : float = 0.0, str_val: str = None):

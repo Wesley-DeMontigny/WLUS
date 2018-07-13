@@ -182,6 +182,8 @@ class PlayerService(services.GameService):
 		self.sync_database([account])
 		player_copy = copy.deepcopy(player_base)
 		player_copy["Data"] = player_data
+		player_copy["Data"]["position"] = game_types.Vector3(player_copy["Data"]["position"])
+		player_copy["Data"]["rotation"] = game_types.Vector4(player_copy["Data"]["rotation"])
 		player_copy["Stats"] = player_stats
 		player_copy["CompletedMissions"] = []
 		player_copy["CurrentMissions"] = []

@@ -1,0 +1,56 @@
+<1>
+{transform = replica.get_component(components.Transform)}
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[bit] - {False}
+		#[u32] - jetpack effect id
+		#[bit] - ???
+		#[bit] - ???
+	[bit] - {False}
+		#[u32] - ???
+		#[u32] - ???
+		#[u32] - ???
+		#[u32] - ???
+		#[u32] - ???
+		#[u32] - ???
+		#[u32] - ???
+{%end%}
+[bit] - {False}
+	#[float] - ???
+	#[float] - ???
+[bit] - {False}
+	#[float] - ???
+	#[bit] - ???
+[bit] - {False}
+	#[bit] - flag
+		#[u32] - ???
+		#[bit] - ???
+[bit] - {True}
+	[float] - {transform.position.X}
+	[float] - {transform.position.Y}
+	[float] - {transform.position.Z}
+	[float] - {transform.rotation.X}
+	[float] - {transform.rotation.Y}
+	[float] - {transform.rotation.Z}
+	[float] - {transform.rotation.W}
+	[bit] - {transform.on_ground}
+	[bit] - {False}#On Rail
+	[bit] - {True}
+		[float] - {transform.velocity.X}
+		[float] - {transform.velocity.Y}
+		[float] - {transform.velocity.Z}
+	[bit] - {True}
+		[float] - {transform.angular_velocity.X}
+		[float] - {transform.angular_velocity.Y}
+		[float] - {transform.angular_velocity.Z}
+	[bit] - {False}
+		#[s64] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[bit] - flag
+			#[float] - ???
+			#[float] - ???
+			#[float] - ???
+	{%if replica_type != game_enums.ReplicaTypes.CONSTRUCTION%}
+		[bit] - {False}
+	{%end%}

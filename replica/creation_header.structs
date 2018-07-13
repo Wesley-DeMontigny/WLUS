@@ -1,0 +1,29 @@
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[s64]-{replica.get_object_id()}
+	[s32]-{replica.lot}
+	[u8-wstring]-{replica.get_name()}
+	[u32]-{0}
+	[bit]-{replica.has_component(components.ModelData)}
+		{%if previous == True%}
+		[ldf]-{replica.get_component(components.ModelData).ldf}
+		{%end%}
+	[bit]-{replica.has_component(components.Trigger)}
+	[bit]-{replica.spawner_id is not None}
+		{%if previous == True%}
+		[s64]-{replica.spawner_id}
+		{%end%}
+	[bit]-{replica.spawner_node_id is not None}
+		{%if previous == True%}
+		[u32]-{replica.spawner_node_id}
+		{%end%}
+	[bit]-{True}
+	[float]-{replica.get_component(components.Transform).scale}
+	[bit]-{False}
+		{%if previous == True%}
+		[u8]-{0}#ObjectWorldState
+		{%end%}
+	[bit]-{False}
+		{%if previous == True%}
+		[u8]-{0}#GMLevel
+		{%end%}
+{%end%}

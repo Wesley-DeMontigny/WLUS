@@ -73,8 +73,8 @@ class AuthServerService(GameService):
 	def validate_login(self, username : str, password : str):
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
 		account_table : database.DBTable = server_db.tables["Accounts"]
-		user_info = account_table.select_all("username = '{}'".format(username))[0]
-		if (user_info is not None and bool(user_info["banned"]) != True and passlib.hash.sha256_crypt.verify(password, user_info["password"])):  # Success
+		user_info = account_table.select_all("username = '{}'".format(username))
+		if (user_info !=[] and bool(user_info[0]["banned"]) != True and passlib.hash.sha256_crypt.verify(password, user_info[0]["password"])):  # Success
 			return True, user_info
 		else:
 			return False, user_info

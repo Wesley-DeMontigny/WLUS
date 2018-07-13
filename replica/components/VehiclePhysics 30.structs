@@ -1,0 +1,42 @@
+<30>
+[bit] - {False}
+	#[float] - position x
+	#[float] - position y
+	#[float] - position z
+	#[float] - rotation x
+	#[float] - rotation y
+	#[float] - rotation z
+	#[float] - rotation w
+	#[bit] - is on ground
+	#[bit] - ???
+	#[bit] - flag
+		#[float] - velocity x
+		#[float] - velocity y
+		#[float] - velocity z
+	#[bit] - flag
+		#[float] - angular velocity x
+		#[float] - angular velocity y
+		#[float] - angular velocity z
+	#[bit] - flag
+		#[s64] - ???
+		#[float] - ???
+		#[float] - ???
+		#[float] - ???
+		#[bit] - flag
+			#[float] - ???
+			#[float] - ???
+			#[float] - ???
+
+	#[bit] - flag
+		#[float] - ???
+		#[float] - ???
+		#[bit] - ???
+		#[bit] - ???
+	#[float] - ???
+	#if not creation:
+		#[bit] - flag?
+#if creation:
+	#[u8] - ???
+	#[bit] - ???
+#[bit] - flag
+	#[bit] - ???

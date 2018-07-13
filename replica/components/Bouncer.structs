@@ -1,0 +1,5 @@
+<6>
+[bit] - {False}
+	{%if previous == True%}
+	[bit] - {True}#This is apparently "PetNotRequired" but I don't really care about pet bouncers right now
+	{%end%}

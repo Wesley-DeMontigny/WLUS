@@ -1,0 +1,4 @@
+Exhibit ($+863790):
+[bit] - {False}
+	#[s32] - exhibited LOT
+	#Should be in replica.get_component(components.LUPExhibit) but I won't implement that right now

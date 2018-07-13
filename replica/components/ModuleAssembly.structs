@@ -1,0 +1,9 @@
+<61>
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[bit] - {False}
+		#[bit] - flag
+			#[s64] - ???
+		#[bit] - ???
+		#[u16-wstring] - ???
+{%end%}
+#Need to implement

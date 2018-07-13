@@ -26,12 +26,22 @@ class GameObject(game_types.BaseObject):
 		for object_component in self._components:
 			if(isinstance(object_component, component)):
 				return object_component
+		return None
 
 	def get_object_id(self):
 		return self._object_id
 
 	def update(self):
 		self.zone.update(self)
+
+	def get_name(self):
+		return self._name
+
+	def has_component(self, component):
+		for object_component in self._components:
+			if(isinstance(object_component, component)):
+				return True
+		return False
 
 class ReplicaObject(GameObject):
 	def __init__(self, parent, zone, config : dict):

@@ -5,6 +5,7 @@ from pyraknet.bitstream import *
 from pyraknet.messages import *
 import pyraknet.replicamanager
 import typing
+import copy
 
 '''
 All Game Objects are children to a scene.
@@ -124,6 +125,6 @@ class ZoneManager(pyraknet.replicamanager.ReplicaManager):
 		replica_service.write_to_stream(obj, out, game_enums.ReplicaTypes.CONSTRUCTION)
 
 		file = open("39_2007-51995_2_[24]_[23-2d].bin", "wb")
-		file.write(bytes(out))
+		file.write(bytes(copy.deepcopy(out)))
 
 		self._server.send(out, recipients)

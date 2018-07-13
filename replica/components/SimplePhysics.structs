@@ -1,0 +1,23 @@
+<3>
+{transform = replica.get_component(components.Transform)}
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[bit] - {False}
+	[float] - {0}
+{%end%}
+[bit] - {False}
+	#[float] - ???
+	#[float] - ???
+	#[float] - ???
+	#[float] - ???
+	#[float] - ???
+	#[float] - ???
+[bit] - {False}
+	#[u32] - ???, expect == 5
+[bit] - {True}
+	[float] - {transform.position.X}
+	[float] - {transform.position.Y}
+	[float] - {transform.position.Z}
+	[float] - {transform.rotation.X}
+	[float] - {transform.rotation.Y}
+	[float] - {transform.rotation.Z}
+	[float] - {transform.rotation.W}

@@ -1,0 +1,21 @@
+<9>
+{%if replica_type == game_enums.ReplicaTypes.CONSTRUCTION%}
+	[bit] - {False}
+		#[u32] - count for following structs
+			#[u32] - ???
+			#[u32] - ???
+			#[u32] - ???
+			#[u32] - ???
+			#[u32] - count for following structs
+				#[u32] - ???
+				#[u32] - ???, seems to be something in BehaviorTemplate?
+				#[u32] - ???
+				#[u32] - ???, expect == 18
+				#[s64] - ???
+				#[s64] - ???
+				#[s64] - ???, expect == 0
+				#[bit] - ???, assert == False
+				#[float] - ???, expect == 0
+				#[u32] - ???, expect == 0
+				#[u32] - ???, expect == 0
+{%end%}

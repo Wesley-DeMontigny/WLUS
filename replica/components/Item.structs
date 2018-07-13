@@ -1,0 +1,9 @@
+<11>
+[bit] - {False}
+	#[s64] - ???
+	#[u32] - ???
+	#[bit] - flag, assert == False
+		#not sure about this
+		#[u32] - ???
+			#[u8] - ???
+#This isn't even in the docs?????

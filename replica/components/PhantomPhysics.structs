@@ -1,0 +1,22 @@
+<40>
+{transform = replica.get_component(components.Transform)}
+[bit] - {True}
+	[float] - {transform.position.X}
+	[float] - {transform.position.Y}
+	[float] - {transform.position.Z}
+	[float] - {transform.rotation.X}
+	[float] - {transform.rotation.Y}
+	[float] - {transform.rotation.Z}
+	[float] - {transform.rotation.W}
+[bit] - {False}
+	#[bit] - is physics effect active
+		#[u32] - effect type, 0 = push, 1 = attract, 2 = repulse, 3 = gravity, 4 = friction
+		#[float] - effect amount
+		#[bit] - flag
+			#[u32] - ???
+			#[u32] - ???
+		#[bit] - flag
+			#[float] - effect direction x
+			#[float] - effect direction y
+			#[float] - effect direction z
+#I do already have the physics effect component but this is just a quick implementation for now

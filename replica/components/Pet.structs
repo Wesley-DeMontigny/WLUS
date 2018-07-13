@@ -1,0 +1,13 @@
+<26>
+[bit] - {False}
+	#[u32] - ???
+	#[u32] - ???
+	#[bit] - flag, expect == False
+		#[s64] - ???
+	#[bit] - flag, expect == False
+		#[s64] - ???
+	#[bit] - flag, expect == False
+		#[u32] - ???
+		#[u8-wstring] - pet name
+		#[u8-wstring] - pet owner name
+#Need to implement
