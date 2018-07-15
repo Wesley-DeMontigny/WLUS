@@ -23,7 +23,8 @@ class WorldServer(pyraknet.server.Server):
 								 "world_minifig_creation":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_CREATE_REQUEST.value), self.handle_minifig_creation],
 								 "world_minifig_deletion:":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_DELETE_MINIFIGURE_REQUEST.value), self.handle_minifig_deletion],
 								 "world_join_world":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLINET_ENTER_WORLD.value), self.handle_join_world],
-								 "world_detailed_user_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOAD_COMPLETE.value), self.handle_detailed_user_info]}
+								 "world_detailed_user_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOAD_COMPLETE.value), self.handle_detailed_user_info],
+								 "world_game_message":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_GAME_MESSAGE.value), self.handle_game_msg]}
 
 	def send_game_msg(self, object_id, msg_id, recipients : list, additional_parameters : list = None):
 		msg = WriteStream()
@@ -34,6 +35,12 @@ class WorldServer(pyraknet.server.Server):
 				msg.write(param)
 		self.send(msg, recipients)
 
+	def handle_game_msg(self, data: bytes, address):
+		stream = ReadStream(data)
+		object_id = stream.read(c_longlong)
+		msg_id = stream.read(c_ushort)
+		game.trigger_event("GM_{}".format(int(msg_id)), args=[object_id, stream, address], debug=True)
+
 	def handle_handshake(self, data: bytes, address):
 		stream = ReadStream(data)
 		client_version = stream.read(c_ulong)
@@ -42,7 +49,7 @@ class WorldServer(pyraknet.server.Server):
 		packet.write(game_enums.PacketHeaderEnum.HANDSHAKE.value)
 		packet.write(c_ulong(client_version))
 		packet.write(c_ulong(0x93))
-		packet.write(c_ulong(4))  # Connection Type (1 For Auth, 4 For Everything Else)
+		packet.write(c_ulong(4))  # Connection Type
 		packet.write(c_ulong(os.getpid()))
 		packet.write(c_short(0xff))  # Local port
 		packet.write(game.get_config("address"), allocated_length=33)
@@ -214,8 +221,11 @@ class WorldServer(pyraknet.server.Server):
 		player_config = {"lot":1, "object_id":player["player_id"], "name":player["name"], "position":player_data["position"], "rotation":player_data["rotation"], "health":player_data["health"], "max_health":player_data["max_health"],
 						 "armor":player_data["armor"], "max_armor":player_data["max_armor"], "imagination":player_data["imagination"], "max_imagination":player_data["max_imagination"]}
 		zone.create_object(zone, player_config)
+
+		game.wait_for_event("GM_888", '''args[0] == {}'''.format(player["player_id"]))
+
 		self.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
-		self.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value,recipients=[address])
+		self.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value, recipients=[address])
 
 	def handle_join_world(self, data: bytes, address):
 		stream = ReadStream(data)

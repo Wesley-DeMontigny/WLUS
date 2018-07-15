@@ -270,8 +270,6 @@ class ReplicaService(services.GameService):
 			exec(self.parse_struct("replica/components/Exhibit.structs"))
 		if(2 in object_components):
 			exec(self.parse_struct("replica/components/Render.structs"))
-		if(50 in object_components):
-			pass#Minigame?
 		if(107 in object_components):
 			exec(self.parse_struct("replica/components/Component 107.structs"))
 		if(69 in object_components):

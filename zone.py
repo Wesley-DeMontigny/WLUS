@@ -124,7 +124,7 @@ class ZoneManager(pyraknet.replicamanager.ReplicaManager):
 		out.write(c_ushort(self._network_ids[obj]))
 		replica_service.write_to_stream(obj, out, game_enums.ReplicaTypes.CONSTRUCTION)
 
-		file = open("39_2007-51995_2_[24]_[23-2d].bin", "wb")
-		file.write(bytes(copy.deepcopy(out)))
+		# file = open("39_2007-51995_2_[24]_[23-2d].bin", "wb")
+		# file.write(bytes(copy.deepcopy(out)))
 
 		self._server.send(out, recipients)

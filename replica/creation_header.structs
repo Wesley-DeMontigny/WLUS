@@ -16,8 +16,10 @@
 		{%if previous == True%}
 		[u32]-{replica.spawner_node_id}
 		{%end%}
-	[bit]-{True}
-	[float]-{replica.get_component(components.Transform).scale}
+	[bit]-{replica.get_component(components.Transform).scale != 1}
+	{%if previous == True%}
+		[float]-{replica.get_component(components.Transform).scale}
+	{%end%}
 	[bit]-{False}
 		{%if previous == True%}
 		[u8]-{0}#ObjectWorldState

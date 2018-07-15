@@ -81,6 +81,7 @@ class ItemLOTs(IntEnum):
 class GameMessages(IntEnum):
 	SERVER_DONE_LOADING_OBJECTS = 0x066a
 	PLAYER_READY = 0x01fd
+	READY_FOR_UPDATES = 0x0378
 
 class MinifigureCreationResponseEnum(IntEnum):
 	SUCCESS = 0x00

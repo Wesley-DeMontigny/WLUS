@@ -3,6 +3,7 @@ import game_types
 import ctypes
 import threading
 import random
+import time
 
 '''
 The Game class is the parent of all other objects in the game.
@@ -17,6 +18,13 @@ class Game(game_types.BaseObject):
 		self._services = []
 		self._config : dict = {}
 		self._event_handlers = {}
+		self._event_wait_list = {}
+
+	def wait_for_event(self, event_id : str, condition : str):
+		if(event_id not in self._event_wait_list):
+			self._event_wait_list[event_id] = {"condition":condition, "state":False}
+		while self._event_wait_list[event_id]["state"] == False:
+			time.sleep(.0001)
 
 	def start(self):
 		for service in self._services:
@@ -38,6 +46,9 @@ class Game(game_types.BaseObject):
 		return register_handler
 
 	def trigger_event(self, event_id, args : typing.Tuple =(), debug : bool = False):
+		if(event_id in self._event_wait_list):
+			if(eval(self._event_wait_list[event_id]["condition"]) == True):
+				self._event_wait_list[event_id]["state"] = True
 		handler_activated = False
 		for handler in self._event_handlers:
 			if(self._event_handlers[handler] == event_id):

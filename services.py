@@ -5,6 +5,7 @@ import passlib.hash
 import database
 import world_server
 import zone
+import sys
 
 '''
 Services are a way to implement new parts of the server architecture.
@@ -21,7 +22,6 @@ class GameService(game_types.BaseObject):
 	def initialize(self):
 		self.get_parent().trigger_event("ServiceInitialized", args=(self,), debug=False)
 		print("Initializied {} Service".format(self._name))
-
 
 class WorldService(GameService):
 	def __init__(self, parent):

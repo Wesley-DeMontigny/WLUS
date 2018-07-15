@@ -34,14 +34,18 @@
 	[float] - {transform.rotation.W}
 	[bit] - {transform.on_ground}
 	[bit] - {False}#On Rail
-	[bit] - {True}
+	[bit] - {transform.velocity != game_types.Vector3(0.0, 0.0, 0.0)}
+		{%if previous == True%}
 		[float] - {transform.velocity.X}
 		[float] - {transform.velocity.Y}
 		[float] - {transform.velocity.Z}
-	[bit] - {True}
+		{%end%}
+	[bit] - {transform.angular_velocity != game_types.Vector3(0.0, 0.0, 0.0)}
+		{%if previous == True%}
 		[float] - {transform.angular_velocity.X}
 		[float] - {transform.angular_velocity.Y}
 		[float] - {transform.angular_velocity.Z}
+		{%end%}
 	[bit] - {False}
 		#[s64] - ???
 		#[float] - ???
