@@ -2,10 +2,12 @@ import pyraknet.server
 import pyraknet.messages
 import time
 import game_enums
+import components
 import os
 import game_types
 from pyraknet.bitstream import *
 import zlib
+import typing
 from xml.etree import ElementTree
 
 
@@ -24,16 +26,8 @@ class WorldServer(pyraknet.server.Server):
 								 "world_minifig_deletion:":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_DELETE_MINIFIGURE_REQUEST.value), self.handle_minifig_deletion],
 								 "world_join_world":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLINET_ENTER_WORLD.value), self.handle_join_world],
 								 "world_detailed_user_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOAD_COMPLETE.value), self.handle_detailed_user_info],
-								 "world_game_message":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_GAME_MESSAGE.value), self.handle_game_msg]}
-
-	def send_game_msg(self, object_id, msg_id, recipients : list, additional_parameters : list = None):
-		msg = WriteStream()
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(msg_id))
-		if(additional_parameters is not None):
-			for param in additional_parameters:
-				msg.write(param)
-		self.send(msg, recipients)
+								 "world_game_message":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_GAME_MESSAGE.value), self.handle_game_msg],
+								 "world_position_updates":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_POSITION_UPDATES.value), self.handle_position_updates]}
 
 	def handle_game_msg(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -138,6 +132,7 @@ class WorldServer(pyraknet.server.Server):
 		else:
 			world.get_zone_by_id(session.zone_id).remove_player(player_id)
 			zone.add_player(player_id)
+		player["zone"] = level_id
 		session.zone_id = level_id
 		self.send(packet, session.address)
 		game.trigger_event("LoadWorld", args=[player_id, level_id])
@@ -222,10 +217,11 @@ class WorldServer(pyraknet.server.Server):
 						 "armor":player_data["armor"], "max_armor":player_data["max_armor"], "imagination":player_data["imagination"], "max_imagination":player_data["max_imagination"]}
 		zone.create_object(zone, player_config)
 
-		game.wait_for_event("GM_888", '''args[0] == {}'''.format(player["player_id"]))
+		game.wait_for_event("GM_{}".format(game_enums.GameMessages.READY_FOR_UPDATES.value), '''args[0] == {}'''.format(player["player_id"]))#Wait for client to load player entirely (May not be necessary)
 
-		self.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
-		self.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value, recipients=[address])
+		game_message_service = game.get_service("Game Message")
+		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
+		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value, recipients=[address])
 
 	def handle_join_world(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -304,6 +300,27 @@ class WorldServer(pyraknet.server.Server):
 			self.send(packet, address)
 		except:
 			pass
+
+
+	def handle_position_updates(self, data: bytes, address):
+		stream = ReadStream(data)
+		x_pos = stream.read(c_float)
+		y_pos = stream.read(c_float)
+		z_pos = stream.read(c_float)
+		x_rot = stream.read(c_float)
+		y_rot = stream.read(c_float)
+		z_rot = stream.read(c_float)
+		w_rot = stream.read(c_float)
+
+		try:
+			session = game.get_service("Session").get_session_by_address(address)
+			zone = game.get_service("World").get_zone_by_id(session.zone_id)
+			player_object = zone.get_object_by_id(session.player_id)
+			transform = player_object.get_component(components.Transform)
+			transform.position = game_types.Vector3(x_pos, y_pos, z_pos)
+			transform.rotation = game_types.Vector4(x_rot, y_rot, z_rot, w_rot)
+		except Exception as e:
+			print(f"Error {e}")
 
 	def handle_minifig_deletion(self, data: bytes, address):
 		stream = ReadStream(data)

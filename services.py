@@ -23,6 +23,9 @@ class GameService(game_types.BaseObject):
 		self.get_parent().trigger_event("ServiceInitialized", args=(self,), debug=False)
 		print("Initializied {} Service".format(self._name))
 
+	def get_name(self):
+		return self._name
+
 class WorldService(GameService):
 	def __init__(self, parent):
 		super().__init__(parent)
@@ -40,7 +43,7 @@ class WorldService(GameService):
 				return zone
 		return None
 
-	def get_scenes(self):
+	def get_zones(self):
 		return self._zones
 
 class AuthServerService(GameService):
@@ -66,9 +69,9 @@ class AuthServerService(GameService):
 		self.server = auth_server.AuthServer((self._address, self._port), max_connections=self._max_connections, incoming_password=b"3.25 ND1", auth_server_service=self)
 
 	def initialize(self):
-		super().initialize()
 		for handler in self.server.default_handlers:
 				self.get_parent().register_event_handler(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
+		super().initialize()
 
 	def validate_login(self, username : str, password : str):
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
@@ -112,6 +115,6 @@ class WorldServerService(GameService):
 		self.server = world_server.WorldServer((self._address, self._port), max_connections=self._max_connections, incoming_password=b"3.25 ND1", world_server_service=self)
 
 	def initialize(self):
-		super().initialize()
 		for handler in self.server.default_handlers:
 			self.get_parent().register_event_handler(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
+		super().initialize()

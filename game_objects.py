@@ -58,15 +58,24 @@ class ReplicaObject(GameObject):
 		self.world_state = None
 		self.gm_level = None
 		self.json = {}
-		transform = components.Transform(self)
-		self.add_component(transform)
 		if("gm_level" in config):
 			self.gm_level = config["gm_level"]
 		if("world_state" in config):
 			self.world_state = config["world_state"]
 		if("lot" in config):
 			self.lot = config["lot"]
+			if(self.lot == 1):
+				self.player_sync = True
 		if("spawner_id" in config):
 			self.spawner_id = config["spawner_id"]
 		if("spawner_node_id" in config):
 			self.spawner_node_id = config["spawner_node_id"]
+		transform = components.Transform(self)
+		self.add_component(transform)
+
+	def on_destruction(self):
+		for component in self._components:
+			if (hasattr(component, "player_sync_thread")):
+				if(self.lot == 1):
+					self.player_sync = False
+				component.player_sync_thread.stop()

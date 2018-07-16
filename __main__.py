@@ -8,6 +8,8 @@ import player_service
 import threading
 import sys
 import replica_service
+import game_message_service
+import chat_command_service
 from importlib import reload
 
 
@@ -30,12 +32,8 @@ if __name__ == "__main__":
 	config = configparser.ConfigParser()
 	config.read("config.ini")
 	game_config = config["GAME_CONFIG"]
-	game.set_config("address", str(game_config["address"]))
-	game.set_config("auth_port", int(game_config["auth_port"]))
-	game.set_config("world_port", int(game_config["world_port"]))
-	game.set_config("auth_max_connections", int(game_config["auth_max_connections"]))
-	game.set_config("world_max_connections", int(game_config["world_max_connections"]))
-	game.set_config("accept_custom_names", bool(game_config["accept_custom_names"]))
+	for config_option in game_config:
+		game.set_config(config_option, eval(game_config[config_option]))
 
 	#Append all game scripts to Game
 	for file in os.listdir("./game_scripts"):
@@ -58,11 +56,17 @@ if __name__ == "__main__":
 	world_server = services.WorldServerService(game)
 	game.register_service(world_server)
 
+	game_message = game_message_service.GameMessageService(game)
+	game.register_service(game_message)
+
 	replica = replica_service.ReplicaService(game)
 	game.register_service(replica)
 
 	world = services.WorldService(game)
 	game.register_service(world)
+
+	chat_command = chat_command_service.ChatCommandService(game)
+	game.register_service(chat_command)
 
 	game.start()
 

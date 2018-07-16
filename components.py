@@ -1,5 +1,6 @@
 import game_types
 import typing
+import time
 import copy
 
 '''
@@ -32,6 +33,20 @@ class Transform(Component):
 		self.velocity : game_types.Vector3 = game_types.Vector3()
 		self.on_ground : bool = True
 		self.angular_velocity : game_types.Vector3 = game_types.Vector3()
+
+		if(self.get_parent().lot == 1):
+			self.player_sync_thread = game_types.GameThread(target=self.player_sync)
+			self.player_sync_thread.start()
+	def player_sync(self):
+		player_id = self.get_parent().get_object_id()
+		game = self.get_parent().zone.get_parent().get_parent()
+		player_service = game.get_service("Player")
+		while self.get_parent().player_sync == True:
+			player = player_service.get_player_by_id(player_id)
+			player["Data"]["position"] = self.position
+			player["Data"]["rotation"] = self.rotation
+			time.sleep(.1)
+
 
 class Collectible(Component):
 	def __init__(self, parent):
@@ -198,6 +213,23 @@ class Stats(Component):
 		self.faction : int = 0
 		self.is_smashable : bool = False
 		self.level : int = 1
+
+		if(self.get_parent().lot == 1):
+			self.player_sync_thread = game_types.GameThread(target=self.player_sync)
+			self.player_sync_thread.start()
+	def player_sync(self):
+		player_id = self.get_parent().get_object_id()
+		game = self.get_parent().zone.get_parent().get_parent()
+		player_service = game.get_service("Player")
+		while self.get_parent().player_sync == True:
+			player = player_service.get_player_by_id(player_id)
+			player["Data"]["health"] = self.health
+			player["Data"]["max_health"] = self.max_health
+			player["Data"]["armor"] = self.armor
+			player["Data"]["max_armor"] = self.max_armor
+			player["Data"]["imagination"] = self.imagination
+			player["Data"]["max_imagination"] = self.max_imagination
+			time.sleep(.1)
 
 #TODO: Implement This Component, It Doesn't Do Anything Now
 class Destructible(Component):

@@ -78,6 +78,11 @@ class Zone(game_types.BaseObject):
 		self.destroy_object(self.get_object_by_id(player_id))
 		game.trigger_event("RemovedPlayerFromZone", args=(player_id, self))
 
+	def get_players(self):
+		return self._players
+
+	def get_connections(self):
+		return self._replica_manager.get_participants()
 
 class ZoneManager(pyraknet.replicamanager.ReplicaManager):
 	def __init__(self, server):
@@ -95,6 +100,9 @@ class ZoneManager(pyraknet.replicamanager.ReplicaManager):
 			return self._network_ids[obj]
 		else:
 			return None
+
+	def get_participants(self):
+		return self._participants
 
 	def serialize(self, obj: game_objects.ReplicaObject) -> None:
 		out = WriteStream()
@@ -123,8 +131,5 @@ class ZoneManager(pyraknet.replicamanager.ReplicaManager):
 		out.write(c_bit(True))
 		out.write(c_ushort(self._network_ids[obj]))
 		replica_service.write_to_stream(obj, out, game_enums.ReplicaTypes.CONSTRUCTION)
-
-		# file = open("39_2007-51995_2_[24]_[23-2d].bin", "wb")
-		# file.write(bytes(copy.deepcopy(out)))
 
 		self._server.send(out, recipients)

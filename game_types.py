@@ -45,6 +45,7 @@ class BaseObject():
 
 class GameThread(threading.Thread):
 	def stop(self):
+		self._tstate_lock = None
 		self._stop()
 
 class String(Serializable):
