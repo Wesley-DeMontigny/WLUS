@@ -15,7 +15,8 @@ class ChatCommandService(services.GameService):
 
 	def initialize(self):
 		self.register_command("/testmap", self.testmap)
-		self.register_command("/toggle_jetpack", self.toggle_jetpack)
+		self.register_command("/togglejetpack", self.toggle_jetpack)
+		self.register_command("/additem", self.get_item)
 		game.register_event_handler("GM_{}".format(game_enums.GameMessages.PARSE_CHAT_MSG.value))(self.handle_command)
 		super().initialize()
 
@@ -31,6 +32,16 @@ class ChatCommandService(services.GameService):
 
 	def register_command(self, command_name, handler):
 		self._commands[command_name] = handler
+
+	def get_item(self, object_id, address, args, client_state):
+		try:
+			lot = int(args[0])
+			player_service = game.get_service("Player")
+			item = player_service.add_item_to_inventory(object_id, lot, json_data={"from_command":1})
+			if(item is not None):
+				game.get_service("Game Message").add_item_to_inventory_client_sync(object_id, [address], item["lot"], item["item_id"], item["slot"])
+		except Exception as e:
+			print("Error While Getting Item", e)
 
 	def toggle_jetpack(self, object_id, address, args, client_state):
 		player = game.get_service("Player").get_player_object_by_id(object_id)

@@ -27,7 +27,10 @@ class WorldServer(pyraknet.server.Server):
 								 "world_join_world":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLINET_ENTER_WORLD.value), self.handle_join_world],
 								 "world_detailed_user_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_LOAD_COMPLETE.value), self.handle_detailed_user_info],
 								 "world_game_message":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_GAME_MESSAGE.value), self.handle_game_msg],
-								 "world_position_updates":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_POSITION_UPDATES.value), self.handle_position_updates]}
+								 "world_position_updates":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_POSITION_UPDATES.value), self.handle_position_updates],
+								 "world_player_loaded":["GM_{}".format(game_enums.GameMessages.PLAYER_LOADED.value), self.handle_player_loaded],
+								 "world_equip_item":["GM_{}".format(game_enums.GameMessages.EQUIP_INVENTORY.value), self.handle_equip_item],
+								 "world_unequip_item":["GM_{}".format(game_enums.GameMessages.UNEQUIP_INVENTORY.value), self.handle_uneuqip_item]}
 
 	def handle_game_msg(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -223,13 +226,73 @@ class WorldServer(pyraknet.server.Server):
 		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
 		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value, recipients=[address])
 
+	def handle_player_loaded(self, object_id, stream, address):
+		player_id = stream.read(c_longlong)
+		self.load_skills(player_id)
+
+	def load_skills(self, player_id):
+		player = game.get_service("Player").get_player_by_id(player_id)
+		game_message_service = game.get_service("Game Message")
 		database_service = game.get_service("Database")
 		cdclient = database_service.cdclient_db
 		object_skills = cdclient.tables["ObjectSkills"]
+		component_registry = cdclient.tables["ComponentsRegistry"]
+		item_component = cdclient.tables["ItemComponent"]
 		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
-			skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
-			if(skill_data != []):
-				game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill_data[0]["skillID"])
+			item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(item["lot"]))
+			if(item_component_id != []):
+				item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))
+				if(item_data != []):
+					skill_slot = 4
+					if(int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAIR.value or int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAT.value):
+						skill_slot = 3
+					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.NECK.value):
+						skill_slot = 2
+					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.RIGHT_HAND.value):
+						skill_slot = 0
+					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.LEFT_HAND.value):
+						skill_slot = 1
+
+					skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
+					if(skill_data != []):
+						address = game.get_service("Session").get_session_by_player_id(player_id).address
+						for skill in skill_data:
+							game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"], slot_id=skill_slot)
+
+
+	def handle_equip_item(self, object_id, stream, address):
+		ignore_cooldown = stream.read(c_bit)
+		success = stream.read(c_bit)
+		item_id = stream.read(c_longlong)
+		player_service = game.get_service("Player")
+		equipped_items = player_service.get_equipped_items(object_id)
+		item = player_service.get_item_by_id(object_id, item_id)
+
+		database_service = game.get_service("Database")
+		cdclient = database_service.cdclient_db
+		component_registry = cdclient.tables["ComponentsRegistry"]
+		for equipped_item in equipped_items:
+			if(component_registry.select(["component_id"],"id = {} and component_type = 11".format(equipped_item["lot"]))[0] == component_registry.select(["component_id"],"id = {} and component_type = 11".format(item["lot"]))[0]):
+				equipped_item["equipped"] = 0
+		item["equipped"] = 1
+
+	def handle_uneuqip_item(self, object_id, stream, address):
+		even_if_dead = stream.read(c_bit)
+		ignore_cooldown = stream.read(c_bit)
+		success = stream.read(c_bit)
+		item_to_unequip = stream.read(c_longlong)
+
+		player_service = game.get_service("Player")
+		item = player_service.get_item_by_id(object_id, item_to_unequip)
+		item["equipped"] = 0
+
+		try:
+			item_to_replace = stream.read(c_longlong)
+			replacement = player_service.get_item_by_id(object_id, item_to_replace)
+			if (replacement is not None):
+				replacement["equipped"] = 1
+		except:
+			pass
 
 
 	def handle_join_world(self, data: bytes, address):

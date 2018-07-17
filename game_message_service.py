@@ -63,6 +63,51 @@ class GameMessageService(services.GameService):
 		msg.write(game_types.String(name, length_type=c_ulong))
 		self.world_server.send(msg, recipients)
 
+	def add_item_to_inventory_client_sync(self, object_id : int, recipients : list, lot : int, item_id : int, slot_id : int, bound: bool = False, bound_on_equip : bool = False, bound_on_pickup : bool = False, loot_type_source : int = 0, extra_info : str = "", sub_key : int = 0, inventory_type : int = 0, item_count : int = 1, items_total : int = 0, flying_loot_pos : game_types.Vector3 = game_types.Vector3(), show_flying_loot : bool = True):
+		msg = WriteStream()
+		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
+		msg.write(c_longlong(object_id))
+		msg.write(c_ushort(game_enums.GameMessages.ADD_ITEM_TO_INVENTORY_CLIENT_SYNC.value))
+
+		msg.write(c_bit(bound))
+		msg.write(c_bit(bound_on_equip))
+		msg.write(c_bit(bound_on_pickup))
+
+		msg.write(c_bit(loot_type_source != 0))
+		if(loot_type_source != 0):
+			msg.write(c_int(loot_type_source))
+
+		msg.write(extra_info, length_type=c_ulong)
+		msg.write(c_ulong(lot))
+
+		msg.write(c_bit(sub_key != 0))
+		if(sub_key != 0):
+			msg.write(c_longlong(sub_key))
+
+		msg.write(c_bit(inventory_type != 0))
+		if(inventory_type != 0):
+			msg.write(c_int(inventory_type))
+
+		msg.write(c_bit(item_count != 1))
+		if(item_count != 1):
+			msg.write(c_ulong(item_count))
+
+		msg.write(c_bit(items_total != 0))
+		if(items_total != 0):
+			msg.write(c_ulong(items_total))
+
+		msg.write(c_longlong(item_id))
+
+		msg.write(c_float(flying_loot_pos.X))
+		msg.write(c_float(flying_loot_pos.Y))
+		msg.write(c_float(flying_loot_pos.Z))
+
+		msg.write(c_bit(show_flying_loot))
+
+		msg.write(c_int(slot_id))
+
+		self.world_server.send(msg, recipients)
+
 	def add_skill(self, object_id : int, recipients : list, skill_id : int, ai_combat_weight : int = 0, from_skill_set : bool = False, cast_type : int = 0, time_secs : float = -1.0, times_can_cast : int = -1, slot_id : int = -1, temporary : bool = True):
 		msg = WriteStream()
 		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
@@ -83,17 +128,18 @@ class GameMessageService(services.GameService):
 		if(time_secs > -1.0):
 			msg.write(c_float(time_secs))
 
-		msg.write(c_ulong(skill_id))
-
 		msg.write(c_bit(times_can_cast > -1))
 		if(times_can_cast > -1):
 			msg.write(c_int(times_can_cast))
+
+		msg.write(c_ulong(skill_id))
 
 		msg.write(c_bit(slot_id > -1))
 		if(slot_id > -1):
 			msg.write(c_int(slot_id))
 
 		msg.write(c_bit(temporary))
+
 		self.world_server.send(msg, recipients)
 
 	def set_jetpack_mode(self, object_id : int, recipients : list, bypass_checks : bool = True, hover : bool = False, use : bool = False, effect_id : int = -1, air_speed : int = 10, max_air_speed : int = 15, vert_vel : int = 1, warning_effect_id : int = -1):

@@ -358,7 +358,7 @@ class PlayerService(services.GameService):
 				slot = availible_slots[0]
 			else:
 				print("No Inventory Space Availible!")
-				return
+				return None
 		item = {"player_id":player_id, "lot":lot, "slot":slot, "equipped":int(equipped), "linked":int(linked), "quantity":quantity, "json":json_data, "item_id":self.get_parent().generate_object_id()}
 		db = self.get_parent().get_service("Database").server_db
 		inventory_table = db.tables["Inventory"]
@@ -368,13 +368,22 @@ class PlayerService(services.GameService):
 
 		player["Inventory"].append(item)
 		self.get_parent().trigger_event("ItemAdded", args=[player_id, item])
+		return item
+
+	def get_item_by_id(self, player_id : int, item_id : int):
+		player = self.get_player_by_id(player_id)
+		if(player is not None):
+			for item in player["Inventory"]:
+				if(item["item_id"] == item_id):
+					return item
+		return None
 
 	def get_equipped_items(self, player_id : int):
 		player = self.get_player_by_id(player_id)
 		inventory = player["Inventory"]
 		items = []
 		for item in inventory:
-			if(item["equipped"] == 1):
+			if(bool(item["equipped"]) == True):
 				items.append(item)
 		return items
 

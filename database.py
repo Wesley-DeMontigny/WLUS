@@ -81,7 +81,10 @@ class DBTable():
 		query_string = "DELETE FROM " + self._name + " WHERE " + condition
 		c = self._connection.cursor()
 		c.execute(query_string)
-		self._connection.commit()
+		try:
+			self._connection.commit()
+		except:
+			pass
 
 class GameDB():
 	def __init__(self, database_path : str):

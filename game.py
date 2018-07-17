@@ -66,16 +66,16 @@ class Game(game_types.BaseObject):
 		return None
 
 	def set_config(self, key : str, value : typing.Any):
-		self._config[key] = value
+		self._config[key.upper()] = value
 
 	def remove_config(self, key : str):
-		del self._config[key]
+		del self._config[key.upper()]
 
 	def get_pyobject(self, id):
 		return ctypes.cast(id, ctypes.py_object).value
 
 	def get_config(self, key : str):
-		if(key in self._config):
-			return self._config[key]
+		if(key.upper() in self._config):
+			return self._config[key.upper()]
 		else:
 			return None

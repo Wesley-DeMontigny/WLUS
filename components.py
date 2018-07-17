@@ -255,7 +255,10 @@ class Inventory(Component):
 		while self.get_parent().player_sync == True:
 			if(self.items != player_service.get_equipped_items(player_id)):
 				self.items = player_service.get_equipped_items(player_id)
+				self.get_parent().update()
+				game.get_service("World Server").server.load_skills(player_id)
 			time.sleep(.1)
+
 
 	def add_item(self, item):
 		self.items.append(item)

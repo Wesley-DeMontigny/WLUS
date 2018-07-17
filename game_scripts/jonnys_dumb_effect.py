@@ -13,10 +13,9 @@ class Main(scripts.Script):
 
 	def run(self):
 		game.wait_for_event("ServiceInitialized", '''args[0].get_name() == "World"''')
-		custom_config = game.get_config("custom_config")
 		game_message_service = game.get_service("Game Message")
 		while True:
-			if ("JonnysDumbEffect" in custom_config and custom_config["JonnysDumbEffect"] == True):
+			if (game.get_config("jonnys_dumb_effect") is not None and game.get_config("jonnys_dumb_effect") == True):
 				zones = game.get_service("World").get_zones()
 				for zone in zones:
 					players = zone.get_players()

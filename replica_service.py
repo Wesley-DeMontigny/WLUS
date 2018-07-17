@@ -94,7 +94,7 @@ class ReplicaService(services.GameService):
 		if(17 in object_components):
 			inventory = components.Inventory(replica)
 			if(game.get_service("Player").get_player_by_id(replica.get_object_id()) is not None):
-				inventory.items = game.get_service("Player").get_player_by_id(replica.get_object_id())["Inventory"]
+				inventory.items = game.get_service("Player").get_equipped_items(replica.get_object_id())
 			db_items = cdclient_db.tables["InventoryComponent"].select_all("id = {}".format(object_components[17]))
 			for item in db_items:
 				new_item = {}
