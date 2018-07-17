@@ -78,6 +78,14 @@ class ItemLOTs(IntEnum):
 	PANTS_REDDISH_BROWN = 2526
 	PANTS_DARK_RED = 2527
 
+
+class DeathType(Enum):
+	DEATH_WATER = "death_water"
+	SHARK = "shark-death"
+	BIG_SHARK = "big-shark-death"
+	ELECTRO_SHOCK = "electro-shock-death"
+
+
 class GameMessages(IntEnum):
 	SERVER_DONE_LOADING_OBJECTS = 1642
 	PLAYER_READY = 509
@@ -85,6 +93,8 @@ class GameMessages(IntEnum):
 	PLAY_FX_EFFECT = 154
 	STOP_FX_EFFECT = 155
 	PARSE_CHAT_MSG = 850
+	SET_JETPACK_MODE = 561
+	ADD_SKILL = 127
 
 class MinifigureCreationResponseEnum(IntEnum):
 	SUCCESS = 0x00

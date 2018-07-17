@@ -165,7 +165,7 @@ class WorldServer(pyraknet.server.Server):
 			i = ElementTree.SubElement(item_in, "i")
 			i.set("l", str(item["lot"]))
 			i.set("id", str(item["item_id"]))
-			i.set("s", str(item["lot"]))
+			i.set("s", str(item["slot"]))
 			i.set("c", str(item["quantity"]))
 			i.set("b", str(int(item["linked"])))
 			i.set("eq", str(int(item["equipped"])))
@@ -222,6 +222,15 @@ class WorldServer(pyraknet.server.Server):
 		game_message_service = game.get_service("Game Message")
 		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
 		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value, recipients=[address])
+
+		database_service = game.get_service("Database")
+		cdclient = database_service.cdclient_db
+		object_skills = cdclient.tables["ObjectSkills"]
+		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
+			skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
+			if(skill_data != []):
+				game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill_data[0]["skillID"])
+
 
 	def handle_join_world(self, data: bytes, address):
 		stream = ReadStream(data)

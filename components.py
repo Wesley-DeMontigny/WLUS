@@ -74,6 +74,7 @@ class Character(Component):
 		self.vehicle_id : int = 0
 		self.head_glow : int = 0
 		self.gm_level : int = 0
+		self.jetpack_enabled : bool = False
 
 	def get_player_info(self):
 		game = self.get_parent().zone.get_parent().get_parent()
@@ -242,6 +243,19 @@ class Inventory(Component):
 		super().__init__(parent)
 		self._name = "Inventory"
 		self.items : list = []
+
+		if(self.get_parent().lot == 1):
+			self.player_sync_thread = game_types.GameThread(target=self.player_sync)
+			self.player_sync_thread.start()
+
+	def player_sync(self):
+		player_id = self.get_parent().get_object_id()
+		game = self.get_parent().zone.get_parent().get_parent()
+		player_service = game.get_service("Player")
+		while self.get_parent().player_sync == True:
+			if(self.items != player_service.get_equipped_items(player_id)):
+				self.items = player_service.get_equipped_items(player_id)
+			time.sleep(.1)
 
 	def add_item(self, item):
 		self.items.append(item)

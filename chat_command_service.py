@@ -2,6 +2,7 @@ import services
 from pyraknet.bitstream import *
 import copy
 import game_enums
+import components
 
 
 class ChatCommandService(services.GameService):
@@ -14,6 +15,7 @@ class ChatCommandService(services.GameService):
 
 	def initialize(self):
 		self.register_command("/testmap", self.testmap)
+		self.register_command("/toggle_jetpack", self.toggle_jetpack)
 		game.register_event_handler("GM_{}".format(game_enums.GameMessages.PARSE_CHAT_MSG.value))(self.handle_command)
 		super().initialize()
 
@@ -29,6 +31,14 @@ class ChatCommandService(services.GameService):
 
 	def register_command(self, command_name, handler):
 		self._commands[command_name] = handler
+
+	def toggle_jetpack(self, object_id, address, args, client_state):
+		player = game.get_service("Player").get_player_object_by_id(object_id)
+		zone = player.zone
+		if(player is not None):
+			game.get_service("Game Message").set_jetpack_mode(object_id, zone.get_connections(), bypass_checks=True, use=not player.get_component(components.Character).jetpack_enabled, air_speed=20,
+															  max_air_speed=30, vert_vel=2, effect_id=36)
+			player.get_component(components.Character).jetpack_enabled = not player.get_component(components.Character).jetpack_enabled
 
 	def testmap(self, object_id, address, args, client_state):
 		if(game.get_service("World").get_zone_by_id(int(args[0])) is not None):

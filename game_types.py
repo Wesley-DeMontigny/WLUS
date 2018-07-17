@@ -98,6 +98,8 @@ class LDF(Serializable):
 		self._keys : list = []
 	def register_key(self, key_name : str, value : any, type : int):
 		self._keys.append([key_name, value, type])
+	def __str__(self):
+		return str(self._keys)
 	def serialize(self, stream):
 		key_num = len(self._keys)
 		stream.write(c_uint(key_num))

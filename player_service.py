@@ -324,6 +324,12 @@ class PlayerService(services.GameService):
 				return account
 		return None
 
+	def get_player_object_by_id(self, player_id : int):
+		session = self.get_parent().get_service("Session").get_session_by_player_id(player_id)
+		zone = self.get_parent().get_service("World").get_zone_by_id(session.zone_id)
+		return zone.get_object_by_id(player_id)
+
+
 	def get_account_by_player_id(self, player_id : int):
 		for account in self._accounts:
 			for character in account["Characters"]:
