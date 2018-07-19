@@ -31,7 +31,7 @@ class AuthServer(pyraknet.server.Server):
 		packet.write(c_ulong(1))  # Connection Type (1 For Auth, 4 For Everything Else)
 		packet.write(c_ulong(os.getpid()))
 		packet.write(c_short(0xff))  # Local port
-		packet.write(game.get_config("address"), allocated_length=33)
+		packet.write(game.get_config("redirect_address"), allocated_length=33)
 
 		self.send(packet, address)
 
@@ -58,8 +58,8 @@ class AuthServer(pyraknet.server.Server):
 		packet.write(c_ushort(64))
 		user_key = (str(uuid.uuid4()))[0:20]
 		packet.write(user_key, allocated_length=33)
-		packet.write(game_types.String(game.get_config("address"), allocated_length=33))  # World Instance IP
-		packet.write(game_types.String(game.get_config("address"), allocated_length=33))  # Chat Instance IP
+		packet.write(game_types.String(game.get_config("redirect_address"), allocated_length=33))  # World Instance IP
+		packet.write(game_types.String(game.get_config("redirect_address"), allocated_length=33))  # Chat Instance IP
 		packet.write(c_uint16(2002))  # World Port
 		packet.write(c_ushort(3003))  # Chat Port
 		packet.write(game_types.String('0', allocated_length=33))  # Some other IP

@@ -102,7 +102,7 @@ class WorldServerService(GameService):
 			self._port = 2002
 
 		if(parent.get_config("address") is not None):
-			self._address = parent.get_config("address")
+			self._address = parent.get_config("bind_address")
 		else:
 			self._address = "127.0.0.1"
 

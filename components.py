@@ -238,26 +238,12 @@ class Destructible(Component):
 		super().__init__(parent)
 		self._name = "Destructible"
 
+#THIS COMPONENT DOES NOT APPLY TO PLAYERS
 class Inventory(Component):
 	def __init__(self, parent):
 		super().__init__(parent)
 		self._name = "Inventory"
 		self.items : list = []
-
-		if(self.get_parent().lot == 1):
-			self.player_sync_thread = game_types.GameThread(target=self.player_sync)
-			self.player_sync_thread.start()
-
-	def player_sync(self):
-		player_id = self.get_parent().get_object_id()
-		game = self.get_parent().zone.get_parent().get_parent()
-		player_service = game.get_service("Player")
-		while self.get_parent().player_sync == True:
-			if(self.items != player_service.get_equipped_items(player_id)):
-				self.items = player_service.get_equipped_items(player_id)
-				self.get_parent().update()
-				game.get_service("World Server").server.load_skills(player_id)
-			time.sleep(.1)
 
 
 	def add_item(self, item):

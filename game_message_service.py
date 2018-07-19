@@ -108,14 +108,71 @@ class GameMessageService(services.GameService):
 
 		self.world_server.send(msg, recipients)
 
+	def remove_skill(self, object_id : int, recipients : list, skill_id : int, from_skill_set : bool = False):
+		msg = WriteStream()
+		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
+		msg.write(c_longlong(object_id))
+		msg.write(c_ushort(game_enums.GameMessages.REMOVE_SKILL.value))
+
+		msg.write(c_bit(from_skill_set))
+
+		msg.write(c_int(skill_id))
+
+		self.world_server.send(msg, recipients)
+
+	def echo_start_skill(self, object_id : int, recipients : list, skill_id : int, bit_stream:str, optional_originator : int, used_mouse : bool = False, caster_latency : float = 0.0, cast_type : int = 0, last_clicked_pos : game_types.Vector3 = game_types.Vector3(), optional_target_id : int = 0, originator_rot : game_types.Vector4 = game_types.Vector4(), ui_skill_handle : int = 0):
+		msg = WriteStream()
+		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
+		msg.write(c_longlong(object_id))
+		msg.write(c_ushort(game_enums.GameMessages.ECHO_START_SKILL.value))
+
+		msg.write(c_bit(used_mouse))
+
+		msg.write(c_bit(caster_latency != 0.0))
+		if(caster_latency != 0.0):
+			msg.write(c_float(caster_latency))
+
+		msg.write(c_bit(cast_type != 0))
+		if(cast_type != 0):
+			msg.write(c_int(cast_type))
+
+		msg.write(c_bit(last_clicked_pos != game_types.Vector3()))
+		if(last_clicked_pos != game_types.Vector3()):
+			msg.write(c_float(last_clicked_pos.X))
+			msg.write(c_float(last_clicked_pos.Y))
+			msg.write(c_float(last_clicked_pos.Z))
+
+		msg.write(c_longlong(optional_originator))
+
+		msg.write(c_bit(optional_target_id != 0))
+		if(optional_target_id != 0):
+			msg.write(c_longlong(optional_target_id))
+
+		msg.write(c_bit(originator_rot != game_types.Vector4()))
+		if(originator_rot != game_types.Vector4()):
+			msg.write(c_float(originator_rot.X))
+			msg.write(c_float(originator_rot.Y))
+			msg.write(c_float(originator_rot.Z))
+			msg.write(c_float(originator_rot.W))
+
+		msg.write(bit_stream, length_type=c_ulong)
+
+		msg.write(c_ulong(skill_id))
+
+		msg.write(c_bit(ui_skill_handle != 0))
+		if(ui_skill_handle != 0):
+			msg.write(c_ulong(0))
+
+		self.world_server.send(msg, recipients)
+
 	def add_skill(self, object_id : int, recipients : list, skill_id : int, ai_combat_weight : int = 0, from_skill_set : bool = False, cast_type : int = 0, time_secs : float = -1.0, times_can_cast : int = -1, slot_id : int = -1, temporary : bool = True):
 		msg = WriteStream()
 		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
 		msg.write(c_longlong(object_id))
 		msg.write(c_ushort(game_enums.GameMessages.ADD_SKILL.value))
 
-		msg.write(c_bit(ai_combat_weight != 0))
-		if(ai_combat_weight != 0):
+		msg.write(c_bit(ai_combat_weight != 0 and ai_combat_weight is not None))
+		if(ai_combat_weight != 0 and ai_combat_weight is not None):
 			msg.write(c_int(ai_combat_weight))
 
 		msg.write(c_bit(from_skill_set))

@@ -92,21 +92,20 @@ class ReplicaService(services.GameService):
 			character = components.Character(replica, replica.get_object_id())
 			replica.add_component(character)
 		if(17 in object_components):
-			inventory = components.Inventory(replica)
-			if(game.get_service("Player").get_player_by_id(replica.get_object_id()) is not None):
-				inventory.items = game.get_service("Player").get_equipped_items(replica.get_object_id())
-			db_items = cdclient_db.tables["InventoryComponent"].select_all("id = {}".format(object_components[17]))
-			for item in db_items:
-				new_item = {}
-				new_item["item_id"] = game.generate_object_id()
-				new_item["lot"] = item["itemid"]
-				new_item["quantity"] = item["count"]
-				new_item["equipped"] = item["equip"]
-				new_item["linked"] = 0
-				new_item["slot"] = 0
-				new_item["json"] = {"from_db":1}
-				inventory.add_item(new_item)
-			replica.add_component(inventory)
+			if(game.get_service("Player").get_player_by_id(int(replica.get_object_id())) is None):
+				inventory = components.Inventory(replica)
+				db_items = cdclient_db.tables["InventoryComponent"].select_all("id = {}".format(object_components[17]))
+				for item in db_items:
+					new_item = {}
+					new_item["item_id"] = game.generate_object_id()
+					new_item["lot"] = item["itemid"]
+					new_item["quantity"] = item["count"]
+					new_item["equipped"] = item["equip"]
+					new_item["linked"] = 0
+					new_item["slot"] = 0
+					new_item["json"] = {"from_db":1}
+					inventory.add_item(new_item)
+				replica.add_component(inventory)
 		if(5 in object_components):
 			script_comp = components.ScriptComponent(replica)
 			replica.add_component(script_comp)

@@ -82,6 +82,7 @@
 	[bit] - {False}
 	[bit] - {False}#This needs to be implemented for rockets
 		#[u16-wstring] - LDF info of rocket modules
+{%end%}
 [bit] - {True}
 	[bit] - {replica.zone.pvp_enabled}
 	[bit] - {False}
@@ -96,4 +97,3 @@
 	#[u8-wstring] - guild name, assert == ""
 	#[bit] - ???
 	#[s32] - ???
-{%end%}

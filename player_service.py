@@ -316,8 +316,6 @@ class PlayerService(services.GameService):
 		self.add_item_to_inventory(player_id, final_shirt_id, equipped=True, linked=True, json_data={"from_character_creation":1})
 		self.add_item_to_inventory(player_id, pants_id, equipped=True, linked=True,json_data={"from_character_creation": 1})
 
-
-
 	def get_account_by_id(self, account_id : int):
 		for account in self._accounts:
 			if(account["account_id"] == account_id):
@@ -380,10 +378,9 @@ class PlayerService(services.GameService):
 
 	def get_equipped_items(self, player_id : int):
 		player = self.get_player_by_id(player_id)
-		inventory = player["Inventory"]
 		items = []
-		for item in inventory:
-			if(bool(item["equipped"]) == True):
+		for item in player["Inventory"]:
+			if(int(item["equipped"]) == 1):
 				items.append(item)
 		return items
 

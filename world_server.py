@@ -8,6 +8,7 @@ import game_types
 from pyraknet.bitstream import *
 import zlib
 import typing
+import copy
 from xml.etree import ElementTree
 
 
@@ -30,7 +31,52 @@ class WorldServer(pyraknet.server.Server):
 								 "world_position_updates":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_POSITION_UPDATES.value), self.handle_position_updates],
 								 "world_player_loaded":["GM_{}".format(game_enums.GameMessages.PLAYER_LOADED.value), self.handle_player_loaded],
 								 "world_equip_item":["GM_{}".format(game_enums.GameMessages.EQUIP_INVENTORY.value), self.handle_equip_item],
-								 "world_unequip_item":["GM_{}".format(game_enums.GameMessages.UNEQUIP_INVENTORY.value), self.handle_uneuqip_item]}
+								 "world_unequip_item":["GM_{}".format(game_enums.GameMessages.UNEQUIP_INVENTORY.value), self.handle_uneuqip_item],
+								 "world_start_skill":["GM_{}".format(game_enums.GameMessages.START_SKILL.value), self.handle_start_skill]}
+
+	def handle_start_skill(self, object_id, stream : ReadStream, address):
+		# player_object = game.get_service("Player").get_player_object_by_id(object_id)
+		print("Start Skill: ", copy.deepcopy(stream).read_remaining())
+		# used_mouse = stream.read(c_bit)
+		# consumable_id = 0
+		# if(stream.read(c_bit)):
+		# 	consumable_id = stream.read(c_longlong)
+		# caster_latency = 0.0
+		# if(stream.read(c_bit)):
+		# 	caster_latency = stream.read(c_float)
+		# cast_type = 0
+		# if(stream.read(c_bit)):
+		# 	cast_type = stream.read(c_int)
+		# last_clicked_pos = game_types.Vector3()
+		# if(stream.read(c_bit)):
+		# 	last_clicked_pos = game_types.Vector3(stream.read(c_float), stream.read(c_float), stream.read(c_float))
+		# optional_originator = stream.read(c_longlong)
+		# optional_target_id = 0
+		# if(stream.read(c_bit)):
+		# 	stream.read(c_longlong)
+		# originator_rot = game_types.Vector4()
+		# if(stream.read(c_bit)):
+		# 	originator_rot = game_types.Vector4(stream.read(c_float), stream.read(c_float), stream.read(c_float), stream.read(c_float))
+		# bit_stream = stream.read(str, length_type=c_ulong)
+		# skill_id = stream.read(c_ulong)
+		# ui_skill_handle = 0
+		# if(stream.read(c_bit)):
+		# 	ui_skill_handle = stream.read(c_ulong)
+		#
+		# game_message_service = game.get_service("Game Message")
+		# game_message_service.echo_start_skill(object_id, player_object.zone.get_connections(), skill_id=skill_id, bit_stream=bit_stream, optional_originator=optional_originator,
+		# 									  optional_target_id=optional_target_id, cast_type=cast_type, caster_latency=caster_latency, used_mouse=used_mouse, last_clicked_pos=last_clicked_pos,
+		# 									  originator_rot=originator_rot, ui_skill_handle=ui_skill_handle)
+
+	def _on_disconnect_or_connection_lost(self, address):
+		super()._on_disconnect_or_connection_lost(address)
+		sessions = game.get_service("Sessions")
+		user_session = sessions.get_session_by_address(address)
+		world = game.get_service("World")
+		zone = world.get_zone_by_id(user_session.zone_id)
+		if(user_session.player_id != 0):
+			zone.remove_player(user_session.player_id)
+		sessions.remove_session(user_session)
 
 	def handle_game_msg(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -49,7 +95,7 @@ class WorldServer(pyraknet.server.Server):
 		packet.write(c_ulong(4))  # Connection Type
 		packet.write(c_ulong(os.getpid()))
 		packet.write(c_short(0xff))  # Local port
-		packet.write(game.get_config("address"), allocated_length=33)
+		packet.write(game.get_config("redirect_address"), allocated_length=33)
 
 		self.send(packet, address)
 
@@ -230,6 +276,19 @@ class WorldServer(pyraknet.server.Server):
 		player_id = stream.read(c_longlong)
 		self.load_skills(player_id)
 
+	def unload_skills(self, player_id):
+		player = game.get_service("Player").get_player_by_id(player_id)
+		game_message_service = game.get_service("Game Message")
+		database_service = game.get_service("Database")
+		cdclient = database_service.cdclient_db
+		object_skills = cdclient.tables["ObjectSkills"]
+		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
+			skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
+			if(skill_data != []):
+				address = game.get_service("Session").get_session_by_player_id(player_id).address
+				for skill in skill_data:
+					game_message_service.remove_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"])
+
 	def load_skills(self, player_id):
 		player = game.get_service("Player").get_player_by_id(player_id)
 		game_message_service = game.get_service("Game Message")
@@ -253,11 +312,11 @@ class WorldServer(pyraknet.server.Server):
 					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.LEFT_HAND.value):
 						skill_slot = 1
 
-					skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
+					skill_data = object_skills.select_all("objectTemplate = {} AND castOnType = 0".format(item["lot"]))
 					if(skill_data != []):
 						address = game.get_service("Session").get_session_by_player_id(player_id).address
 						for skill in skill_data:
-							game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"], slot_id=skill_slot)
+							game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"], slot_id=skill_slot, ai_combat_weight=skill["AICombatWeight"], cast_type=skill["castOnType"])
 
 
 	def handle_equip_item(self, object_id, stream, address):
@@ -271,10 +330,21 @@ class WorldServer(pyraknet.server.Server):
 		database_service = game.get_service("Database")
 		cdclient = database_service.cdclient_db
 		component_registry = cdclient.tables["ComponentsRegistry"]
+		item_component = cdclient.tables["ItemComponent"]
+		game.get_service("World Server").server.unload_skills(object_id)
 		for equipped_item in equipped_items:
-			if(component_registry.select(["component_id"],"id = {} and component_type = 11".format(equipped_item["lot"]))[0] == component_registry.select(["component_id"],"id = {} and component_type = 11".format(item["lot"]))[0]):
-				equipped_item["equipped"] = 0
+			item_component_id_1 = component_registry.select(["component_id"], "id = {} and component_type = 11".format(equipped_item["lot"]))
+			item_data_1 = item_component.select_all("id = {}".format(item_component_id_1[0]["component_id"]))[0]
+			item_component_id_2 = component_registry.select(["component_id"],"id = {} and component_type = 11".format(item["lot"]))
+			item_data_2 = item_component.select_all("id = {}".format(item_component_id_2[0]["component_id"]))[0]
+			if(item_data_1["itemType"] == item_data_2["itemType"]):
+				player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
 		item["equipped"] = 1
+
+		game.get_service("World Server").server.load_skills(object_id)
+
+		player_object = player_service.get_player_object_by_id(object_id)
+		player_object.zone.update(player_object)
 
 	def handle_uneuqip_item(self, object_id, stream, address):
 		even_if_dead = stream.read(c_bit)
@@ -282,6 +352,7 @@ class WorldServer(pyraknet.server.Server):
 		success = stream.read(c_bit)
 		item_to_unequip = stream.read(c_longlong)
 
+		game.get_service("World Server").server.unload_skills(object_id)
 		player_service = game.get_service("Player")
 		item = player_service.get_item_by_id(object_id, item_to_unequip)
 		item["equipped"] = 0
@@ -293,7 +364,10 @@ class WorldServer(pyraknet.server.Server):
 				replacement["equipped"] = 1
 		except:
 			pass
+		game.get_service("World Server").server.load_skills(object_id)
 
+		player_object = player_service.get_player_object_by_id(object_id)
+		player_object.zone.update(player_object)
 
 	def handle_join_world(self, data: bytes, address):
 		stream = ReadStream(data)
@@ -391,6 +465,7 @@ class WorldServer(pyraknet.server.Server):
 			transform = player_object.get_component(components.Transform)
 			transform.position = game_types.Vector3(x_pos, y_pos, z_pos)
 			transform.rotation = game_types.Vector4(x_rot, y_rot, z_rot, w_rot)
+			transform.velocity = game_types.Vector3(x_pos, y_pos, z_pos)
 		except Exception as e:
 			print(f"Error {e}")
 
