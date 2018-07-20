@@ -39,7 +39,8 @@ if __name__ == "__main__":
 	for file in os.listdir("./game_scripts"):
 		if file.endswith(".py"):
 			mod = __import__(f'game_scripts.{file[:-3]}', fromlist=["Main"])
-			game.add_script(getattr(mod, 'Main')(game))
+			if(hasattr(mod, 'Main')):
+				game.add_script(getattr(mod, 'Main')(game))
 
 	database = services.DatabaseService(game)
 	game.register_service(database)

@@ -70,7 +70,7 @@ class WorldServer(pyraknet.server.Server):
 
 	def _on_disconnect_or_connection_lost(self, address):
 		super()._on_disconnect_or_connection_lost(address)
-		sessions = game.get_service("Sessions")
+		sessions = game.get_service("Session")
 		user_session = sessions.get_session_by_address(address)
 		world = game.get_service("World")
 		zone = world.get_zone_by_id(user_session.zone_id)
@@ -283,11 +283,15 @@ class WorldServer(pyraknet.server.Server):
 		cdclient = database_service.cdclient_db
 		object_skills = cdclient.tables["ObjectSkills"]
 		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
-			skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
-			if(skill_data != []):
+			if ("skill_overide" not in item["json"]):
+				skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
+				if(skill_data != []):
+					address = game.get_service("Session").get_session_by_player_id(player_id).address
+					for skill in skill_data:
+						game_message_service.remove_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"])
+			else:
 				address = game.get_service("Session").get_session_by_player_id(player_id).address
-				for skill in skill_data:
-					game_message_service.remove_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"])
+				game_message_service.remove_skill(player["player_id"], recipients=[address], skill_id=item["json"]["skill_overide"]["skill_id"])
 
 	def load_skills(self, player_id):
 		player = game.get_service("Player").get_player_by_id(player_id)
@@ -298,25 +302,29 @@ class WorldServer(pyraknet.server.Server):
 		component_registry = cdclient.tables["ComponentsRegistry"]
 		item_component = cdclient.tables["ItemComponent"]
 		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
-			item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(item["lot"]))
-			if(item_component_id != []):
-				item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))
-				if(item_data != []):
-					skill_slot = 4
-					if(int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAIR.value or int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAT.value):
-						skill_slot = 3
-					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.NECK.value):
-						skill_slot = 2
-					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.RIGHT_HAND.value):
-						skill_slot = 0
-					elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.LEFT_HAND.value):
-						skill_slot = 1
+			if("skill_overide" not in item["json"]):
+				item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(item["lot"]))
+				if(item_component_id != []):
+					item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))
+					if(item_data != []):
+						skill_slot = 4
+						if(int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAIR.value or int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAT.value):
+							skill_slot = 3
+						elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.NECK.value):
+							skill_slot = 2
+						elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.RIGHT_HAND.value):
+							skill_slot = 0
+						elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.LEFT_HAND.value):
+							skill_slot = 1
 
-					skill_data = object_skills.select_all("objectTemplate = {} AND castOnType = 0".format(item["lot"]))
-					if(skill_data != []):
-						address = game.get_service("Session").get_session_by_player_id(player_id).address
-						for skill in skill_data:
-							game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"], slot_id=skill_slot, ai_combat_weight=skill["AICombatWeight"], cast_type=skill["castOnType"])
+						skill_data = object_skills.select_all("objectTemplate = {} AND castOnType = 0".format(item["lot"]))
+						if(skill_data != []):
+							address = game.get_service("Session").get_session_by_player_id(player_id).address
+							for skill in skill_data:
+								game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=skill["skillID"], slot_id=skill_slot, ai_combat_weight=skill["AICombatWeight"], cast_type=skill["castOnType"])
+			else:
+				address = game.get_service("Session").get_session_by_player_id(player_id).address
+				game_message_service.add_skill(player["player_id"], recipients=[address], skill_id=item["json"]["skill_overide"]["skill_id"], ai_combat_weight=item["json"]["skill_overide"]["ai_combat_weight"], slot_id=item["json"]["skill_overide"]["slot"], cast_type=item["json"]["skill_overide"]["cast_on_type"])
 
 
 	def handle_equip_item(self, object_id, stream, address):
@@ -332,13 +340,19 @@ class WorldServer(pyraknet.server.Server):
 		component_registry = cdclient.tables["ComponentsRegistry"]
 		item_component = cdclient.tables["ItemComponent"]
 		game.get_service("World Server").server.unload_skills(object_id)
+
+		item_to_equip_component = component_registry.select(["component_id"],"id = {} and component_type = 11".format(item["lot"]))
+		item_to_equip_data = item_component.select_all("id = {}".format(item_to_equip_component[0]["component_id"]))[0]
 		for equipped_item in equipped_items:
-			item_component_id_1 = component_registry.select(["component_id"], "id = {} and component_type = 11".format(equipped_item["lot"]))
-			item_data_1 = item_component.select_all("id = {}".format(item_component_id_1[0]["component_id"]))[0]
-			item_component_id_2 = component_registry.select(["component_id"],"id = {} and component_type = 11".format(item["lot"]))
-			item_data_2 = item_component.select_all("id = {}".format(item_component_id_2[0]["component_id"]))[0]
-			if(item_data_1["itemType"] == item_data_2["itemType"]):
+			item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(equipped_item["lot"]))
+			item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))[0]
+			if(item_data["itemType"] == item_to_equip_data["itemType"]):
 				player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
+			if("proxy_item" in equipped_item["json"]):
+				proxy_component_id = component_registry.select(["component_id"],"id = {} and component_type = 11".format(equipped_item["proxy_item"]["lot"]))
+				proxy_data = item_component.select_all("id = {}".format(proxy_component_id[0]["component_id"]))[0]
+				if (proxy_data["itemType"] == item_to_equip_data["itemType"]):
+					player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
 		item["equipped"] = 1
 
 		game.get_service("World Server").server.load_skills(object_id)
@@ -453,10 +467,28 @@ class WorldServer(pyraknet.server.Server):
 		x_pos = stream.read(c_float)
 		y_pos = stream.read(c_float)
 		z_pos = stream.read(c_float)
+
 		x_rot = stream.read(c_float)
 		y_rot = stream.read(c_float)
 		z_rot = stream.read(c_float)
 		w_rot = stream.read(c_float)
+
+		on_ground = stream.read(c_bit)
+		stream.read(c_bit)
+
+		update_velocity = False
+		if(stream.read(c_bit)):
+			update_velocity = True
+			x_vel = stream.read(c_float)
+			y_vel = stream.read(c_float)
+			z_vel = stream.read(c_float)
+
+		update_angular = False
+		if(stream.read(c_bit)):
+			update_angular = True
+			x_angular_vel = stream.read(c_float)
+			y_angular_vel = stream.read(c_float)
+			z_angular_vel = stream.read(c_float)
 
 		try:
 			session = game.get_service("Session").get_session_by_address(address)
@@ -464,8 +496,12 @@ class WorldServer(pyraknet.server.Server):
 			player_object = zone.get_object_by_id(session.player_id)
 			transform = player_object.get_component(components.Transform)
 			transform.position = game_types.Vector3(x_pos, y_pos, z_pos)
+			transform.on_ground = on_ground
 			transform.rotation = game_types.Vector4(x_rot, y_rot, z_rot, w_rot)
-			transform.velocity = game_types.Vector3(x_pos, y_pos, z_pos)
+			if(update_velocity):
+				transform.velocity = game_types.Vector3(x_vel, y_vel, z_vel)
+			if(update_angular):
+				transform.angular_velocity = game_types.Vector3(x_angular_vel, y_angular_vel, z_angular_vel)
 		except Exception as e:
 			print(f"Error {e}")
 

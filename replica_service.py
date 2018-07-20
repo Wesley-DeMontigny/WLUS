@@ -49,14 +49,19 @@ class ReplicaService(services.GameService):
 
 			destructible_data = cdclient_db.tables["DestructibleComponent"].select_all("id = {}".format(object_components[7]))[0]
 			stats = components.Stats(replica)
-			stats.health = destructible_data["life"]
-			stats.max_health = destructible_data["life"]
-			stats.armor = destructible_data["armor"]
-			stats.max_armor = destructible_data["armor"]
-			stats.imagination = destructible_data["imagination"]
-			stats.max_imagination = destructible_data["imagination"]
-			stats.faction = destructible_data["faction"]
-			stats.is_smashable = destructible_data["isSmashable"]
+			if(destructible_data["life"] is not None):
+				stats.health = int(destructible_data["life"])
+				stats.max_health = int(destructible_data["life"])
+			if(destructible_data["armor"] is not None):
+				stats.armor = int(destructible_data["armor"])
+				stats.max_armor = int(destructible_data["armor"])
+			if (destructible_data["imagination"] is not None):
+				stats.imagination = int(destructible_data["imagination"])
+				stats.max_imagination = int(destructible_data["imagination"])
+			if (destructible_data["faction"] is not None):
+				stats.faction = int(destructible_data["faction"])
+			if (destructible_data["isSmashable"] is not None):
+				stats.is_smashable = destructible_data["isSmashable"]
 
 			if("health" in config):
 				stats.health = config["health"]

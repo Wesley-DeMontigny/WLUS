@@ -75,8 +75,11 @@ class DBTable():
 				query_string += keys[i] + " = " + "'"+str(values[keys[i]])+"'"
 		query_string += " WHERE " + condition
 		c = self._connection.cursor()
-		c.execute(query_string)
-		self._connection.commit()
+		try:
+			c.execute(query_string)
+			self._connection.commit()
+		except Exception as e:
+			print("Error", e)
 	def delete(self, condition : str):
 		query_string = "DELETE FROM " + self._name + " WHERE " + condition
 		c = self._connection.cursor()

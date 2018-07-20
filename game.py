@@ -33,6 +33,7 @@ class Game(game_types.BaseObject):
 		self.trigger_event("GameStarted")
 
 	def generate_object_id(self):
+		#TODO: You need to figure out the correct way to generate object ids you dumb dumb
 		id = random.randint(100000000000000000, 999999999999999999)
 		return id
 

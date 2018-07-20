@@ -16,22 +16,38 @@ class ChatCommandService(services.GameService):
 	def initialize(self):
 		self.register_command("/testmap", self.testmap)
 		self.register_command("/togglejetpack", self.toggle_jetpack)
+		self.register_command("/toggleworldpvp", self.toggle_pvp)
 		self.register_command("/additem", self.get_item)
+		self.register_command("/spawnlot", self.spawn_lot)
 		game.register_event_handler("GM_{}".format(game_enums.GameMessages.PARSE_CHAT_MSG.value))(self.handle_command)
 		super().initialize()
+
+	def toggle_pvp(self, object_id, address, args, client_state):
+		player = game.get_service("Player").get_player_object_by_id(object_id)
+		player.zone.pvp_enabled = not player.zone.pvp_enabled
+
+	def spawn_lot(self, object_id, address, args, client_state):
+		player = game.get_service("Player").get_player_object_by_id(object_id)
+		try:
+			lot = int(args[0])
+		except:
+			return
+		object_config = {"lot":lot, "object_id":game.generate_object_id(), "position":player.get_component(components.Transform).position}
+		player.zone.create_object(player.zone, object_config)
+
 
 	def handle_command(self, object_id, stream, address):
 		client_state = stream.read(c_int)
 		command = stream.read(str, length_type=c_ulong)
 		args = command.split(" ")
-		if(game.get_config("allow_commands") == True or bool(game.get_service("Player").get_account_by_player_id(object_id)["is_admin"]) == True):
-			if(args[0] in self._commands):
+		if(args[0] in self._commands):
+			if (self._commands[args[0]][1] == False or game.get_config("allow_commands") == True or bool(game.get_service("Player").get_account_by_player_id(object_id)["is_admin"]) == True):
 				copy_args = copy.deepcopy(args)
 				del copy_args[0]
-				self._commands[args[0]](object_id, address, copy_args, client_state)
+				self._commands[args[0]][0](object_id, address, copy_args, client_state)
 
-	def register_command(self, command_name, handler):
-		self._commands[command_name] = handler
+	def register_command(self, command_name, handler, requires_admin = True):
+		self._commands[command_name] = [handler, requires_admin]
 
 	def get_item(self, object_id, address, args, client_state):
 		try:

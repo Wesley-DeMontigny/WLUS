@@ -15,6 +15,9 @@ class PlayerService(services.GameService):
 
 		self._accounts = []
 
+		global game
+		game = self.get_parent()
+
 	def initialize(self):
 		super().initialize()
 		def sync_thread():
@@ -357,7 +360,19 @@ class PlayerService(services.GameService):
 			else:
 				print("No Inventory Space Availible!")
 				return None
-		item = {"player_id":player_id, "lot":lot, "slot":slot, "equipped":int(equipped), "linked":int(linked), "quantity":quantity, "json":json_data, "item_id":self.get_parent().generate_object_id()}
+
+		database_service = game.get_service("Database")
+		cdclient = database_service.cdclient_db
+		component_registry = cdclient.tables["ComponentsRegistry"]
+		item_component = cdclient.tables["ItemComponent"]
+
+		item_component_id = component_registry.select(["component_id"],"id = {} and component_type = 11".format(lot))
+		item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))[0]
+		if(item_data["subItems"] is not None):
+			json_data["proxy_item"] = {"player_id":player_id, "lot":int(item_data["subItems"]), "slot":-1, "equipped":1, "linked":1, "quantity":1, "item_id":game.generate_object_id(), "json":{"is_proxy":1}}
+
+		item = {"player_id":player_id, "lot":lot, "slot":slot, "equipped":int(equipped), "linked":int(linked), "quantity":quantity, "json":json_data, "item_id":game.generate_object_id()}
+
 		db = self.get_parent().get_service("Database").server_db
 		inventory_table = db.tables["Inventory"]
 		db_item = copy.deepcopy(item)
@@ -382,6 +397,8 @@ class PlayerService(services.GameService):
 		for item in player["Inventory"]:
 			if(int(item["equipped"]) == 1):
 				items.append(item)
+				if("proxy_item" in item["json"]):
+					items.append(item["json"]["proxy_item"])
 		return items
 
 
