@@ -5,7 +5,6 @@ from pyraknet.bitstream import *
 from pyraknet.messages import *
 import pyraknet.replicamanager
 import typing
-import copy
 
 '''
 All Game Objects are children to a scene.
@@ -13,12 +12,13 @@ All Game Objects are children to a scene.
 
 
 class Zone(game_types.BaseObject):
-	def __init__(self, parent, zone_id: int, load_id: int, checksum: int, name: str = "Zone", activity: bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), pvp_enabled : bool = False):
+	def __init__(self, parent, zone_id: int, load_id: int, checksum: int, name: str = "Zone", activity: bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), spawn_rot : game_types.Vector4 = game_types.Vector4(), pvp_enabled : bool = False):
 		super().__init__(parent)
 		self._zone_id = zone_id
 		self._load_id = load_id
 		self._checksum = checksum
 		self.spawn_loc = spawn_loc
+		self.spawn_rot = spawn_rot
 		self.pvp_enabled = pvp_enabled
 		self._name = name
 		self._objects = []
@@ -33,7 +33,7 @@ class Zone(game_types.BaseObject):
 		return self._zone_id
 
 	def get_load_info(self):
-		return self._load_id, self._checksum, self._activity, self.spawn_loc, self._name
+		return self._load_id, self._checksum, self._activity, self.spawn_loc, self.spawn_rot, self._name
 
 	def update(self, game_object):
 		if(isinstance(game_object, game_objects.ReplicaObject) and self._replica_manager.get_network_id(game_object) is not None):

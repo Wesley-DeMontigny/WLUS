@@ -316,8 +316,8 @@ class PlayerService(services.GameService):
 		else:
 			pants_id = 2508
 
-		self.add_item_to_inventory(player_id, final_shirt_id, equipped=True, linked=True, json_data={"from_character_creation":1})
-		self.add_item_to_inventory(player_id, pants_id, equipped=True, linked=True,json_data={"from_character_creation": 1})
+		self.add_item_to_inventory(player_id, final_shirt_id, equipped=True, linked=True, json_data={"from":"character_creation"})
+		self.add_item_to_inventory(player_id, pants_id, equipped=True, linked=True,json_data={"from":"character_creation"})
 
 	def get_account_by_id(self, account_id : int):
 		for account in self._accounts:
@@ -368,10 +368,14 @@ class PlayerService(services.GameService):
 
 		item_component_id = component_registry.select(["component_id"],"id = {} and component_type = 11".format(lot))
 		item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))[0]
-		if(item_data["subItems"] is not None):
-			json_data["proxy_item"] = {"player_id":player_id, "lot":int(item_data["subItems"]), "slot":-1, "equipped":1, "linked":1, "quantity":1, "item_id":game.generate_object_id(), "json":{"is_proxy":1}}
 
-		item = {"player_id":player_id, "lot":lot, "slot":slot, "equipped":int(equipped), "linked":int(linked), "quantity":quantity, "json":json_data, "item_id":game.generate_object_id()}
+		new_item_id = game.generate_object_id()
+
+		json_data["proxy_items"] = []
+		if(item_data["subItems"] is not None):
+			json_data["proxy_items"].append({"player_id":player_id, "lot":int(item_data["subItems"]), "slot":-1, "equipped":1, "linked":1, "quantity":1, "item_id":game.generate_object_id(), "json":{"is_proxy":1, "parent_item":new_item_id}})
+
+		item = {"player_id":player_id, "lot":lot, "slot":slot, "equipped":int(equipped), "linked":int(linked), "quantity":quantity, "json":json_data, "item_id":new_item_id}
 
 		db = self.get_parent().get_service("Database").server_db
 		inventory_table = db.tables["Inventory"]
@@ -397,8 +401,9 @@ class PlayerService(services.GameService):
 		for item in player["Inventory"]:
 			if(int(item["equipped"]) == 1):
 				items.append(item)
-				if("proxy_item" in item["json"]):
-					items.append(item["json"]["proxy_item"])
+				if("proxy_items" in item["json"] and item["json"]["proxy_items"] != []):
+					for proxy_item in item["json"]["proxy_items"]:
+						items.append(proxy_item)
 		return items
 
 

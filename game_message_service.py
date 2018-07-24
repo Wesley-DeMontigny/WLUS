@@ -155,7 +155,7 @@ class GameMessageService(services.GameService):
 			msg.write(c_float(originator_rot.Z))
 			msg.write(c_float(originator_rot.W))
 
-		msg.write(bit_stream, length_type=c_ulong)
+		msg.write(game_types.String(bit_stream, length_type=c_ulong))
 
 		msg.write(c_ulong(skill_id))
 

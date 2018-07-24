@@ -41,9 +41,9 @@ class Game(game_types.BaseObject):
 		self._services.append(service)
 		self.trigger_event("ServiceRegistered", args=(service,), debug=False)
 
-	def register_event_handler(self, event_id : str):
+	def register_event_handler(self, event_id : str, threaded : bool = True):
 		def register_handler(handler):
-			self._event_handlers[handler] = event_id
+			self._event_handlers[handler] = [event_id, threaded]
 		return register_handler
 
 	def trigger_event(self, event_id, args : typing.Tuple =(), debug : bool = False):
@@ -52,9 +52,12 @@ class Game(game_types.BaseObject):
 				self._event_wait_list[event_id]["state"] = True
 		handler_activated = False
 		for handler in self._event_handlers:
-			if(self._event_handlers[handler] == event_id):
-				handler_thread = threading.Thread(target=handler, args=args)
-				handler_thread.start()
+			if(self._event_handlers[handler][0] == event_id):
+				if(self._event_handlers[handler][1] == True):
+					handler_thread = threading.Thread(target=handler, args=args)
+					handler_thread.start()
+				else:
+					handler(*args)
 				handler_activated = True
 		if(handler_activated != True and debug):
 			print("{} Had No Handler!".format(event_id))

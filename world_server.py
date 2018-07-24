@@ -35,38 +35,47 @@ class WorldServer(pyraknet.server.Server):
 								 "world_start_skill":["GM_{}".format(game_enums.GameMessages.START_SKILL.value), self.handle_start_skill]}
 
 	def handle_start_skill(self, object_id, stream : ReadStream, address):
-		# player_object = game.get_service("Player").get_player_object_by_id(object_id)
-		print("Start Skill: ", copy.deepcopy(stream).read_remaining())
-		# used_mouse = stream.read(c_bit)
-		# consumable_id = 0
-		# if(stream.read(c_bit)):
-		# 	consumable_id = stream.read(c_longlong)
-		# caster_latency = 0.0
-		# if(stream.read(c_bit)):
-		# 	caster_latency = stream.read(c_float)
-		# cast_type = 0
-		# if(stream.read(c_bit)):
-		# 	cast_type = stream.read(c_int)
-		# last_clicked_pos = game_types.Vector3()
-		# if(stream.read(c_bit)):
-		# 	last_clicked_pos = game_types.Vector3(stream.read(c_float), stream.read(c_float), stream.read(c_float))
-		# optional_originator = stream.read(c_longlong)
-		# optional_target_id = 0
-		# if(stream.read(c_bit)):
-		# 	stream.read(c_longlong)
-		# originator_rot = game_types.Vector4()
-		# if(stream.read(c_bit)):
-		# 	originator_rot = game_types.Vector4(stream.read(c_float), stream.read(c_float), stream.read(c_float), stream.read(c_float))
-		# bit_stream = stream.read(str, length_type=c_ulong)
-		# skill_id = stream.read(c_ulong)
-		# ui_skill_handle = 0
-		# if(stream.read(c_bit)):
-		# 	ui_skill_handle = stream.read(c_ulong)
-		#
-		# game_message_service = game.get_service("Game Message")
-		# game_message_service.echo_start_skill(object_id, player_object.zone.get_connections(), skill_id=skill_id, bit_stream=bit_stream, optional_originator=optional_originator,
-		# 									  optional_target_id=optional_target_id, cast_type=cast_type, caster_latency=caster_latency, used_mouse=used_mouse, last_clicked_pos=last_clicked_pos,
-		# 									  originator_rot=originator_rot, ui_skill_handle=ui_skill_handle)
+		player_object = game.get_service("Player").get_player_object_by_id(object_id)
+
+		used_mouse = stream.read(c_bit)
+
+		consumable_id = 0
+		if(stream.read(c_bit) == True):
+			consumable_id = stream.read(c_longlong)
+
+		caster_latency = 0.0
+		if(stream.read(c_bit) == True):
+			caster_latency = stream.read(c_float)
+
+		cast_type = 0
+		if(stream.read(c_bit) == True):
+			cast_type = stream.read(c_int)
+
+		last_clicked_pos = game_types.Vector3()
+		if(stream.read(c_bit) == True):
+			last_clicked_pos = game_types.Vector3(stream.read(c_float), stream.read(c_float), stream.read(c_float))
+
+		optional_originator = stream.read(c_longlong)
+
+		optional_target_id = 0
+		if(stream.read(c_bit) == True):
+			stream.read(c_longlong)
+
+		originator_rot = game_types.Vector4()
+		if(stream.read(c_bit) == True):
+			originator_rot = game_types.Vector4(stream.read(c_float), stream.read(c_float), stream.read(c_float), stream.read(c_float))
+
+		bit_stream = game_types.String(length_type=c_ulong).deserialize(stream)
+		skill_id = stream.read(c_ulong)
+
+		ui_skill_handle = 0
+		if(stream.read(c_bit) == True):
+			ui_skill_handle = stream.read(c_ulong)
+
+		game_message_service = game.get_service("Game Message")
+		game_message_service.echo_start_skill(object_id, player_object.zone.get_connections(), skill_id=skill_id, bit_stream=bit_stream, optional_originator=optional_originator,
+											  optional_target_id=optional_target_id, cast_type=cast_type, caster_latency=caster_latency, used_mouse=used_mouse, last_clicked_pos=last_clicked_pos,
+											  originator_rot=originator_rot, ui_skill_handle=ui_skill_handle)
 
 	def _on_disconnect_or_connection_lost(self, address):
 		super()._on_disconnect_or_connection_lost(address)
@@ -155,7 +164,7 @@ class WorldServer(pyraknet.server.Server):
 		session = game.get_service("Session").get_session_by_address(address)
 		session.player_id = player_id
 		zone = world.get_zone_by_id(level_id)
-		load_id, checksum, activity, spawn_loc, name = zone.get_load_info()
+		load_id, checksum, activity, spawn_loc, spawn_rot, name = zone.get_load_info()
 		print("Sending Player {} to {}".format(player_id, name))
 		packet.write(game_enums.PacketHeaderEnum.WORLD_INFO.value)
 
@@ -168,6 +177,7 @@ class WorldServer(pyraknet.server.Server):
 			packet.write(c_float(spawn_loc.Y))
 			packet.write(c_float(spawn_loc.Z))
 			player["Data"]["position"] = spawn_loc
+			player["Data"]["rotation"] = spawn_rot
 		else:
 			packet.write(c_float(player["Data"]["position"].X))
 			packet.write(c_float(player["Data"]["position"].Y))
@@ -266,8 +276,6 @@ class WorldServer(pyraknet.server.Server):
 						 "armor":player_data["armor"], "max_armor":player_data["max_armor"], "imagination":player_data["imagination"], "max_imagination":player_data["max_imagination"]}
 		zone.create_object(zone, player_config)
 
-		game.wait_for_event("GM_{}".format(game_enums.GameMessages.READY_FOR_UPDATES.value), '''args[0] == {}'''.format(player["player_id"]))#Wait for client to load player entirely (May not be necessary)
-
 		game_message_service = game.get_service("Game Message")
 		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.SERVER_DONE_LOADING_OBJECTS.value, recipients=[address])
 		game_message_service.send_game_msg(player["player_id"], game_enums.GameMessages.PLAYER_READY.value, recipients=[address])
@@ -347,12 +355,19 @@ class WorldServer(pyraknet.server.Server):
 			item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(equipped_item["lot"]))
 			item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))[0]
 			if(item_data["itemType"] == item_to_equip_data["itemType"]):
-				player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
-			if("proxy_item" in equipped_item["json"]):
-				proxy_component_id = component_registry.select(["component_id"],"id = {} and component_type = 11".format(equipped_item["proxy_item"]["lot"]))
-				proxy_data = item_component.select_all("id = {}".format(proxy_component_id[0]["component_id"]))[0]
-				if (proxy_data["itemType"] == item_to_equip_data["itemType"]):
+				if("is_proxy" not in equipped_item["json"]):
 					player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
+				else:
+					player_service.get_item_by_id(object_id, equipped_item["json"]["parent_item"])["equipped"] = 0
+			if("proxy_items" in item["json"] and item["json"]["proxy_items"] != []):
+				for proxy_item in item["json"]["proxy_items"]:
+					proxy_item_component = component_registry.select(["component_id"], "id = {} and component_type = 11".format(proxy_item["lot"]))
+					proxy_item_data = item_component.select_all("id = {}".format(proxy_item_component[0]["component_id"]))[0]
+					if(item_data["itemType"] == proxy_item_data["itemType"]):
+						if ("is_proxy" not in equipped_item["json"]):
+							player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
+						else:
+							player_service.get_item_by_id(object_id, equipped_item["json"]["parent_item"])["equipped"] = 0
 		item["equipped"] = 1
 
 		game.get_service("World Server").server.load_skills(object_id)
@@ -390,7 +405,7 @@ class WorldServer(pyraknet.server.Server):
 		if (player["zone"] == 0):
 			player["zone"] = 1000
 		spawn_at_default = False
-		if (player["Data"]["position"].X < 2 and player["Data"]["position"].Y < 2 and player["Data"]["position"].Z < 2):
+		if (int(player["Data"]["position"].X) < 2 and int(player["Data"]["position"].Y) < 2 and int(player["Data"]["position"].Z) < 2):
 			spawn_at_default = True
 		self.load_world(player_id, player["zone"], address, spawn_at_default=spawn_at_default)
 

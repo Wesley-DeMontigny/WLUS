@@ -12,6 +12,43 @@ class ReplicaService(services.GameService):
 		self._name = "Replica"
 		global game
 		game = self.get_parent()
+		#Cached structs should give a boost to performance, the only reason it should really be disabled is if you are working on a replica component
+		self._cached_structs = {}
+
+	def initialize(self):
+		if(game.get_config("cache_structs") is not None and game.get_config("cache_structs") == True):
+			'''Theres probably a much better way to do this but I'm too lazy'''
+			self._cached_structs["replica/creation_header.structs"] = compile(self.parse_struct("replica/creation_header.structs"), '<string>', 'exec')
+			self._cached_structs["replica/serialization_header.structs"] = compile(self.parse_struct("replica/serialization_header.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Component 108.structs"] = compile(self.parse_struct("replica/components/Component 108.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/ModuleAssembly.structs"] = compile(self.parse_struct("replica/components/ModuleAssembly.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/ControllablePhysics.structs"] = compile(self.parse_struct("replica/components/ControllablePhysics.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/SimplePhysics.structs"] = compile(self.parse_struct("replica/components/SimplePhysics.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/RigidBodyPhantomPhysics.structs"] = compile(self.parse_struct("replica/components/RigidBodyPhantomPhysics.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/VehiclePhysics.structs"] = compile(self.parse_struct("replica/components/VehiclePhysics.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/PhantomPhysics.structs"] = compile(self.parse_struct("replica/components/PhantomPhysics.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Destructible.structs"] = compile(self.parse_struct("replica/components/Destructible.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Stats.structs"] = compile(self.parse_struct("replica/components/Stats.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Collectible.structs"] = compile(self.parse_struct("replica/components/Collectible.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Pet.structs"] = compile(self.parse_struct("replica/components/Pet.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Character.structs"] = compile(self.parse_struct("replica/components/Character.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Shooting Gallery.structs"] = compile(self.parse_struct("replica/components/Shooting Gallery.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Inventory.structs"] = compile(self.parse_struct("replica/components/Inventory.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Script.structs"] = compile(self.parse_struct("replica/components/Script.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Skill.structs"] = compile(self.parse_struct("replica/components/Skill.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/BaseCombatAI.structs"] = compile(self.parse_struct("replica/components/BaseCombatAI.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Rebuild.structs"] = compile(self.parse_struct("replica/components/Rebuild.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/MovingPlatform.structs"] = compile(self.parse_struct("replica/components/MovingPlatform.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Switch.structs"] = compile(self.parse_struct("replica/components/Switch.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Vendor.structs"] = compile(self.parse_struct("replica/components/Vendor.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Bouncer.structs"] = compile(self.parse_struct("replica/components/Bouncer.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/ScriptedActivity.structs"] = compile(self.parse_struct("replica/components/ScriptedActivity.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/RacingControl.structs"] = compile(self.parse_struct("replica/components/RacingControl.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Exhibit.structs"] = compile(self.parse_struct("replica/components/Exhibit.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Render.structs"] = compile(self.parse_struct("replica/components/Render.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Component 107.structs"] = compile(self.parse_struct("replica/components/Component 107.structs"), '<string>', 'exec')
+			self._cached_structs["replica/components/Trigger.structs"] = compile(self.parse_struct("replica/components/Trigger.structs"), '<string>', 'exec')
+		super().initialize()
 
 	def create_replica_object(self, parent, zone, config : dict):
 		if("lot" not in config):
@@ -165,7 +202,7 @@ class ReplicaService(services.GameService):
 		if(69 in object_components):
 			trigger = components.Trigger(replica)
 			replica.add_component(trigger)
-
+		game.trigger_event("GeneratedReplica", args=[replica])
 		return replica
 
 
@@ -210,9 +247,20 @@ class ReplicaService(services.GameService):
 					execute_string += format_line(write_value, indent_level)
 		return execute_string
 
+	def _get_real_time(self, file_name):
+		return self.parse_struct(file_name)
+
+	def _get_from_cache(self, file_name):
+		return self._cached_structs[file_name]
+
 	def write_to_stream(self, replica : game_objects.ReplicaObject, stream : WriteStream, replica_type):
-		exec(self.parse_struct("replica/creation_header.structs"))
-		exec(self.parse_struct("replica/serialization_header.structs"))
+		struct_method = self._get_real_time
+		if(game.get_config("cache_structs") is not None and game.get_config("cache_structs") == True):
+			struct_method = self._get_from_cache
+
+
+		exec(struct_method("replica/creation_header.structs"))
+		exec(struct_method("replica/serialization_header.structs"))
 
 		cdclient_db = game.get_service("Database").cdclient_db
 		component_list = cdclient_db.tables["ComponentsRegistry"].select(["component_type", "component_id"], "id = {}".format(replica.lot))
@@ -222,62 +270,62 @@ class ReplicaService(services.GameService):
 
 
 		if(108 in object_components):
-			exec(self.parse_struct("replica/components/Component 108.structs"))
+			exec(struct_method("replica/components/Component 108.structs"))
 		if(61 in object_components):
-			exec(self.parse_struct("replica/components/ModuleAssembly.structs"))
+			exec(struct_method("replica/components/ModuleAssembly.structs"))
 		if(1 in object_components):
-			exec(self.parse_struct("replica/components/ControllablePhysics.structs"))
+			exec(struct_method("replica/components/ControllablePhysics.structs"))
 		if(3 in object_components):
-			exec(self.parse_struct("replica/components/SimplePhysics.structs"))
+			exec(struct_method("replica/components/SimplePhysics.structs"))
 		if(20 in object_components):
-			exec(self.parse_struct("replica/components/RigidBodyPhantomPhysics.structs"))
+			exec(struct_method("replica/components/RigidBodyPhantomPhysics.structs"))
 		if(30 in object_components):
-			exec(self.parse_struct("replica/components/VehiclePhysics.structs"))
+			exec(struct_method("replica/components/VehiclePhysics.structs"))
 		if(40 in object_components):
-			exec(self.parse_struct("replica/components/PhantomPhysics.structs"))
+			exec(struct_method("replica/components/PhantomPhysics.structs"))
 		if(7 in object_components):
-			exec(self.parse_struct("replica/components/Destructible.structs"))
-			exec(self.parse_struct("replica/components/Stats.structs"))
+			exec(struct_method("replica/components/Destructible.structs"))
+			exec(struct_method("replica/components/Stats.structs"))
 		if(23 in object_components):
-			exec(self.parse_struct("replica/components/Stats.structs"))
-			exec(self.parse_struct("replica/components/Collectible.structs"))
+			exec(struct_method("replica/components/Stats.structs"))
+			exec(struct_method("replica/components/Collectible.structs"))
 		if(26 in object_components):
-			exec(self.parse_struct("replica/components/Pet.structs"))
+			exec(struct_method("replica/components/Pet.structs"))
 		if(4 in object_components):
-			exec(self.parse_struct("replica/components/Character.structs"))
+			exec(struct_method("replica/components/Character.structs"))
 		if(19 in object_components):
-			exec(self.parse_struct("replica/components/Shooting Gallery.structs"))
+			exec(struct_method("replica/components/Shooting Gallery.structs"))
 		if(17 in object_components):
-			exec(self.parse_struct("replica/components/Inventory.structs"))
+			exec(struct_method("replica/components/Inventory.structs"))
 		if(5 in object_components):
-			exec(self.parse_struct("replica/components/Script.structs"))
+			exec(struct_method("replica/components/Script.structs"))
 		if(9 in object_components):
-			exec(self.parse_struct("replica/components/Skill.structs"))
+			exec(struct_method("replica/components/Skill.structs"))
 		if(60 in object_components):
-			exec(self.parse_struct("replica/components/BaseCombatAI.structs"))
+			exec(struct_method("replica/components/BaseCombatAI.structs"))
 		if(48 in object_components):
-			exec(self.parse_struct("replica/components/Stats.structs"))
-			exec(self.parse_struct("replica/components/Rebuild.structs"))
+			exec(struct_method("replica/components/Stats.structs"))
+			exec(struct_method("replica/components/Rebuild.structs"))
 		if(25 in object_components):
-			exec(self.parse_struct("replica/components/MovingPlatform.structs"))
+			exec(struct_method("replica/components/MovingPlatform.structs"))
 		if(49 in object_components):
-			exec(self.parse_struct("replica/components/Switch.structs"))
+			exec(struct_method("replica/components/Switch.structs"))
 		if(16 in object_components):
-			exec(self.parse_struct("replica/components/Vendor.structs"))
+			exec(struct_method("replica/components/Vendor.structs"))
 		if(6 in object_components):
-			exec(self.parse_struct("replica/components/Bouncer.structs"))
+			exec(struct_method("replica/components/Bouncer.structs"))
 		if(39 in object_components):
-			exec(self.parse_struct("replica/components/ScriptedActivity.structs"))
+			exec(struct_method("replica/components/ScriptedActivity.structs"))
 		if(71 in object_components):
-			exec(self.parse_struct("replica/components/RacingControl.structs"))
+			exec(struct_method("replica/components/RacingControl.structs"))
 		if(75 in object_components):
-			exec(self.parse_struct("replica/components/Exhibit.structs"))
+			exec(struct_method("replica/components/Exhibit.structs"))
 		if(2 in object_components):
-			exec(self.parse_struct("replica/components/Render.structs"))
+			exec(struct_method("replica/components/Render.structs"))
 		if(107 in object_components):
-			exec(self.parse_struct("replica/components/Component 107.structs"))
+			exec(struct_method("replica/components/Component 107.structs"))
 		if(69 in object_components):
-			exec(self.parse_struct("replica/components/Trigger.structs"))
+			exec(struct_method("replica/components/Trigger.structs"))
 
 
 
