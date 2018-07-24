@@ -28,8 +28,7 @@ class Game(game_types.BaseObject):
 
 	def start(self):
 		for service in self._services:
-			service_thread = game_types.GameThread(target=service.initialize)
-			service_thread.start()
+			service.initialize()
 		self.trigger_event("GameStarted")
 
 	def generate_object_id(self):

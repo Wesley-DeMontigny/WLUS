@@ -2,7 +2,7 @@ import sys
 sys.path.append("..")
 import scripts
 import game_types
-
+from pyraknet.bitstream import ReadStream
 
 
 zone_checksums = {1000: 0x20b8087c,
@@ -99,19 +99,31 @@ zone_names = {1000: "Venture Explorer",
 				   2000: "Ninjago Monastery",
 				   2001: "Frakjaw Battle"}
 
+luz_files = {1000: "resources/01_live_maps/space_ship/nd_space_ship.luz",
+	1200: "resources/01_live_maps/nimbus_station/nd_nimbus_station.luz"}
+
 class Main(scripts.Script):
 	def __init__(self, parent):
 		super().__init__(parent, "on_boot")
 		global game
-
 		game = self.get_parent()
 
 	def run(self):
-		@game.register_event_handler("ServiceRegistered")
-		def register_zones(service):
-			if (service.get_name() == "World"):
-				for zone in zone_names:
-					service.register_zone(zone_id=zone, load_id=zone, checksum=zone_checksums[zone], spawn_loc=zone_spawns[zone], name=zone_names[zone])
-					print("Registered {}!".format(zone_names[zone]))
+		@game.register_event_handler("GameStarted", threaded=True)
+		def register_zones():
+			world_service = game.get_service("World")
+			for zone in zone_names:
+				spawn_loc = zone_spawns[zone]
+				spawn_rot = game_types.Vector4()
+				if(zone in luz_files):
+					luz_file = open(luz_files[zone], "rb")
+					stream = ReadStream(luz_file.read())
+					luz = game_types.LUZ().deserialize(stream)
+					luz_file.close()
+					spawn_loc = luz.config["spawnpoint_pos"]
+					spawn_rot = luz.config["spawnpoint_rot"]
+				world_service.register_zone(zone_id=zone, load_id=zone, checksum=zone_checksums[zone], spawn_loc=spawn_loc, spawn_rot=spawn_rot, name=zone_names[zone])
+				print("Registered {}!".format(zone_names[zone]))
+			game.trigger_event("BootUp_WorldsRegistered")
 
 

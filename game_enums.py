@@ -20,6 +20,7 @@ class PacketHeaderEnum(Enum):
 	CLIENT_GAME_MESSAGE = b'S\x04\x00\x05\x00\x00\x00\x00'
 	SERVER_GAME_MESSAGE = b'S\x05\x00\x0c\x00\x00\x00\x00'
 	CLIENT_POSITION_UPDATES = b'S\x04\x00\x16\x00\x00\x00\x00'
+	CLIENT_CHAT_MESSAGE = b'S\x04\x00\x0e\x00\x00\x00\x00'
 
 class ReplicaTypes(IntEnum):
 	CONSTRUCTION = 0
@@ -103,6 +104,8 @@ class GameMessages(IntEnum):
 	RESYNC_EQUIPMENT = 1238
 	START_SKILL = 119
 	ECHO_START_SKILL = 118
+	ECHO_SYNC_SKILL = 1144
+	SYNC_SKILL = 1145
 
 class ItemTypes(IntEnum):
 	INVALID = 0

@@ -32,10 +32,21 @@ class WorldServer(pyraknet.server.Server):
 								 "world_player_loaded":["GM_{}".format(game_enums.GameMessages.PLAYER_LOADED.value), self.handle_player_loaded],
 								 "world_equip_item":["GM_{}".format(game_enums.GameMessages.EQUIP_INVENTORY.value), self.handle_equip_item],
 								 "world_unequip_item":["GM_{}".format(game_enums.GameMessages.UNEQUIP_INVENTORY.value), self.handle_uneuqip_item],
-								 "world_start_skill":["GM_{}".format(game_enums.GameMessages.START_SKILL.value), self.handle_start_skill]}
+								 "world_start_skill":["GM_{}".format(game_enums.GameMessages.START_SKILL.value), self.handle_start_skill],
+								 "world_sync_skill":["GM_{}".format(game_enums.GameMessages.SYNC_SKILL.value), self.handle_sync_skill],
+								 "world_ready_for_updates":["GM_{}".format(game_enums.GameMessages.READY_FOR_UPDATES.value), self.handle_ready_for_updates]}
+
+	def handle_ready_for_updates(self, object_id, stream : ReadStream, address):
+		pass  # This is just to get stuff from clogging up the logs for now
+
+	def handle_sync_skill(self, object_id, stream : ReadStream, address):
+		pass#This is just to get stuff from clogging up the logs for now
 
 	def handle_start_skill(self, object_id, stream : ReadStream, address):
-		player_object = game.get_service("Player").get_player_object_by_id(object_id)
+		try:
+			player_object = game.get_service("Player").get_player_object_by_id(object_id)
+		except:
+			return
 
 		used_mouse = stream.read(c_bit)
 

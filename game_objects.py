@@ -15,9 +15,8 @@ class GameObject(game_types.BaseObject):
 		global game
 		game = zone.get_parent().get_parent().get_parent()
 		if(object_id is None):
-			self._object_id = game.generate_object_id()
-		else:
-			self._object_id = object_id
+			raise Exception("Need Object ID!")
+		self._object_id = object_id
 
 	def add_component(self, component):
 		self._components.append(component)

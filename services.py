@@ -32,13 +32,13 @@ class WorldService(GameService):
 		self._name = "World"
 		self._zones : typing.List[zone.Zone] = []
 
-	def register_zone(self, zone_id : int, load_id : int, checksum : int, activity : bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), name : str = "Zone"):
+	def register_zone(self, zone_id : int, load_id : int, checksum : int, activity : bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), spawn_rot : game_types.Vector4 = game_types.Vector4(), name : str = "Zone"):
 		if(self.get_zone_by_id(zone_id) is None):
-			new_zone = zone.Zone(self, zone_id, load_id, checksum, name, activity, spawn_loc)
+			new_zone = zone.Zone(self, zone_id, load_id, checksum, name, activity, spawn_loc, spawn_rot)
 			self._zones.append(new_zone)
 			self.get_parent().trigger_event("ZoneRegistered", args=(new_zone,))
 		else:
-			raise Exception("A ZONE WITH THAT ID WAS ALREADY REGISTERED!")
+			raise Exception("A ZONE WITH THE ID {} WAS ALREADY REGISTERED!".format(zone_id))
 
 	def get_zone_by_id(self, id : int):
 		for zone in self._zones:

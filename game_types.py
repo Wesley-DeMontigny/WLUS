@@ -197,43 +197,49 @@ class LVL(Serializable):
 		config = {}
 		config["objects"] = []
 		while True:
-			buffer = b""
-			for i in range(4):
-				character = stream.read(bytes, length=1)
-				buffer = buffer + character
-			if (buffer == b"CHNK"):
-				chunk_type = stream.read(c_ulong)
-				stream.read(c_uint16)
-				stream.read(c_uint16)
-				stream.read(c_ulong)
-				stream.read(bytes, length=int((stream.read(c_ulong) * 8 - int(stream.read_offset)) / 8))
-				if (chunk_type == 1000):
-					config["version"] = stream.read(c_ulong)
+			try:
+				buffer = b""
+				for i in range(4):
+					character = stream.read(bytes, length=1)
+					buffer = buffer + character
+				if (buffer == b"CHNK"):
+					chunk_type = stream.read(c_ulong)
+					stream.read(c_uint16)
+					stream.read(c_uint16)
 					stream.read(c_ulong)
-					stream.read(c_ulong)
-					stream.read(c_ulong)
-					stream.read(c_ulong)
-				elif (chunk_type == 2001):
-					for i in range(stream.read(c_ulong)):
-						gameobject = {}
-						gameobject["object_id"] = stream.read(c_ulonglong)
-						gameobject["lot"] = stream.read(c_ulong)
-						if (config["version"] >= 0x26):
-							stream.read(c_ulong)
-						if (config["version"] >= 0x20):
-							stream.read(c_ulong)
-						gameobject["position"] = Vector3().deserialize(stream)
-						w_rot = stream.read(c_float)
-						x_rot = stream.read(c_float)
-						y_rot = stream.read(c_float)
-						z_rot = stream.read(c_float)
-						gameobject["rotation"] = Vector4(x_rot, y_rot, z_rot, w_rot)
-						gameobject["scale"] = stream.read(c_float)
-						gameobject["ldf"] = self._read_ldf(stream.read(str, length_type=c_ulong))
-						if (config["version"] >= 7):
-							stream.read(c_ulong)
-						config["objects"].append(gameobject)
-					break
+					stream.read(bytes, length=int((stream.read(c_ulong) * 8 - int(stream.read_offset)) / 8))
+					if (chunk_type == 1000):
+						config["version"] = stream.read(c_ulong)
+						stream.read(c_ulong)
+						stream.read(c_ulong)
+						stream.read(c_ulong)
+						stream.read(c_ulong)
+					elif (chunk_type == 2001):
+						for i in range(stream.read(c_ulong)):
+							gameobject = {}
+							gameobject["object_id"] = stream.read(c_ulonglong)
+							gameobject["lot"] = stream.read(c_ulong)
+							if (config["version"] >= 0x26):
+								stream.read(c_ulong)
+							if (config["version"] >= 0x20):
+								stream.read(c_ulong)
+							gameobject["position"] = Vector3().deserialize(stream)
+							w_rot = stream.read(c_float)
+							x_rot = stream.read(c_float)
+							y_rot = stream.read(c_float)
+							z_rot = stream.read(c_float)
+							gameobject["rotation"] = Vector4(x_rot, y_rot, z_rot, w_rot)
+							gameobject["scale"] = stream.read(c_float)
+							gameobject["ldf"] = self._read_ldf(stream.read(str, length_type=c_ulong))
+							if (config["version"] >= 7):
+								stream.read(c_ulong)
+							config["objects"].append(gameobject)
+						break
+			except Exception as e:
+				#print("Error while parsing LVL", e)
+				#Because of this sloppy implementation theres always a dumb error or two
+				break
+		return LVL(config)
 
 	def _read_ldf(self, ldf):
 		ldf_dict = {}

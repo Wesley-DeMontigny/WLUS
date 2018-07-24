@@ -3,7 +3,7 @@ from pyraknet.bitstream import *
 import copy
 import game_enums
 import components
-
+import json
 
 class ChatCommandService(services.GameService):
 	def __init__(self, parent):
@@ -34,6 +34,13 @@ class ChatCommandService(services.GameService):
 			return
 		object_config = {"lot":lot, "object_id":game.generate_object_id(), "position":player.get_component(components.Transform).position}
 		player.zone.create_object(player.zone, object_config)
+
+		database_service = game.get_service("Database")
+		server_db = database_service.server_db
+		zone_objects = server_db.tables["ZoneObjects"]
+		adjusted_config = copy.deepcopy(object_config)
+		adjusted_config["position"] = str(object_config["position"])
+		zone_objects.insert({"zone_id":player.zone.get_zone_id(), "replica_config":json.dumps(adjusted_config)})
 
 
 	def handle_command(self, object_id, stream, address):
