@@ -18,8 +18,8 @@ class ChatServerService(services.GameService):
 		else:
 			self._address = "127.0.0.1"
 
-		if (parent.get_config("chat_max_connections") is not None):
-			self._max_connections = parent.get_config("chat_max_connections")
+		if (parent.get_config("world_max_connections") is not None):#Since you would only be connected to the Chat Server if you were also connected to the World Server why not make them the same
+			self._max_connections = parent.get_config("world_max_connections")
 		else:
 			self._max_connections = 10
 

@@ -413,7 +413,11 @@ class WorldServer(pyraknet.server.Server):
 		if (player["zone"] == 0):
 			player["zone"] = 1000
 		spawn_at_default = False
-		if (int(player["Data"]["position"].X) < 2 and int(player["Data"]["position"].Y) < 2 and int(player["Data"]["position"].Z) < 2):
+		pos = player["Data"]["position"]
+		if(isinstance(pos, str)):
+			pos = game_types.Vector3(pos)
+			player["Data"]["position"] = pos
+		if (pos.X < 2 and pos.Y < 2 and pos.Z < 2):
 			spawn_at_default = True
 		self.load_world(player_id, player["zone"], address, spawn_at_default=spawn_at_default)
 
@@ -523,8 +527,12 @@ class WorldServer(pyraknet.server.Server):
 			transform.rotation = game_types.Vector4(x_rot, y_rot, z_rot, w_rot)
 			if(update_velocity):
 				transform.velocity = game_types.Vector3(x_vel, y_vel, z_vel)
+			else:
+				transform.velocity = game_types.Vector3()
 			if(update_angular):
 				transform.angular_velocity = game_types.Vector3(x_angular_vel, y_angular_vel, z_angular_vel)
+			else:
+				transform.velocity = game_types.Vector3()
 		except Exception as e:
 			print(f"Error {e}")
 
