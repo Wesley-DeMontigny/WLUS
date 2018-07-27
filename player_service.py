@@ -398,12 +398,14 @@ class PlayerService(services.GameService):
 	def get_equipped_items(self, player_id : int):
 		player = self.get_player_by_id(player_id)
 		items = []
-		for item in player["Inventory"]:
-			if(int(item["equipped"]) == 1):
+		def parse_item(item):
+			if (int(item["equipped"]) == 1):
 				items.append(item)
-				if("proxy_items" in item["json"] and item["json"]["proxy_items"] != []):
+				if ("proxy_items" in item["json"] and item["json"]["proxy_items"] != []):
 					for proxy_item in item["json"]["proxy_items"]:
-						items.append(proxy_item)
+						parse_item(proxy_item)
+		for item in player["Inventory"]:
+			parse_item(item)
 		return items
 
 

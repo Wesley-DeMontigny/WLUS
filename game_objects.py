@@ -57,6 +57,8 @@ class ReplicaObject(GameObject):
 		self.world_state = None
 		self.gm_level = None
 		self.json = {}
+		if("json" in config):
+			self.json = config["json"]
 		if("gm_level" in config):
 			self.gm_level = config["gm_level"]
 		if("world_state" in config):

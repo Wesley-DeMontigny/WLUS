@@ -21,6 +21,7 @@ class PacketHeaderEnum(Enum):
 	SERVER_GAME_MESSAGE = b'S\x05\x00\x0c\x00\x00\x00\x00'
 	CLIENT_POSITION_UPDATES = b'S\x04\x00\x16\x00\x00\x00\x00'
 	CLIENT_CHAT_MESSAGE = b'S\x04\x00\x0e\x00\x00\x00\x00'
+	CLIENT_WHITELIST_REQUEST = b'S\x04\x00\x19\x00\x00\x00\x00'
 
 class ReplicaTypes(IntEnum):
 	CONSTRUCTION = 0

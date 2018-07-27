@@ -10,7 +10,7 @@ import sys
 import replica_service
 import game_message_service
 import chat_command_service
-from importlib import reload
+import chat_server_service
 
 
 def console_loop():
@@ -65,6 +65,9 @@ if __name__ == "__main__":
 
 	world = services.WorldService(game)
 	game.register_service(world)
+
+	chat_server = chat_server_service.ChatServerService(game)
+	game.register_service(chat_server)
 
 	chat_command = chat_command_service.ChatCommandService(game)
 	game.register_service(chat_command)

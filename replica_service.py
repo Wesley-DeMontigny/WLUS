@@ -253,7 +253,7 @@ class ReplicaService(services.GameService):
 	def _get_from_cache(self, file_name):
 		return self._cached_structs[file_name]
 
-	def write_to_stream(self, replica : game_objects.ReplicaObject, stream : WriteStream, replica_type):
+	def write_to_stream(self, replica : game_objects.ReplicaObject, stream, replica_type):
 		struct_method = self._get_real_time
 		if(game.get_config("cache_structs") is not None and game.get_config("cache_structs") == True):
 			struct_method = self._get_from_cache

@@ -59,8 +59,8 @@ class AuthServerService(GameService):
 		else:
 			self._port = 1001
 
-		if(parent.get_config("address") is not None):
-			self._address = parent.get_config("address")
+		if(parent.get_config("bind_address") is not None):
+			self._address = parent.get_config("bind_address")
 		else:
 			self._address = "127.0.0.1"
 
@@ -104,7 +104,7 @@ class WorldServerService(GameService):
 		else:
 			self._port = 2002
 
-		if(parent.get_config("address") is not None):
+		if(parent.get_config("bind_address") is not None):
 			self._address = parent.get_config("bind_address")
 		else:
 			self._address = "127.0.0.1"

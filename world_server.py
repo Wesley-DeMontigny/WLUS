@@ -17,9 +17,9 @@ class WorldServer(pyraknet.server.Server):
 		super().__init__(address, max_connections, incoming_password)
 		self.world_server_service = world_server_service
 		self.add_handler(pyraknet.server.Event.UserPacket, self.handle_packet)
-		self._userpacket_handlers = {}
 		global game
 		game = self.world_server_service.get_parent()
+		#So the reason for this to have a event name like this is so that a gamescript could override the default handler by changing the value of the event name on service register
 		self.default_handlers = {"world_handshake":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.HANDSHAKE.value), self.handle_handshake],
 								 "world_session_info":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_USER_SESSION_INFO.value), self.handle_session_info],
 								 "world_minifigure_list":["OnPacket_World_{}".format(game_enums.PacketHeaderEnum.CLIENT_MINIFIGURE_LIST_REQUEST.value), self.handle_minifig_list_request],
@@ -386,6 +386,8 @@ class WorldServer(pyraknet.server.Server):
 		player_object = player_service.get_player_object_by_id(object_id)
 		player_object.zone.update(player_object)
 
+		game.trigger_event("EquippedItem", args=[object_id, item_id])
+
 	def handle_uneuqip_item(self, object_id, stream, address):
 		even_if_dead = stream.read(c_bit)
 		ignore_cooldown = stream.read(c_bit)
@@ -397,17 +399,12 @@ class WorldServer(pyraknet.server.Server):
 		item = player_service.get_item_by_id(object_id, item_to_unequip)
 		item["equipped"] = 0
 
-		try:
-			item_to_replace = stream.read(c_longlong)
-			replacement = player_service.get_item_by_id(object_id, item_to_replace)
-			if (replacement is not None):
-				replacement["equipped"] = 1
-		except:
-			pass
 		game.get_service("World Server").server.load_skills(object_id)
 
 		player_object = player_service.get_player_object_by_id(object_id)
 		player_object.zone.update(player_object)
+
+		game.trigger_event("UnequippedItem", args=[object_id, item_to_unequip])
 
 	def handle_join_world(self, data: bytes, address):
 		stream = ReadStream(data)

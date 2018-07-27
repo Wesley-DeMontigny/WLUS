@@ -5,6 +5,7 @@ from pyraknet.bitstream import *
 from pyraknet.messages import *
 import pyraknet.replicamanager
 import typing
+import json
 
 '''
 All Game Objects are children to a scene.
@@ -28,6 +29,17 @@ class Zone(game_types.BaseObject):
 
 		global game
 		game = self.get_parent().get_parent()
+
+		database_service = game.get_service("Database")
+		server_db = database_service.server_db
+		objects = server_db.tables["ZoneObjects"].select_all("zone_id == {}".format(self._zone_id))
+		for object in objects:
+			adjusted_config = json.loads(object["replica_config"])
+			if ("position" in adjusted_config):
+				adjusted_config["position"] = game_types.Vector3(str_val=adjusted_config["position"])
+			if ("rotation" in adjusted_config):
+				adjusted_config["rotation"] = game_types.Vector4(str_val=adjusted_config["rotation"])
+			self.create_object(self, adjusted_config)
 
 	def get_zone_id(self):
 		return self._zone_id
