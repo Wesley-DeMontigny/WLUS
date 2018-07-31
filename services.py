@@ -32,9 +32,9 @@ class WorldService(GameService):
 		self._name = "World"
 		self._zones : typing.List[zone.Zone] = []
 
-	def register_zone(self, zone_id : int, load_id : int, checksum : int, activity : bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), spawn_rot : game_types.Vector4 = game_types.Vector4(), name : str = "Zone"):
+	def register_zone(self, zone_id : int, load_id : int, checksum : int, activity : bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), spawn_rot : game_types.Vector4 = game_types.Vector4(), name : str = "Zone", json : dict = None):
 		if(self.get_zone_by_id(zone_id) is None):
-			new_zone = zone.Zone(self, zone_id, load_id, checksum, name, activity, spawn_loc, spawn_rot)
+			new_zone = zone.Zone(self, zone_id, load_id, checksum, name, activity, spawn_loc, spawn_rot, json)
 			self._zones.append(new_zone)
 			self.get_parent().trigger_event("ZoneRegistered", args=(new_zone,))
 		else:
@@ -84,6 +84,13 @@ class AuthServerService(GameService):
 			return True, user_info
 		else:
 			return False, user_info
+
+	def register_account(self, username : str, password : str, banned = 0, is_admin = 0):
+		passhash = passlib.hash.sha256_crypt.encrypt(password)
+		server_db : database.GameDB = self._parent.get_service("Database").server_db
+		account_table : database.DBTable = server_db.tables["Accounts"]
+		account_table.insert({"username":username, "password":passhash, "banned":banned, "is_admin":is_admin})
+		print(f"Registered User '{username}'")
 
 class DatabaseService(GameService):
 	def __init__(self, parent):

@@ -60,8 +60,11 @@ class DBTable():
 			else:
 				query_string += "'"+str(values[keys[x]])+"'" + ")"
 		c = self._connection.cursor()
-		c.execute(query_string)
-		self._connection.commit()
+		try:
+			c.execute(query_string)
+			self._connection.commit()
+		except Exception as e:
+			print("Error", e)
 	def query(self, query_str : str):
 		c = self._connection.cursor()
 		c.execute(query_str)
@@ -83,11 +86,11 @@ class DBTable():
 	def delete(self, condition : str):
 		query_string = "DELETE FROM " + self._name + " WHERE " + condition
 		c = self._connection.cursor()
-		c.execute(query_string)
 		try:
+			c.execute(query_string)
 			self._connection.commit()
-		except:
-			pass
+		except Exception as e:
+			print("Error", e)
 
 class GameDB():
 	def __init__(self, database_path : str):

@@ -13,7 +13,7 @@ All Game Objects are children to a scene.
 
 
 class Zone(game_types.BaseObject):
-	def __init__(self, parent, zone_id: int, load_id: int, checksum: int, name: str = "Zone", activity: bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), spawn_rot : game_types.Vector4 = game_types.Vector4(), pvp_enabled : bool = False):
+	def __init__(self, parent, zone_id: int, load_id: int, checksum: int, name: str = "Zone", activity: bool = False, spawn_loc : game_types.Vector3 = game_types.Vector3(0,0,0), spawn_rot : game_types.Vector4 = game_types.Vector4(), pvp_enabled : bool = False, obj_json : dict = None):
 		super().__init__(parent)
 		self._zone_id = zone_id
 		self._load_id = load_id
@@ -26,6 +26,10 @@ class Zone(game_types.BaseObject):
 		self._replica_manager: ZoneManager = ZoneManager(self.get_parent().get_parent().get_service("World Server").server)
 		self._players = []
 		self._activity = activity
+		if(json is None):
+			self.json = {}
+		else:
+			self.json = obj_json
 
 		global game
 		game = self.get_parent().get_parent()

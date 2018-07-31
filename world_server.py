@@ -415,9 +415,9 @@ class WorldServer(pyraknet.server.Server):
 		spawn_at_default = False
 		pos = player["Data"]["position"]
 		if(isinstance(pos, str)):
-			pos = game_types.Vector3(pos)
+			pos = game_types.Vector3(str_val = pos)
 			player["Data"]["position"] = pos
-		if (pos.X < 2 and pos.Y < 2 and pos.Z < 2):
+		if (int(pos.X) < 2 and int(pos.Y) < 2 and int(pos.Z) < 2):
 			spawn_at_default = True
 		self.load_world(player_id, player["zone"], address, spawn_at_default=spawn_at_default)
 

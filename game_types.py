@@ -101,6 +101,16 @@ class Vector3(Serializable):
 	def deserialize(self, stream):
 		return Vector3(stream.read(c_float), stream.read(c_float), stream.read(c_float))
 
+	def __mul__(self, other):
+		if(isinstance(other, Vector3)):
+			return Vector3(self.X * other.X, self.Y * other.Y, self.Z * other.Z)
+		elif(isinstance(other, float)):
+			return Vector3(self.X * other, self.Y * other, self.Z * other)
+		elif(isinstance(other, int)):
+			return Vector3(float(self.X * other), float(self.Y * other), float(self.Z * other))
+		else:
+			raise Exception(f"Vector3 cannot be multiplied with type {other.__class__}")
+
 class LDF(Serializable):
 	def __init__(self):
 		self._keys : list = []
@@ -173,6 +183,16 @@ class Vector4(Serializable):
 			return True
 		else:
 			return False
+
+	def __mul__(self, other):
+		if(isinstance(other, Vector4)):
+			return Vector4(self.X * other.X, self.Y * other.Y, self.Z * other.Z, self.W * other.W)
+		elif(isinstance(other, float)):
+			return Vector4(self.X * other, self.Y * other, self.Z * other, self.W * other)
+		elif(isinstance(other, int)):
+			return Vector4(float(self.X * other), float(self.Y * other), float(self.Z * other), float(self.W * other))
+		else:
+			raise Exception(f"Vector4 cannot be multiplied with type {other.__class__}")
 
 	def serialize(self, stream):
 		stream.write(c_float(self.X))

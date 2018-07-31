@@ -169,7 +169,7 @@ class PlayerService(services.GameService):
 
 		player_id = self.get_parent().generate_object_id()
 		player_base = {"account_id":account_id, "name":name, "shirt_color":shirt_color, "shirt_style":shirt_style, "pants_color":pants_color, "hair_color":hair_color, "hair_style":hair_style,
-								"lh":lh, "rh":rh, "eyebrows":eyebrows, "eyes":eyes, "mouth":mouth, "zone":0, "player_id":player_id, "custom_name":custom_name}
+								"lh":lh, "rh":rh, "eyebrows":eyebrows, "eyes":eyes, "mouth":mouth, "zone":1000, "player_id":player_id, "custom_name":custom_name}
 		player_data = {"universe_score":0, "level":0, "health":4, "max_health":4, "armor":0, "max_armor":0, "imagination":0, "max_imagination":0, "currency":0, "position":"0,0,0",
 									 "rotation":"0,0,0,0", "player_id":player_id, "backpack_space":20}
 		player_stats = {"currency_collected":0, "bricks_collected":0, "smashables_smashed":0, "quick_builds_done":0, "enemies_smashed":0, "rockets_used":0, "pets_tamed":0,
@@ -185,8 +185,8 @@ class PlayerService(services.GameService):
 		self.sync_database([account])
 		player_copy = copy.deepcopy(player_base)
 		player_copy["Data"] = player_data
-		player_copy["Data"]["position"] = game_types.Vector3(player_copy["Data"]["position"])
-		player_copy["Data"]["rotation"] = game_types.Vector4(player_copy["Data"]["rotation"])
+		player_copy["Data"]["position"] = game_types.Vector3(str_val = player_copy["Data"]["position"])
+		player_copy["Data"]["rotation"] = game_types.Vector4(str_val = player_copy["Data"]["rotation"])
 		player_copy["Stats"] = player_stats
 		player_copy["CompletedMissions"] = []
 		player_copy["CurrentMissions"] = []
@@ -406,6 +406,7 @@ class PlayerService(services.GameService):
 						parse_item(proxy_item)
 		for item in player["Inventory"]:
 			parse_item(item)
+		self.get_parent().trigger_event("EquipListRequest", args=[player_id, items])
 		return items
 
 

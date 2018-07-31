@@ -57,9 +57,15 @@ class ReplicaService(services.GameService):
 
 		transform : components.Transform = replica.get_component(components.Transform)
 		if("position" in config):
-			transform.position = config["position"]
+			if(not isinstance(config["position"], str)):
+				transform.position = config["position"]
+			else:
+				transform.position = game_types.Vector3(str_val=config["position"])
 		if("rotation" in config):
-			transform.rotation = config["rotation"]
+			if (not isinstance(config["rotation"], str)):
+				transform.rotation = config["rotation"]
+			else:
+				transform.rotation = game_types.Vector4(str_val=config["rotation"])
 		if("scale" in config):
 			transform.scale = config["scale"]
 

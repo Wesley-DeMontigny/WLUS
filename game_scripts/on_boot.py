@@ -70,23 +70,23 @@ zone_spawns = {1000: game_types.Vector3(-624.13, 613.326233, -30.974),
 zone_names = {1000: "Venture Explorer",
 				   1001: "Return To The Venture Explorer",
 				   1100: "Avant Gardens",
-				   1101: "Avant Gardens Survival",
+				   #1101: "Avant Gardens Survival",
 				   1102: "Spider Queen Battle",
 				   1150: "Block Yard",
 				   1151: "Avant Grove",
 				   1200: "Nimbus Station",
 				   1201: "Pet Cove",
-				   1203: "Vertigo Loop",
+				   #1203: "Vertigo Loop",
 				   1204: "Battle of Nimbus Station",
 				   1250: "Nimbus Rock",
 				   1251: "Nimbus Isle",
 				   1300: "Gnarled Forest",
 				   1302: "Canyon Cove",
-				   1303: "Keelhaul Canyon",
+				   #1303: "Keelhaul Canyon",
 				   1350: "Chantey Shantey",
 				   1400: "Forbidden Valley",
 				   1402: "Forbidden Valley Dragon",
-				   1403: "Dragonmaw Chasm",
+				   #1403: "Dragonmaw Chasm",
 				   1450: "Raven Bluff",
 				   1600: "Starbase 3001",
 				   1601: "Deep Freeze",
@@ -100,6 +100,7 @@ zone_names = {1000: "Venture Explorer",
 				   2001: "Frakjaw Battle"}
 
 luz_files = {1000: "resources/01_live_maps/space_ship/nd_space_ship.luz",
+	1100: "resources/01_live_maps/avant_gardens/nd_avant_gardens.luz",
 	1200: "resources/01_live_maps/nimbus_station/nd_nimbus_station.luz"}
 
 class Main(scripts.Script):
@@ -113,6 +114,7 @@ class Main(scripts.Script):
 		def register_zones():
 			world_service = game.get_service("World")
 			for zone in zone_names:
+				json = {}
 				spawn_loc = zone_spawns[zone]
 				spawn_rot = game_types.Vector4()
 				if(zone in luz_files):
@@ -122,7 +124,14 @@ class Main(scripts.Script):
 					luz_file.close()
 					spawn_loc = luz.config["spawnpoint_pos"]
 					spawn_rot = luz.config["spawnpoint_rot"]
-				world_service.register_zone(zone_id=zone, load_id=zone, checksum=zone_checksums[zone], spawn_loc=spawn_loc, spawn_rot=spawn_rot, name=zone_names[zone])
+					folder = ""
+					path_folders = luz_files[zone].split("/")
+					path_folders = path_folders[:-1]
+					for path_folder in path_folders:
+						folder += path_folder + "/"
+					json["zone_path"] = folder
+					json["scenes"] = luz.config["scenes"]
+				world_service.register_zone(zone_id=zone, load_id=zone, checksum=zone_checksums[zone], spawn_loc=spawn_loc, spawn_rot=spawn_rot, name=zone_names[zone], json = json)
 				print("Registered {}!".format(zone_names[zone]))
 			game.trigger_event("BootUp_WorldsRegistered")
 

@@ -13,19 +13,6 @@ import chat_command_service
 import chat_server_service
 
 
-def console_loop():
-	while True:
-		input_str = input()
-		args = input_str.split(" ")
-		if(args[0] == "exit"):
-			sys.exit(0)
-		if(args[0] == "py"):
-			try:
-				del args[0]
-				exec(''.join(str(e) for e in args))
-			except Exception as e:
-				print("Console Error :", e)
-
 if __name__ == "__main__":
 	game = game.Game()
 
@@ -73,9 +60,6 @@ if __name__ == "__main__":
 	game.register_service(chat_command)
 
 	game.start()
-
-	console_thread = threading.Thread(target=console_loop)
-	console_thread.start()
 
 	loop = asyncio.get_event_loop()
 	loop.run_forever()

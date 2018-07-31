@@ -19,6 +19,7 @@ class Game(game_types.BaseObject):
 		self._config : dict = {}
 		self._event_handlers = {}
 		self._event_wait_list = {}
+		self._console_command_handlers = {}
 
 	def wait_for_event(self, event_id : str, condition : str):
 		if(event_id not in self._event_wait_list):
@@ -30,6 +31,21 @@ class Game(game_types.BaseObject):
 		for service in self._services:
 			service.initialize()
 		self.trigger_event("GameStarted")
+		console_thread = threading.Thread(target =self._console_loop)
+		console_thread.start()
+
+	def register_console_command(self, command, handler):
+		self._console_command_handlers[command.upper()] = handler
+
+	def _console_loop(self):
+		while True:
+			input_str = input()
+			args = input_str.rstrip().split(" ")
+			if(args[0].upper() in self._console_command_handlers):
+				cmd_thread = threading.Thread(target=self._console_command_handlers[args[0].upper()], args=[args[1:],])
+				cmd_thread.start()
+			else:
+				print("Unknown Console Command")
 
 	def generate_object_id(self):
 		#TODO: You need to figure out the correct way to generate object ids you dumb dumb
