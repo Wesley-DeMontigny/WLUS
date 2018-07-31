@@ -37,12 +37,6 @@ class ChatServerService(services.GameService):
 		for handler in self.server.default_handlers:
 			self.get_parent().register_event_handler(self.server.default_handlers[handler][0])(self.server.default_handlers[handler][1])
 		super().initialize()
-		blacklist = open('blacklist.txt')
-		while True:
-			line = str(blacklist.readline()).rstrip()
-			if not line:
-				break
-			self.blacklist.append(line)
 
 
 class ChatServer(pyraknet.server.Server):
