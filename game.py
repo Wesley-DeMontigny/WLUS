@@ -42,8 +42,7 @@ class Game(game_types.BaseObject):
 			input_str = input()
 			args = input_str.rstrip().split(" ")
 			if(args[0].upper() in self._console_command_handlers):
-				cmd_thread = threading.Thread(target=self._console_command_handlers[args[0].upper()], args=[args[1:],])
-				cmd_thread.start()
+				self._console_command_handlers[args[0].upper()](args[1:])
 			else:
 				print("Unknown Console Command")
 
