@@ -1,7 +1,6 @@
 import sys
 sys.path.append("..")
 import scripts
-import os
 import json
 import game_types
 import random
@@ -43,12 +42,12 @@ class Main(scripts.Script):
 					if(chunk["_type"] == 2001):
 						object_id = random.randint(100000000000000000, 999999999999900000)
 						for game_object in chunk["objects"]:
-							if("spawntemplate" in game_object["settings"] and ("renderDisabled" not in game_object["settings"] or game_object["settings"]["renderDisabled"] == False)):
+							if("spawntemplate" in game_object["settings"]):
 								object_id += 1
 								config = {'lot':game_object["settings"]["spawntemplate"], 'spawner_id':game_object["id"],
 										  'position': str(game_types.Vector3(game_object['pos']['pos']['x'], game_object['pos']['pos']['y'], game_object['pos']['pos']['z'])),
 										  'rotation': str(game_types.Vector4(game_object['pos']['rot']['x'], game_object['pos']['rot']['y'], game_object['pos']['rot']['z'], game_object['pos']['rot']['w'])),
-										  'scale':game_object["scale"], 'spawner_node_id':0, 'object_id':object_id, 'scene':lvl["scene_id"]}
+										  'scale':game_object["scale"], 'spawner_node_id':0, 'object_id':object_id, 'scene':lvl["scene_id"], 'object_type':1}
 								zone_objects.insert({"zone_id": zone, "replica_config": json.dumps(config)})
 								print("Imported Object {} To DB".format(config["object_id"]))
 

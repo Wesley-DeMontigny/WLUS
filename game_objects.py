@@ -1,6 +1,6 @@
 import game_types
 import components
-import inspect
+import game_enums
 
 '''
 GameObjects are objects placed inside scenes
@@ -51,12 +51,15 @@ class ReplicaObject(GameObject):
 		if ("name" in config):
 			name = config["name"]
 		super().__init__(parent, zone, object_id, name)
+		self.object_type = game_enums.ObjectTypes.UNDEFINED.value
 		self.lot = 0
 		self.spawner_id = None
 		self.spawner_node_id = None
 		self.world_state = None
 		self.gm_level = None
 		self.json = {}
+		if("object_type" in config):
+			self.object_type = int(config["object_type"])
 		if("json" in config):
 			self.json = config["json"]
 		if("gm_level" in config):

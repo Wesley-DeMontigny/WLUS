@@ -4,6 +4,7 @@ from pyraknet.bitstream import *
 import pyraknet.replicamanager
 from pyraknet.messages import *
 from xml.etree import ElementTree
+import game_enums
 
 class BaseObject():
 	def __init__(self, parent):
@@ -61,6 +62,18 @@ class String(Serializable):
 	def deserialize(self, stream):
 		return stream.read(bytes, allocated_length=self.allocated_length, length_type=self.length_type).decode('latin1')
 
+
+class LwoObjectID(Serializable):
+	def __init__(self, value : int, type : int = 0):
+		self._val = value
+		self._type = type
+	def serialize(self, stream: "WriteStream"):
+		if(self._type == game_enums.ObjectTypes.SPAWNED.value):
+			stream.write(c_longlong(self._val + (1>>57)))
+		else:
+			stream.write(c_longlong(self._val))
+	def deserialize(cls, stream: "ReadStream"):
+		return stream.read(c_longlong)
 
 class Vector3(Serializable):
 	def __init__(self, X : float = 0.0, Y : float = 0.0, Z : float = 0.0, str_val:str = None):

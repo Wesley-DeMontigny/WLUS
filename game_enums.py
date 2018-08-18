@@ -45,6 +45,13 @@ class DisconnectionReasonEnum(IntEnum):
 	CHARACTER_CORRUPTION = 0x0a
 	KICKED = 0x0b
 
+class ObjectTypes(IntEnum):
+	UNDEFINED = 0
+	SPAWNED = 1
+	LOCAL = 2
+	GLOBAL = 3
+	STATIC = 4
+
 class ItemLOTs(IntEnum):
 	SHIRT_BRIGHT_RED = 4049
 	SHIRT_BRIGHT_BLUE = 4083

@@ -237,6 +237,8 @@ class ReplicaService(services.GameService):
 							write_str = "stream.write(game_types.String({}, length_type={}))".format(write_value, write_methods[data_type.split("-")[0]])
 						elif(len(data_type.split("-")) == 2 and data_type.split("-")[1] == "wstring"):
 							write_str = "stream.write({}, length_type={})".format(write_value, write_methods[data_type.split("-")[0]])
+						elif(len(data_type.split("-")) == 2 and data_type.split("-")[0] == "lwoobjectid"):
+							write_str = "stream.write(game_types.LwoObjectID({}, {}))".format(write_value, data_type.split("-")[1])
 						elif(data_type == "ldf"):
 							write_str = "stream.write({})".format(write_value)
 					execute_string += format_line(write_str, indent_level)

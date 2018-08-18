@@ -4,7 +4,7 @@ import scripts
 
 class Main(scripts.Script):
 	def __init__(self, parent):
-		super().__init__(parent, "Wesley's Zone Editor")
+		super().__init__(parent, "Easy Register")
 		global game
 		game = self.get_parent()
 
