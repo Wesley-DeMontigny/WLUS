@@ -70,7 +70,9 @@ class ReplicaService(services.GameService):
 			transform.scale = config["scale"]
 
 		cdclient_db = game.get_service("Database").cdclient_db
-		component_list = cdclient_db.tables["ComponentsRegistry"].select(["component_type", "component_id"], "id = {}".format(config["lot"]))
+		c = cdclient_db.connection.cursor()
+		c.execute("SELECT component_type, component_id FROM ComponentsRegistry WHERE id = ?", (config["lot"],))
+		component_list = c.fetchall()
 		object_components = {}
 		for component in component_list:
 			object_components[int(component["component_type"])] = int(component["component_id"])
@@ -90,7 +92,8 @@ class ReplicaService(services.GameService):
 			destructible = components.Destructible(replica)
 			replica.add_component(destructible)
 
-			destructible_data = cdclient_db.tables["DestructibleComponent"].select_all("id = {}".format(object_components[7]))[0]
+			c.execute("SELECT * FROM DestructibleComponent WHERE id = ?", (object_components[7],))
+			destructible_data = c.fetchone()
 			stats = components.Stats(replica)
 			if(destructible_data["life"] is not None):
 				stats.health = int(destructible_data["life"])
@@ -142,7 +145,8 @@ class ReplicaService(services.GameService):
 		if(17 in object_components):
 			if(game.get_service("Player").get_player_by_id(int(replica.get_object_id())) is None):
 				inventory = components.Inventory(replica)
-				db_items = cdclient_db.tables["InventoryComponent"].select_all("id = {}".format(object_components[17]))
+				c.execute("SELECT * FROM InventoryComponent WHERE id = ?", (object_components[17],))
+				db_items = c.fetchall()
 				for item in db_items:
 					new_item = {}
 					new_item["item_id"] = game.generate_object_id()
@@ -165,7 +169,8 @@ class ReplicaService(services.GameService):
 			replica.add_component(base_comabt_ai)
 		if(48 in object_components):
 			rebuild = components.Rebuild(replica)
-			db_rebuild = cdclient_db.tables["RebuildComponent"].select_all("id = {}".format(object_components[48]))[0]
+			c.execute("SELECT * FROM RebuildComponent WHERE id = ?", (object_components[48],))
+			db_rebuild = c.fetchone()
 			rebuild.reset_time = float(db_rebuild["reset_time"])
 			if("build_activator_pos" in config):
 				rebuild.build_activator_pos = config["build_activator_pos"]
@@ -271,7 +276,9 @@ class ReplicaService(services.GameService):
 		exec(struct_method("replica/serialization_header.structs"))
 
 		cdclient_db = game.get_service("Database").cdclient_db
-		component_list = cdclient_db.tables["ComponentsRegistry"].select(["component_type", "component_id"], "id = {}".format(replica.lot))
+		c = cdclient_db.connection.cursor()
+		c.execute("SELECT component_type, component_id FROM ComponentsRegistry WHERE id = ?", (replica.lot,))
+		component_list = c.fetchall()
 		object_components = []
 		for component in component_list:
 			object_components.append(int(component["component_type"]))

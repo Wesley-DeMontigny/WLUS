@@ -37,10 +37,10 @@ class ChatCommandService(services.GameService):
 
 		database_service = game.get_service("Database")
 		server_db = database_service.server_db
-		zone_objects = server_db.tables["ZoneObjects"]
+		c = server_db.connection.cursor()
 		adjusted_config = copy.deepcopy(object_config)
 		adjusted_config["position"] = str(object_config["position"])
-		zone_objects.insert({"zone_id":player.zone.get_zone_id(), "replica_config":json.dumps(adjusted_config)})
+		c.execute("INSERT INTO ZoneObjects (zone_id, replica_config) VALUES (?, ?)", (player.zone.get_zone_id(), json.dumps(adjusted_config)))
 
 
 	def handle_command(self, object_id, stream, address):
@@ -57,14 +57,11 @@ class ChatCommandService(services.GameService):
 		self._commands[command_name] = [handler, requires_admin]
 
 	def get_item(self, object_id, address, args, client_state):
-		try:
-			lot = int(args[0])
-			player_service = game.get_service("Player")
-			item = player_service.add_item_to_inventory(object_id, lot, json_data={"from":"command"})
-			if(item is not None):
-				game.get_service("Game Message").add_item_to_inventory_client_sync(object_id, [address], item["lot"], item["item_id"], item["slot"])
-		except Exception as e:
-			print("Error While Getting Item", e)
+		lot = int(args[0])
+		player_service = game.get_service("Player")
+		item = player_service.add_item_to_inventory(object_id, lot, json_data={"from":"command"})
+		if(item is not None):
+			game.get_service("Game Message").add_item_to_inventory_client_sync(object_id, [address], item["lot"], item["item_id"], item["slot"])
 
 	def toggle_jetpack(self, object_id, address, args, client_state):
 		player = game.get_service("Player").get_player_object_by_id(object_id)

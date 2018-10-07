@@ -36,7 +36,9 @@ class Zone(game_types.BaseObject):
 
 		database_service = game.get_service("Database")
 		server_db = database_service.server_db
-		objects = server_db.tables["ZoneObjects"].select_all("zone_id == {}".format(self._zone_id))
+		c = server_db.connection.cursor()
+		c.execute("SELECT * FROM ZoneObjects WHERE zone_id = ?", (self._zone_id,))
+		objects = c.fetchall()
 		for object in objects:
 			adjusted_config = json.loads(object["replica_config"])
 			if ("position" in adjusted_config):

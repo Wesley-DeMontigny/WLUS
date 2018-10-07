@@ -78,18 +78,19 @@ class AuthServerService(GameService):
 
 	def validate_login(self, username : str, password : str):
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
-		account_table : database.DBTable = server_db.tables["Accounts"]
-		user_info = account_table.select_all("username = '{}'".format(username))
-		if (user_info !=[] and bool(user_info[0]["banned"]) != True and passlib.hash.sha256_crypt.verify(password, user_info[0]["password"])):  # Success
+		c = server_db.connection.cursor()
+		c.execute("SELECT * FROM Accounts WHERE username = ?", (username,))
+		user_info = c.fetchone()
+		if (user_info is not None and bool(user_info["banned"]) != True and passlib.hash.bcrypt.verify(password, user_info["password"])):  # Success
 			return True, user_info
 		else:
 			return False, user_info
 
 	def register_account(self, username : str, password : str, banned = 0, is_admin = 0):
-		passhash = passlib.hash.sha256_crypt.encrypt(password)
+		passhash = passlib.hash.bcrypt.hash(password)
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
-		account_table : database.DBTable = server_db.tables["Accounts"]
-		account_table.insert({"username":username, "password":passhash, "banned":banned, "is_admin":is_admin})
+		c = server_db.connection.cursor()
+		c.execute("INSERT INTO Accounts (username, password, banned, is_admin) VALUES (?, ?, ?, ?)", (username, passhash, banned, is_admin))
 		print(f"Registered User '{username}'")
 
 class DatabaseService(GameService):

@@ -7,12 +7,14 @@ import random
 
 class Main(scripts.Script):
 	def __init__(self, parent):
-		super().__init__(parent, "JSON Importer")
+		super().__init__(parent, "Console Commands")
 		global game
 		game = self.get_parent()
 
 	def run(self):
+		game.register_console_command("Register", self.register_handler)
 		game.register_console_command("ImportLUZ", self.import_handler)
+
 
 	def import_handler(self, args):
 		if(len(args) == 1):
@@ -36,7 +38,7 @@ class Main(scripts.Script):
 
 				database = game.get_service("Database")
 				server_db = database.server_db
-				zone_objects = server_db.tables["ZoneObjects"]
+				c = server_db.connection.cursor()
 
 				for chunk in json_obj["chunks"]:
 					if(chunk["_type"] == 2001):
@@ -48,7 +50,12 @@ class Main(scripts.Script):
 										  'position': str(game_types.Vector3(game_object['pos']['pos']['x'], game_object['pos']['pos']['y'], game_object['pos']['pos']['z'])),
 										  'rotation': str(game_types.Vector4(game_object['pos']['rot']['x'], game_object['pos']['rot']['y'], game_object['pos']['rot']['z'], game_object['pos']['rot']['w'])),
 										  'scale':game_object["scale"], 'spawner_node_id':0, 'object_id':object_id, 'scene':lvl["scene_id"], 'object_type':1}
-								zone_objects.insert({"zone_id": zone, "replica_config": json.dumps(config)})
+								c.execute("INSERT INTO ZoneObjects (zone_id, replica_config) VALUES (?, ?)", (zone, json.dumps(config)))
 								print("Imported Object {} To DB".format(config["object_id"]))
 
 
+	def register_handler(self, args):
+		username = args[0]
+		password = args[1]
+		auth_service = game.get_service("Auth Server")
+		auth_service.register_account(username, password)

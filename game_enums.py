@@ -115,6 +115,8 @@ class GameMessages(IntEnum):
 	ECHO_START_SKILL = 118
 	ECHO_SYNC_SKILL = 1144
 	SYNC_SKILL = 1145
+	DIE = 37
+	REQUEST_DIE = 38
 
 class ItemTypes(IntEnum):
 	INVALID = 0

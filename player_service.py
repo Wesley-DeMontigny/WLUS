@@ -28,28 +28,28 @@ class PlayerService(services.GameService):
 		sync.start()
 
 	def add_account(self, account_id : int):
-		db = self.get_parent().get_service("Database").server_db
-
-		account_table : database.DBTable = db.tables["Accounts"]
-		character_table : database.DBTable = db.tables["Characters"]
-		character_data_table : database.DBTable = db.tables["CharacterData"]
-		character_stats_table : database.DBTable = db.tables["CharacterStats"]
-		completed_missions_table : database.DBTable = db.tables["CompletedMissions"]
-		current_missions_table : database.DBTable = db.tables["CurrentMissions"]
-		inventory_table : database.DBTable = db.tables["Inventory"]
-
-
-		account = account_table.select(["account_id", "username", "banned", "is_admin"], "account_id = {}".format(account_id))[0]
-		characters = character_table.select_all("account_id = {}".format(account_id))
+		server_db = self.get_parent().get_service("Database").server_db
+		
+		c = server_db.connection.cursor()
+		
+		c.execute("SELECT * FROM Accounts WHERE account_id = ?", (account_id,))
+		account = c.fetchone()
+		c.execute("SELECT * FROM Characters WHERE account_id = ?", (account_id,))
+		characters = c.fetchall()
 		for character in characters:
-			data = character_data_table.select_all("player_id = {}".format(character["player_id"]))[0]
+			c.execute("SELECT * FROM CharacterData WHERE player_id = ?", (character["player_id"],))
+			data = c.fetchone()
 			data["position"] = game_types.Vector3(str_val=data["position"])
 			data["rotation"] = game_types.Vector4(str_val=data["rotation"])
 			character["Data"] = data
-			character["Stats"] = character_stats_table.select_all("player_id = {}".format(character["player_id"]))[0]
-			character["CompletedMissions"] = completed_missions_table.select_all("player_id = {}".format(character["player_id"]))
-			character["CurrentMissions"] = current_missions_table.select_all("player_id = {}".format(character["player_id"]))
-			inventory = inventory_table.select_all("player_id = {}".format(character["player_id"]))
+			c.execute("SELECT * FROM CharacterStats WHERE player_id = ?", (character["player_id"],))
+			character["Stats"] = c.fetchone()
+			c.execute("SELECT * FROM CompletedMissions WHERE player_id = ?", (character["player_id"],))
+			character["CompletedMissions"] = c.fetchall()
+			c.execute("SELECT * FROM CurrentMissions WHERE player_id = ?", (character["player_id"],))
+			character["CurrentMissions"] = c.fetchall()
+			c.execute("SELECT * FROM Inventory WHERE player_id = ?", (character["player_id"],))
+			inventory = c.fetchall()
 			for item in inventory:
 				if(item["json"] is not None):
 					item["json"] = json.loads(item["json"])
@@ -68,14 +68,9 @@ class PlayerService(services.GameService):
 	def sync_database(self, accounts : typing.Iterable = None):
 		if(accounts is None):
 			accounts = self._accounts
-		db = self.get_parent().get_service("Database").server_db
+		server_db = self.get_parent().get_service("Database").server_db
+		c = server_db.connection.cursor()
 
-		character_table : database.DBTable = db.tables["Characters"]
-		character_data_table : database.DBTable = db.tables["CharacterData"]
-		character_stats_table : database.DBTable = db.tables["CharacterStats"]
-		completed_missions_table : database.DBTable = db.tables["CompletedMissions"]
-		current_missions_table : database.DBTable = db.tables["CurrentMissions"]
-		inventory_table : database.DBTable = db.tables["Inventory"]
 		for account in accounts:
 			account_copy = copy.deepcopy(account)
 			for character in account_copy["Characters"]:
@@ -91,47 +86,62 @@ class PlayerService(services.GameService):
 				del character["CompletedMissions"]
 				current_missions = character["CurrentMissions"]
 				del character["CurrentMissions"]
-				character_table.update(character, "player_id = {}".format(character["player_id"]))
-				character_stats_table.update(stats, "player_id = {}".format(character["player_id"]))
-				character_data_table.update(data, "player_id = {}".format(character["player_id"]))
+
+				c.execute("UPDATE Characters SET name = ?, zone = ?, shirt_color = ?, shirt_style = ?, pants_color = ?, hair_color = ?, hair_style = ?, lh = ?, rh = ?, eyebrows = ?, eyes = ?, mouth = ? WHERE player_id = ?",
+						  (character["name"], character["zone"], character["shirt_color"], character["shirt_style"], character["pants_color"], character["hair_color"], character["hair_style"], character["lh"], character["rh"],
+						   character["eyebrows"], character["eyes"], character["mouth"], character["player_id"]))
+				c.execute('''UPDATE CharacterStats SET currency_collected = ?, bricks_collected = ?, smashables_smashed = ?, quick_builds_done = ?, enemies_smashed = ?, rockets_used = ?, pets_tamed = ?, imagination_collected = ?, health_collected = ?, armor_collected = ?, distance_traveled = ?, times_died = ?,
+						  damage_taken = ?, damage_healed = ?, armor_repaired = ?, imagination_restored = ?, imagination_used = ?, distance_driven = ?, time_airborne_in_car = ?, racing_imagination_collected = ?, racing_imagination_crates_smashed = ?, race_car_boosts = ?, car_wrecks = ?, racing_smashables_smashed = ?,
+						  races_finished = ?, races_won = ? WHERE player_id = ?''', (stats["currency_collected"], stats["bricks_collected"], stats["smashables_smashed"], stats["quick_builds_done"], stats["enemies_smashed"], stats["rockets_used"], stats["pets_tamed"], stats["imagination_collected"], stats["health_collected"], stats["armor_collected"], stats["distance_traveled"], stats["times_died"],
+						  stats["damage_taken"], stats["damage_healed"], stats["armor_repaired"], stats["imagination_restored"], stats["imagination_used"], stats["distance_driven"], stats["time_airborne_in_car"], stats["racing_imagination_collected"], stats["racing_imagination_crates_smashed"], stats["race_car_boosts"], stats["car_wrecks"], stats["racing_smashables_smashed"],
+						  stats["races_finished"], stats["races_won"], character["player_id"]))
+				c.execute('''UPDATE CharacterData SET universe_score = ?, level = ?, health = ?, max_health = ?, armor = ?, max_armor = ?, imagination = ?, max_imagination = ?, currency = ?, position = ?, rotation = ?, backpack_space = ? WHERE player_id = ?''',
+						  (data["universe_score"], data["level"], data["health"], data["max_health"], data["armor"], data["max_armor"], data["imagination"], data["max_imagination"], data["currency"], data["position"], data["rotation"], data["backpack_space"], character["player_id"]))
 
 				for mission in completed_missions:
-					check = completed_missions_table.select_all("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+					c.execute("SELECT * FROM CompletedMissions WHERE player_id = ? and mission_id = ?", (mission["player_id"], mission["mission_id"]))
+					check = c.fetchall()
 					if(check == []):
-						completed_missions_table.insert(mission)
+						c.execute("INSERT INTO CompletedMissions (player_id, mission_id) VALUES (?, ?)", (mission["player_id"], mission["mission_id"]))
 
 				for mission in current_missions:
-					check = current_missions_table.select_all("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+					c.execute("SELECT * FROM CurrentMissions WHERE player_id = ? and mission_id = ?", (mission["player_id"], mission["mission_id"]))
+					check = c.fetchall()
 					if(check == []):
-						current_missions_table.insert(mission)
+						c.execute("INSERT INTO CurrentMissions (player_id, mission_id, progress) VALUES (?, ?, ?)", (mission["player_id"], mission["mission_id"], mission["progress"]))
 					else:
-						current_missions_table.update(mission, "player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+						c.execute("UPDATE CurrentMissions SET progress = ? WHERE player_id = ? AND mission_id = ?", (mission["progress"], mission["player_id"], mission["mission_id"]))
 
-				db_missions = current_missions_table.select_all("player_id = {}".format(character["player_id"]))
+				c.execute("SELECT * FROM CurrentMissions WHERE player_id = ?", (character["player_id"],))
+				db_missions = c.fetchall()
 				for mission in db_missions:
 					keep = False
 					for server_mission in current_missions:
 						if(server_mission["mission_id"] == mission["mission_id"]):
 							keep = True
 					if(keep == False):
-						current_missions_table.delete("player_id = {} AND mission_id = {}".format(mission["player_id"], mission["mission_id"]))
+						c.execute("DELETE FROM CurrentMissions WHERE player_id = ? AND mission_id = ?", (mission["player_id"], mission["mission_id"]))
 
 				for item in inventory:
 					item["json"] = json.dumps(item["json"])
-					check = inventory_table.select_all("item_id = {}".format(item["item_id"]))
+					c.execute("SELECT * FROM Inventory WHERE item_id = ?", (item["item_id"],))
+					check = c.fetchall()
 					if(check == []):
-						inventory_table.insert(item)
+						c.execute("INSERT INTO Inventory (lot, slot, equipped, linked, quantity, item_id, player_id, json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+								  (item["lot"], item["slot"], item["equipped"], item["linked"], item["quantity"], item["item_id"], item["player_id"], item["json"]))
 					else:
-						inventory_table.update(item, "item_id = {}".format(item["item_id"]))
+						c.execute("UPDATE Inventory SET slot = ?, equipped = ?, linked = ?, quantity = ?, json = ? WHERE item_id = ?",
+								  (item["slot"], item["equipped"], item["linked"], item["quantity"], item["json"], item["item_id"]))
 
-				db_inventory = inventory_table.select_all("player_id = {}".format(character["player_id"]))
+				c.execute("SELECT * FROM Inventory WHERE player_id = ?", (character["player_id"],))
+				db_inventory = c.fetchall()
 				for item in db_inventory:
 					keep = False
 					for server_item in inventory:
 						if(server_item["item_id"] == item["item_id"]):
 							keep = True
 					if(keep == False):
-						inventory_table.delete("item_id = {}".format(item["item_id"]))
+						c.execute("DELETE FROM Inventory WHERE item_id = ?", (item["item_id"],))
 
 
 	def delete_player(self, player_id):
@@ -144,50 +154,46 @@ class PlayerService(services.GameService):
 				account["Characters"].remove(character)
 
 		db = self.get_parent().get_service("Database").server_db
-		character_table : database.DBTable = db.tables["Characters"]
-		character_data_table : database.DBTable = db.tables["CharacterData"]
-		character_stats_table : database.DBTable = db.tables["CharacterStats"]
-		completed_missions_table : database.DBTable = db.tables["CompletedMissions"]
-		current_missions_table : database.DBTable = db.tables["CurrentMissions"]
-		inventory_table : database.DBTable = db.tables["Inventory"]
+		c = db.connection.cursor()
 
-		character_table.delete("player_id = {}".format(player_id))
-		character_data_table.delete("player_id = {}".format(player_id))
-		character_stats_table.delete("player_id = {}".format(player_id))
-		completed_missions_table.delete("player_id = {}".format(player_id))
-		current_missions_table.delete("player_id = {}".format(player_id))
-		inventory_table.delete("player_id = {}".format(player_id))
+		c.execute("DELETE FROM Characters WHERE player_id = ?", (player_id,))
+		c.execute("DELETE FROM CharacterData WHERE player_id = ?", (player_id,))
+		c.execute("DELETE FROM CharacterStats WHERE player_id = ?", (player_id,))
+		c.execute("DELETE FROM CompletedMissions WHERE player_id = ?", (player_id,))
+		c.execute("DELETE FROM CurrentMissions WHERE player_id = ?", (player_id,))
+		c.execute("DELETE FROM Inventory WHERE player_id = ?", (player_id,))
 
 		self.get_parent().trigger_event("PlayerDeleted", args=(player,))
 
 	def create_player(self, account_id : int, name: str, shirt_color: int, shirt_style: int, pants_color: int, hair_color: int,
 						 hair_style: int, lh: int, rh: int, eyebrows: int, eyes: int, mouth: int, custom_name: str):
 		db = self.get_parent().get_service("Database").server_db
-		character_table : database.DBTable = db.tables["Characters"]
-		character_data_table : database.DBTable = db.tables["CharacterData"]
-		character_stats_table : database.DBTable = db.tables["CharacterStats"]
+		c = db.connection.cursor()
 
 		player_id = self.get_parent().generate_object_id()
-		player_base = {"account_id":account_id, "name":name, "shirt_color":shirt_color, "shirt_style":shirt_style, "pants_color":pants_color, "hair_color":hair_color, "hair_style":hair_style,
-								"lh":lh, "rh":rh, "eyebrows":eyebrows, "eyes":eyes, "mouth":mouth, "zone":1000, "player_id":player_id, "custom_name":custom_name}
-		player_data = {"universe_score":0, "level":0, "health":4, "max_health":4, "armor":0, "max_armor":0, "imagination":0, "max_imagination":0, "currency":0, "position":"0,0,0",
-									 "rotation":"0,0,0,0", "player_id":player_id, "backpack_space":20}
-		player_stats = {"currency_collected":0, "bricks_collected":0, "smashables_smashed":0, "quick_builds_done":0, "enemies_smashed":0, "rockets_used":0, "pets_tamed":0,
-									  "imagination_collected":0, "health_collected":0, "armor_collected":0, "distance_traveled":0, "times_died":0, "damage_taken":0, "damage_healed":0,
-									  "armor_repaired":0, "imagination_restored":0, "imagination_used":0, "distance_driven":0, "time_airborne_in_car":0, "racing_imagination_collected":0,
-									  "racing_imagination_crates_smashed":0, "race_car_boosts":0, "car_wrecks":0, "racing_smashables_smashed":0, "races_finished":0, "races_won":0, "player_id":player_id}
 
-		character_table.insert(player_base)
-		character_data_table.insert(player_data)
-		character_stats_table.insert(player_stats)
+		c.execute('''INSERT INTO CharacterStats (currency_collected, bricks_collected, smashables_smashed, quick_builds_done, enemies_smashed, rockets_used, pets_tamed, imagination_collected, health_collected, armor_collected, distance_traveled, times_died,
+				  damage_taken, damage_healed, armor_repaired, imagination_restored , imagination_used, distance_driven, time_airborne_in_car, racing_imagination_collected, racing_imagination_crates_smashed, race_car_boosts, car_wrecks, racing_smashables_smashed,
+				  races_finished, races_won, player_id) VALUES (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,?)''', (player_id,))
+		c.execute('''INSERT INTO Characters (account_id, name, shirt_color, shirt_style, pants_color, hair_color, hair_style, lh, rh, eyebrows, eyes, mouth, zone, player_id, custom_name) VALUES
+				  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (account_id, name, shirt_color, shirt_style, pants_color, hair_color, hair_style, lh, rh, eyebrows, eyes, mouth, 1000, player_id, custom_name))
+		c.execute('''INSERT INTO CharacterData (universe_score, level, health, max_health, armor, max_armor, imagination, max_imagination, currency, position, rotation, player_id, backpack_space) VALUES
+			  	  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (0, 0, 4, 4, 0, 0, 0, 0, 0, "0,0,0", "0,0,0", player_id, 20))
+
+
 
 		account = self.get_account_by_id(account_id)
 		self.sync_database([account])
-		player_copy = copy.deepcopy(player_base)
-		player_copy["Data"] = player_data
+		player_copy = copy.deepcopy({"account_id":account_id, "name":name, "shirt_color":shirt_color, "shirt_style":shirt_style, "pants_color":pants_color, "hair_color":hair_color, "hair_style":hair_style,
+								"lh":lh, "rh":rh, "eyebrows":eyebrows, "eyes":eyes, "mouth":mouth, "zone":1000, "player_id":player_id, "custom_name":custom_name})
+		player_copy["Data"] = {"universe_score":0, "level":0, "health":4, "max_health":4, "armor":0, "max_armor":0, "imagination":0, "max_imagination":0, "currency":0, "position":"0,0,0",
+									 "rotation":"0,0,0,0", "player_id":player_id, "backpack_space":20}
 		player_copy["Data"]["position"] = game_types.Vector3(str_val = player_copy["Data"]["position"])
 		player_copy["Data"]["rotation"] = game_types.Vector4(str_val = player_copy["Data"]["rotation"])
-		player_copy["Stats"] = player_stats
+		player_copy["Stats"] = {"currency_collected":0, "bricks_collected":0, "smashables_smashed":0, "quick_builds_done":0, "enemies_smashed":0, "rockets_used":0, "pets_tamed":0,
+									  "imagination_collected":0, "health_collected":0, "armor_collected":0, "distance_traveled":0, "times_died":0, "damage_taken":0, "damage_healed":0,
+									  "armor_repaired":0, "imagination_restored":0, "imagination_used":0, "distance_driven":0, "time_airborne_in_car":0, "racing_imagination_collected":0,
+									  "racing_imagination_crates_smashed":0, "race_car_boosts":0, "car_wrecks":0, "racing_smashables_smashed":0, "races_finished":0, "races_won":0, "player_id":player_id}
 		player_copy["CompletedMissions"] = []
 		player_copy["CurrentMissions"] = []
 		player_copy["Inventory"] = []
@@ -363,11 +369,12 @@ class PlayerService(services.GameService):
 
 		database_service = game.get_service("Database")
 		cdclient = database_service.cdclient_db
-		component_registry = cdclient.tables["ComponentsRegistry"]
-		item_component = cdclient.tables["ItemComponent"]
+		c = cdclient.connection.cursor()
 
-		item_component_id = component_registry.select(["component_id"],"id = {} and component_type = 11".format(lot))
-		item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))[0]
+		c.execute("SELECT component_id FROM ComponentsRegistry WHERE id = ? and component_type = 11", (lot,))
+		item_component_id = c.fetchone()
+		c.execute("SELECT * FROM ItemComponent WHERE id = ?", (item_component_id["component_id"],))
+		item_data = c.fetchone()
 
 		new_item_id = game.generate_object_id()
 
@@ -378,10 +385,11 @@ class PlayerService(services.GameService):
 		item = {"player_id":player_id, "lot":lot, "slot":slot, "equipped":int(equipped), "linked":int(linked), "quantity":quantity, "json":json_data, "item_id":new_item_id}
 
 		db = self.get_parent().get_service("Database").server_db
-		inventory_table = db.tables["Inventory"]
+		c2 = db.connection.cursor()
 		db_item = copy.deepcopy(item)
 		db_item["json"] = json.dumps(db_item["json"])
-		inventory_table.insert(db_item)
+		c2.execute("INSERT INTO Inventory (lot, slot, equipped, linked, quantity, item_id, player_id, json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			(db_item["lot"], db_item["slot"], db_item["equipped"], db_item["linked"], db_item["quantity"], db_item["item_id"], db_item["player_id"], db_item["json"]))
 
 		player["Inventory"].append(item)
 		self.get_parent().trigger_event("ItemAdded", args=[player_id, item])

@@ -120,6 +120,37 @@ class GameMessageService(services.GameService):
 
 		self.world_server.send(msg, recipients)
 
+
+	def die(self, object_id : int, recipients : list, killer_id : int, client_death : bool = False, spawn_loot : bool = False, death_type : str = game_enums.DeathType.ELECTRO_SHOCK.value, dir_rel_xz : float = 0, dir_rel_y : float = 0, dir_rel_force = 0, kill_type : int = 0, loot_owner_id : int = 0):
+		msg = WriteStream()
+		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
+		msg.write(c_longlong(object_id))
+		msg.write(c_ushort(game_enums.GameMessages.DIE.value))
+
+		msg.write(c_bit(client_death))
+
+		msg.write(c_bit(spawn_loot))
+
+		msg.write(death_type, length_type=c_ulong)
+
+		msg.write(c_float(dir_rel_xz))
+
+		msg.write(c_float(dir_rel_y))
+
+		msg.write(c_float(dir_rel_force))
+
+		msg.write(c_bit(kill_type != 0))
+		if(kill_type != 0):
+			msg.write(c_ulong(kill_type))
+
+		msg.write(c_longlong(killer_id))
+
+		msg.write(c_bit(loot_owner_id != 0))
+		if(loot_owner_id != 0):
+			msg.write(c_longlong(loot_owner_id))
+
+		self.world_server.send(msg, recipients)
+
 	def echo_start_skill(self, object_id : int, recipients : list, skill_id : int, bit_stream:str, optional_originator : int, used_mouse : bool = False, caster_latency : float = 0.0, cast_type : int = 0, last_clicked_pos : game_types.Vector3 = game_types.Vector3(), optional_target_id : int = 0, originator_rot : game_types.Vector4 = game_types.Vector4(), ui_skill_handle : int = 0):
 		msg = WriteStream()
 		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)

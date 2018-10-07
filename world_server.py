@@ -300,10 +300,11 @@ class WorldServer(pyraknet.server.Server):
 		game_message_service = game.get_service("Game Message")
 		database_service = game.get_service("Database")
 		cdclient = database_service.cdclient_db
-		object_skills = cdclient.tables["ObjectSkills"]
+		c = cdclient.connection.cursor()
 		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
 			if ("skill_overide" not in item["json"]):
-				skill_data = object_skills.select_all("objectTemplate = {}".format(item["lot"]))
+				c.execute("SELECT * FROM ObjectSkills WHERE objectTemplate = ?", (item["lot"],))
+				skill_data = c.fetchall()
 				if(skill_data != []):
 					address = game.get_service("Session").get_session_by_player_id(player_id).address
 					for skill in skill_data:
@@ -317,26 +318,27 @@ class WorldServer(pyraknet.server.Server):
 		game_message_service = game.get_service("Game Message")
 		database_service = game.get_service("Database")
 		cdclient = database_service.cdclient_db
-		object_skills = cdclient.tables["ObjectSkills"]
-		component_registry = cdclient.tables["ComponentsRegistry"]
-		item_component = cdclient.tables["ItemComponent"]
+		c = cdclient.connection.cursor()
 		for item in game.get_service("Player").get_equipped_items(player["player_id"]):
 			if("skill_overide" not in item["json"]):
-				item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(item["lot"]))
+				c.execute("SELECT component_id FROM ComponentsRegistry WHERE id = ? and component_type = 11", (item["lot"],))
+				item_component_id = c.fetchone()
 				if(item_component_id != []):
-					item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))
+					c.execute("SELECT * FROM ItemComponent WHERE id = ?", (item_component_id["component_id"],))
+					item_data = c.fetchone()
 					if(item_data != []):
 						skill_slot = 4
-						if(int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAIR.value or int(item_data[0]["itemType"]) == game_enums.ItemTypes.HAT.value):
+						if(int(item_data["itemType"]) == game_enums.ItemTypes.HAIR.value or int(item_data["itemType"]) == game_enums.ItemTypes.HAT.value):
 							skill_slot = 3
-						elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.NECK.value):
+						elif(int(item_data["itemType"]) == game_enums.ItemTypes.NECK.value):
 							skill_slot = 2
-						elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.RIGHT_HAND.value):
+						elif(int(item_data["itemType"]) == game_enums.ItemTypes.RIGHT_HAND.value):
 							skill_slot = 0
-						elif(int(item_data[0]["itemType"]) == game_enums.ItemTypes.LEFT_HAND.value):
+						elif(int(item_data["itemType"]) == game_enums.ItemTypes.LEFT_HAND.value):
 							skill_slot = 1
 
-						skill_data = object_skills.select_all("objectTemplate = {} AND castOnType = 0".format(item["lot"]))
+						c.execute("SELECT * FROM ObjectSkills WHERE objectTemplate = ? AND castOnType = 0", (item["lot"],))
+						skill_data = c.fetchall()
 						if(skill_data != []):
 							address = game.get_service("Session").get_session_by_player_id(player_id).address
 							for skill in skill_data:
@@ -356,15 +358,18 @@ class WorldServer(pyraknet.server.Server):
 
 		database_service = game.get_service("Database")
 		cdclient = database_service.cdclient_db
-		component_registry = cdclient.tables["ComponentsRegistry"]
-		item_component = cdclient.tables["ItemComponent"]
+		c = cdclient.connection.cursor()
 		game.get_service("World Server").server.unload_skills(object_id)
 
-		item_to_equip_component = component_registry.select(["component_id"],"id = {} and component_type = 11".format(item["lot"]))
-		item_to_equip_data = item_component.select_all("id = {}".format(item_to_equip_component[0]["component_id"]))[0]
+		c.execute("SELECT component_id FROM ComponentsRegistry WHERE id = ? and component_type = 11", (item["lot"],))
+		item_to_equip_component = c.fetchone()
+		c.execute("SELECT * FROM ItemComponent WHERE id = ?", (item_to_equip_component["component_id"],))
+		item_to_equip_data = c.fetchone()
 		for equipped_item in equipped_items:
-			item_component_id = component_registry.select(["component_id"], "id = {} and component_type = 11".format(equipped_item["lot"]))
-			item_data = item_component.select_all("id = {}".format(item_component_id[0]["component_id"]))[0]
+			c.execute("SELECT component_id FROM ComponentsRegistry WHERE id = ? and component_type = 11", (equipped_item["lot"],))
+			item_component_id = c.fetchone()
+			c.execute("SELECT * FROM ItemComponent WHERE id = ?", (item_component_id["component_id"],))
+			item_data = c.fetchone()
 			if(item_data["itemType"] == item_to_equip_data["itemType"]):
 				if("is_proxy" not in equipped_item["json"]):
 					player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
@@ -372,8 +377,10 @@ class WorldServer(pyraknet.server.Server):
 					player_service.get_item_by_id(object_id, equipped_item["json"]["parent_item"])["equipped"] = 0
 			if("proxy_items" in item["json"] and item["json"]["proxy_items"] != []):
 				for proxy_item in item["json"]["proxy_items"]:
-					proxy_item_component = component_registry.select(["component_id"], "id = {} and component_type = 11".format(proxy_item["lot"]))
-					proxy_item_data = item_component.select_all("id = {}".format(proxy_item_component[0]["component_id"]))[0]
+					c.execute("SELECT component_id FROM ComponentsRegistry WHERE id = ? and component_type = 11", (proxy_item["lot"],))
+					proxy_item_component = c.fetchone()
+					c.execute("SELECT * FROM ItemComponent WHERE id = ?", (proxy_item_component["component_id"],))
+					proxy_item_data = c.fetchone()
 					if(item_data["itemType"] == proxy_item_data["itemType"]):
 						if ("is_proxy" not in equipped_item["json"]):
 							player_service.get_item_by_id(object_id, equipped_item["item_id"])["equipped"] = 0
