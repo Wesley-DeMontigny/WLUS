@@ -14,11 +14,11 @@ class ChatCommandService(services.GameService):
 		game = self.get_parent()
 
 	def initialize(self):
-		self.register_command("/gmtestmap", self.testmap)
-		self.register_command("/gmjetpack", self.toggle_jetpack)
-		self.register_command("/gmtogglepvp", self.toggle_pvp)
+		self.register_command("/testmap", self.testmap)
+		self.register_command("/fly", self.toggle_jetpack)
+		self.register_command("/togglepvp", self.toggle_pvp)
 		self.register_command("/gmadditem", self.get_item)
-		self.register_command("/gmspawnobj", self.spawn_lot)
+		self.register_command("/spawn", self.spawn_lot)
 		game.register_event_handler("GM_{}".format(game_enums.GameMessages.PARSE_CHAT_MSG.value))(self.handle_command)
 		super().initialize()
 
