@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import game
 import services
 import session_service

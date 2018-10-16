@@ -1,7 +1,7 @@
 import game_types
 import typing
 import auth_server
-import passlib.hash
+import bcrypt
 import database
 import world_server
 import zone
@@ -81,13 +81,13 @@ class AuthServerService(GameService):
 		c = server_db.connection.cursor()
 		c.execute("SELECT * FROM Accounts WHERE username = ?", (username,))
 		user_info = c.fetchone()
-		if (user_info is not None and bool(user_info["banned"]) != True and passlib.hash.bcrypt.verify(password, user_info["password"])):  # Success
+		if (user_info is not None and bool(user_info["banned"]) != True and bcrypt.checkpw(password.encode("utf-8"), user_info["password"].encode("utf-8"))):  # Success
 			return True, user_info
 		else:
 			return False, user_info
 
 	def register_account(self, username : str, password : str, banned = 0, is_admin = 0):
-		passhash = passlib.hash.bcrypt.hash(password)
+		passhash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 		server_db : database.GameDB = self._parent.get_service("Database").server_db
 		c = server_db.connection.cursor()
 		c.execute("INSERT INTO Accounts (username, password, banned, is_admin) VALUES (?, ?, ?, ?)", (username, passhash, banned, is_admin))
