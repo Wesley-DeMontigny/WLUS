@@ -341,18 +341,3 @@ class ReplicaService(services.GameService):
 			exec(struct_method("replica/components/Component 107.structs"))
 		if(69 in object_components):
 			exec(struct_method("replica/components/Trigger.structs"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -127,7 +127,6 @@ class ZoneManager(pyraknet.replicamanager.ReplicaManager):
 		out.write(c_ubyte(Message.ReplicaManagerSerialize))
 		out.write(c_ushort(self._network_ids[obj]))
 		replica_service.write_to_stream(obj, out, game_enums.ReplicaTypes.SERIALIZATION)
-
 		self._server.send(out, self._participants)
 		game.trigger_event("SerializedReplica", args=(obj,))
 

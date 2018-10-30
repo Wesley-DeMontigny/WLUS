@@ -121,7 +121,7 @@ class GameMessageService(services.GameService):
 		self.world_server.send(msg, recipients)
 
 
-	def die(self, object_id : int, recipients : list, killer_id : int, client_death : bool = False, spawn_loot : bool = False, death_type : str = game_enums.DeathType.ELECTRO_SHOCK.value, dir_rel_xz : float = 0, dir_rel_y : float = 0, dir_rel_force = 0, kill_type : int = 0, loot_owner_id : int = 0):
+	def die(self, object_id : int, recipients : list, killer_id : int = 0, client_death : bool = True, spawn_loot : bool = False, death_type : str = game_enums.DeathType.ELECTRO_SHOCK.value, dir_rel_xz : float = 0, dir_rel_y : float = 0, dir_rel_force = 0, loot_owner_id : int = 0):
 		msg = WriteStream()
 		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
 		msg.write(c_longlong(object_id))
@@ -131,6 +131,8 @@ class GameMessageService(services.GameService):
 
 		msg.write(c_bit(spawn_loot))
 
+		msg.write(c_bit(False))
+
 		msg.write(death_type, length_type=c_ulong)
 
 		msg.write(c_float(dir_rel_xz))
@@ -139,11 +141,12 @@ class GameMessageService(services.GameService):
 
 		msg.write(c_float(dir_rel_force))
 
-		msg.write(c_bit(kill_type != 0))
-		if(kill_type != 0):
-			msg.write(c_ulong(kill_type))
+		msg.write(c_bit(False))
 
-		msg.write(c_longlong(killer_id))
+		if(killer_id > 0):
+			msg.write(c_longlong(killer_id))
+		else:
+			msg.write(c_longlong(object_id))
 
 		msg.write(c_bit(loot_owner_id != 0))
 		if(loot_owner_id != 0):

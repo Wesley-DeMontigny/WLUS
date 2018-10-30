@@ -19,8 +19,16 @@ class ChatCommandService(services.GameService):
 		self.register_command("/togglepvp", self.toggle_pvp)
 		self.register_command("/gmadditem", self.get_item)
 		self.register_command("/spawn", self.spawn_lot)
+		self.register_command("/togglegm", self.toggle_gm, True)
 		game.register_event_handler("GM_{}".format(game_enums.GameMessages.PARSE_CHAT_MSG.value))(self.handle_command)
 		super().initialize()
+
+	def toggle_gm(self, object_id, address, args, client_state):
+		player = game.get_service("Player").get_player_object_by_id(object_id)
+		if(player.gm_level != 2):
+			player.gm_level = 2
+		else:
+			player.gm_level = 2
 
 	def toggle_pvp(self, object_id, address, args, client_state):
 		player = game.get_service("Player").get_player_object_by_id(object_id)

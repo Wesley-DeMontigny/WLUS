@@ -48,6 +48,8 @@ class ReplicaObject(GameObject):
 		name = ""
 		if("object_id" in config):
 			object_id = config["object_id"]
+		else:
+			object_id = zone.get_parent().get_parent().generate_object_id()
 		if ("name" in config):
 			name = config["name"]
 		super().__init__(parent, zone, object_id, name)

@@ -221,57 +221,65 @@ class LVL(Serializable):
 	def __init__(self, config : dict = None):
 		self.config = config
 
-
 	def serialize(self, stream):
 		raise NotImplementedError
 
-	#TODO: This is a super lazy version of what it should actually be doing, definitely need to fix this up
 	def deserialize(self, stream):
+		#Most of this is shamelessly ripped off from PyLUS because I'm very lazy (Sorry Knight d:)
 		config = {}
 		config["objects"] = []
-		while True:
-			try:
-				buffer = b""
-				for i in range(4):
-					character = stream.read(bytes, length=1)
-					buffer = buffer + character
-				if (buffer == b"CHNK"):
-					chunk_type = stream.read(c_ulong)
-					stream.read(c_uint16)
-					stream.read(c_uint16)
-					stream.read(c_ulong)
-					stream.read(bytes, length=int((stream.read(c_ulong) * 8 - int(stream.read_offset)) / 8))
-					if (chunk_type == 1000):
-						config["version"] = stream.read(c_ulong)
-						stream.read(c_ulong)
-						stream.read(c_ulong)
-						stream.read(c_ulong)
-						stream.read(c_ulong)
-					elif (chunk_type == 2001):
-						for i in range(stream.read(c_ulong)):
-							gameobject = {}
-							gameobject["object_id"] = stream.read(c_ulonglong)
-							gameobject["lot"] = stream.read(c_ulong)
-							if (config["version"] >= 0x26):
-								stream.read(c_ulong)
-							if (config["version"] >= 0x20):
-								stream.read(c_ulong)
-							gameobject["position"] = Vector3().deserialize(stream)
-							w_rot = stream.read(c_float)
-							x_rot = stream.read(c_float)
-							y_rot = stream.read(c_float)
-							z_rot = stream.read(c_float)
-							gameobject["rotation"] = Vector4(x_rot, y_rot, z_rot, w_rot)
-							gameobject["scale"] = stream.read(c_float)
-							gameobject["ldf"] = self._read_ldf(stream.read(str, length_type=c_ulong))
-							if (config["version"] >= 7):
-								stream.read(c_ulong)
-							config["objects"].append(gameobject)
-						break
-			except Exception as e:
-				#print("Error while parsing LVL", e)
-				#Because of this sloppy implementation theres always a dumb error or two
-				break
+		header = stream.read(bytes, length=4)
+		stream._read_offset = 0
+
+		if header == b'CHNK':
+			while not stream.all_read():
+				assert stream._read_offset // 8 % 16 == 0
+				start_pos = stream._read_offset // 8
+				assert stream.read(bytes, length=4) == b'CHNK'
+
+				chunk_type = stream.read(c_uint)
+				assert stream.read(c_ushort) == 1
+				assert stream.read(c_ushort) in (1, 2)
+				chunk_len = stream.read(c_uint)
+				data_pos = stream.read(c_uint)
+				stream._read_offset = data_pos * 8
+				assert stream._read_offset // 8 % 16 == 0
+
+				if chunk_type == 1000:
+					pass
+				elif chunk_type == 2000:
+					pass
+				elif chunk_type == 2001:
+					for _ in range(stream.read(c_uint)):
+						objid = stream.read(c_int64)
+						lot = stream.read(c_uint)
+						unknown1 = stream.read(c_uint)
+						unknown2 = stream.read(c_uint)
+						position = Vector3().deserialize(stream)
+
+						rot_w = stream.read(c_float)
+						rot_x = stream.read(c_float)
+						rot_y = stream.read(c_float)
+						rot_z = stream.read(c_float)
+
+						rotation = Vector4(rot_x, rot_y, rot_z, rot_w)
+						scale = stream.read(c_float)
+						object_config = self._read_ldf(stream.read(str, length_type=c_uint))
+
+						assert stream.read(c_uint) == 0
+
+						if('renderDisabled' in object_config):
+							continue
+
+						if lot == 176:
+							lot = int(object_config['spawntemplate'])
+
+						config["objects"].append({"lot":lot, "spawner_id":objid, "position":position, "rotation": rotation, "scale":scale, "object_type":game_enums.ObjectTypes.SPAWNED.value, "spawner_config":object_config})
+				elif chunk_type == 2002:
+					pass
+
+				stream._read_offset = (start_pos + chunk_len) * 8
+
 		return LVL(config)
 
 	def _read_ldf(self, ldf):

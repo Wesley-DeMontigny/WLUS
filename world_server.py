@@ -34,13 +34,23 @@ class WorldServer(pyraknet.server.Server):
 								 "world_unequip_item":["GM_{}".format(game_enums.GameMessages.UNEQUIP_INVENTORY.value), self.handle_uneuqip_item],
 								 "world_start_skill":["GM_{}".format(game_enums.GameMessages.START_SKILL.value), self.handle_start_skill],
 								 "world_sync_skill":["GM_{}".format(game_enums.GameMessages.SYNC_SKILL.value), self.handle_sync_skill],
-								 "world_ready_for_updates":["GM_{}".format(game_enums.GameMessages.READY_FOR_UPDATES.value), self.handle_ready_for_updates]}
+								 "world_ready_for_updates":["GM_{}".format(game_enums.GameMessages.READY_FOR_UPDATES.value), self.handle_ready_for_updates],
+								 "world_smash_request": ["GM_{}".format(game_enums.GameMessages.REQUEST_DIE.value), self.handle_smash_request]}
 
 	def handle_ready_for_updates(self, object_id, stream : ReadStream, address):
 		pass  # This is just to get stuff from clogging up the logs for now
 
 	def handle_sync_skill(self, object_id, stream : ReadStream, address):
 		pass#This is just to get stuff from clogging up the logs for now
+
+	def handle_smash_request(self, object_id, stream : ReadStream, address):
+		try:
+			player_object = game.get_service("Player").get_player_object_by_id(object_id)
+		except:
+			return
+
+		game_message_service = game.get_service("Game Message")
+		game_message_service.die(object_id, player_object.zone.get_connections())
 
 	def handle_start_skill(self, object_id, stream : ReadStream, address):
 		try:
