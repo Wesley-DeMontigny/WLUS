@@ -117,6 +117,9 @@ class GameMessages(IntEnum):
 	SYNC_SKILL = 1145
 	DIE = 37
 	REQUEST_DIE = 38
+	PLAYER_REQUEST_SMASH = 1202
+	RESSURECT_REQUEST = 159
+	RESSURECT = 160
 
 class ItemTypes(IntEnum):
 	INVALID = 0

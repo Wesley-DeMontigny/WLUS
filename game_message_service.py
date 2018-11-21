@@ -15,8 +15,13 @@ class GameMessageService(services.GameService):
 	def initialize(self):
 		self.world_server = game.get_service("World Server").server
 		super().initialize()
-
-	def send_game_msg(self, object_id, msg_id, recipients: list, additional_parameters: list = None):
+	
+	def init_game_msg(self, stream: WriteStream, object_id: int, message_id: int):
+		stream.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
+		stream.write(c_longlong(object_id))
+		stream.write(c_ushort(message_id))
+	
+	def send_game_msg(self, object_id, msg_id, recipients: list):
 		msg = WriteStream()
 		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
 		msg.write(c_longlong(object_id))
@@ -25,9 +30,7 @@ class GameMessageService(services.GameService):
 
 	def play_fx_effect(self, object_id : int, recipients : list, effect_id : int, effect_type : str, scale : float, name : str, priority : float = 1.0, secondary : int = -1, serialize : bool = True):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.PLAY_FX_EFFECT.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.PLAY_FX_EFFECT.value)
 
 		msg.write(c_bit(effect_id != -1))
 		if(effect_id != -1):
@@ -55,9 +58,7 @@ class GameMessageService(services.GameService):
 
 	def stop_fx_effect(self, object_id : int, recipients : list, kill_immediately : bool, name : str):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.PLAY_FX_EFFECT.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.STOP_FX_EFFECT.value)
 
 		msg.write(c_bit(kill_immediately))
 		msg.write(game_types.String(name, length_type=c_ulong))
@@ -65,9 +66,7 @@ class GameMessageService(services.GameService):
 
 	def add_item_to_inventory_client_sync(self, object_id : int, recipients : list, lot : int, item_id : int, slot_id : int, bound: bool = False, bound_on_equip : bool = False, bound_on_pickup : bool = False, loot_type_source : int = 0, extra_info : str = "", sub_key : int = 0, inventory_type : int = 0, item_count : int = 1, items_total : int = 0, flying_loot_pos : game_types.Vector3 = game_types.Vector3(), show_flying_loot : bool = True):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.ADD_ITEM_TO_INVENTORY_CLIENT_SYNC.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.ADD_ITEM_TO_INVENTORY_CLIENT_SYNC.value)
 
 		msg.write(c_bit(bound))
 		msg.write(c_bit(bound_on_equip))
@@ -110,9 +109,7 @@ class GameMessageService(services.GameService):
 
 	def remove_skill(self, object_id : int, recipients : list, skill_id : int, from_skill_set : bool = False):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.REMOVE_SKILL.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.REMOVE_SKILL.value)
 
 		msg.write(c_bit(from_skill_set))
 
@@ -121,17 +118,21 @@ class GameMessageService(services.GameService):
 		self.world_server.send(msg, recipients)
 
 
+	def ressurect(self, object_id : int, recipients : list, rez_immediately : bool = False):
+		msg = WriteStream()
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.RESSURECT.value)
+
+		msg.write(c_bit(rez_immediately))
+
+		self.world_server.send(msg, recipients)
+
 	def die(self, object_id : int, recipients : list, killer_id : int = 0, client_death : bool = True, spawn_loot : bool = False, death_type : str = game_enums.DeathType.ELECTRO_SHOCK.value, dir_rel_xz : float = 0, dir_rel_y : float = 0, dir_rel_force = 0, loot_owner_id : int = 0):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.DIE.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.DIE.value)
 
 		msg.write(c_bit(client_death))
 
 		msg.write(c_bit(spawn_loot))
-
-		msg.write(c_bit(False))
 
 		msg.write(death_type, length_type=c_ulong)
 
@@ -148,17 +149,15 @@ class GameMessageService(services.GameService):
 		else:
 			msg.write(c_longlong(object_id))
 
-		msg.write(c_bit(loot_owner_id != 0))
-		if(loot_owner_id != 0):
+		msg.write(c_bit(loot_owner_id != 0 and spawn_loot))
+		if(loot_owner_id != 0 and spawn_loot):
 			msg.write(c_longlong(loot_owner_id))
 
 		self.world_server.send(msg, recipients)
 
 	def echo_start_skill(self, object_id : int, recipients : list, skill_id : int, bit_stream:str, optional_originator : int, used_mouse : bool = False, caster_latency : float = 0.0, cast_type : int = 0, last_clicked_pos : game_types.Vector3 = game_types.Vector3(), optional_target_id : int = 0, originator_rot : game_types.Vector4 = game_types.Vector4(), ui_skill_handle : int = 0):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.ECHO_START_SKILL.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.ECHO_START_SKILL.value)
 
 		msg.write(c_bit(used_mouse))
 
@@ -201,9 +200,7 @@ class GameMessageService(services.GameService):
 
 	def add_skill(self, object_id : int, recipients : list, skill_id : int, ai_combat_weight : int = 0, from_skill_set : bool = False, cast_type : int = 0, time_secs : float = -1.0, times_can_cast : int = -1, slot_id : int = -1, temporary : bool = True):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.ADD_SKILL.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.ADD_SKILL.value)
 
 		msg.write(c_bit(ai_combat_weight != 0 and ai_combat_weight is not None))
 		if(ai_combat_weight != 0 and ai_combat_weight is not None):
@@ -235,9 +232,7 @@ class GameMessageService(services.GameService):
 
 	def set_jetpack_mode(self, object_id : int, recipients : list, bypass_checks : bool = True, hover : bool = False, use : bool = False, effect_id : int = -1, air_speed : int = 10, max_air_speed : int = 15, vert_vel : int = 1, warning_effect_id : int = -1):
 		msg = WriteStream()
-		msg.write(game_enums.PacketHeaderEnum.SERVER_GAME_MESSAGE.value)
-		msg.write(c_longlong(object_id))
-		msg.write(c_ushort(game_enums.GameMessages.SET_JETPACK_MODE.value))
+		self.init_game_msg(msg, object_id, game_enums.GameMessages.SET_JETPACK_MODE.value)
 
 		msg.write(c_bit(bypass_checks))
 		msg.write(c_bit(hover))

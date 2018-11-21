@@ -35,7 +35,8 @@ class WorldServer(pyraknet.server.Server):
 								 "world_start_skill":["GM_{}".format(game_enums.GameMessages.START_SKILL.value), self.handle_start_skill],
 								 "world_sync_skill":["GM_{}".format(game_enums.GameMessages.SYNC_SKILL.value), self.handle_sync_skill],
 								 "world_ready_for_updates":["GM_{}".format(game_enums.GameMessages.READY_FOR_UPDATES.value), self.handle_ready_for_updates],
-								 "world_smash_request": ["GM_{}".format(game_enums.GameMessages.REQUEST_DIE.value), self.handle_smash_request]}
+								 "world_smash_request": ["GM_{}".format(game_enums.GameMessages.PLAYER_REQUEST_SMASH.value), self.handle_smash_request],
+								 "world_rez_request": ["GM_{}".format(game_enums.GameMessages.RESSURECT_REQUEST.value), self.rez_player_handler]}
 
 	def handle_ready_for_updates(self, object_id, stream : ReadStream, address):
 		pass  # This is just to get stuff from clogging up the logs for now
@@ -44,13 +45,27 @@ class WorldServer(pyraknet.server.Server):
 		pass#This is just to get stuff from clogging up the logs for now
 
 	def handle_smash_request(self, object_id, stream : ReadStream, address):
-		try:
-			player_object = game.get_service("Player").get_player_object_by_id(object_id)
-		except:
-			return
+		player = game.get_service("Player").get_player_object_by_id(object_id)
+		player_object = player.zone.get_object_by_id(object_id)
+		stats = player_object.get_component(components.Stats)
+		stats.health = 0
+		stats.armor = 0
 
 		game_message_service = game.get_service("Game Message")
-		game_message_service.die(object_id, player_object.zone.get_connections())
+		game_message_service.die(object_id, player.zone.get_connections())
+		print(f"Killing Player {object_id}")
+
+	def rez_player_handler(self, object_id, stream : ReadStream, address):
+		player = game.get_service("Player").get_player_object_by_id(object_id)
+		player_object = player.zone.get_object_by_id(object_id)
+		stats = player_object.get_component(components.Stats)
+
+		game_message_service = game.get_service("Game Message")
+		game_message_service.ressurect(object_id, player.zone.get_connections())
+		stats.health = stats.max_health
+		stats.armor = stats.max_armor
+		stats.imagination = stats.max_imagination
+		print(f"Rez Player {object_id}")
 
 	def handle_start_skill(self, object_id, stream : ReadStream, address):
 		try:
