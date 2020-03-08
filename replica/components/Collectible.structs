@@ -1,1 +1,0 @@
-[u16] - {replica.get_component(components.Collectible).collectible_id}

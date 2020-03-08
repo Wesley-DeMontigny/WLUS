@@ -1,0 +1,8 @@
+{
+  "name": "Char Handler",
+  "id": "char_handler",
+  "description": "This plugin handles all the character packets.",
+  "main_file": "char_handlers",
+  "type": "char",
+  "dependencies": ["serializables"]
+}

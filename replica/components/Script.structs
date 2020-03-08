@@ -1,5 +1,0 @@
-<5>
-{transform = replica.get_component(components.Transform)}
-	[bit] - {False}
-		#[compressed_ldf] - script variables
-{%end%}

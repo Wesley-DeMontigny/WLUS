@@ -1,0 +1,7 @@
+{
+  "name": "Easy CDClient Module",
+  "id": "easy_cdclient",
+  "description": "This module makes searching through the cdclient a lot easier. Something is currently wrong with it, sooo probably best not to use it for now.",
+  "type": "module",
+  "dependencies": []
+}

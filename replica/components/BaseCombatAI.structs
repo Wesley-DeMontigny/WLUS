@@ -1,6 +1,0 @@
-<60>
-[bit] - {replica.has_component(components.BaseCombatAI)}
-	{%if previous == True%}
-	[u32] - {replica.get_component(components.BaseCombatAI).action}
-	[s64] - {replica.get_component(components.BaseCombatAI).target_id}
-	{%end%}

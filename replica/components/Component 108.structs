@@ -1,8 +1,0 @@
-<108>
-[bit] - {False}
-	#[bit] - flag
-		#[s64] - driver object id
-	#[bit] - flag
-		#[u32] - possessable component id?
-	#[bit] - ???
-#I should Implement this eventually

@@ -1,8 +1,0 @@
-
-#asset list
-A:res\audio\NDAudio\Music\Music_Global\Music_Global_Nimbus_Station_Streaming.fsb
-A:res\audio\NDAudio\Music\Music_Global\Music_Global_Day1-Patch.fsb
-A:res\audio\NDAudio\Ambience\Ambience_Spaceship\Ambience_Spaceship_Streaming.fsb
-A:res\audio\NDAudio\Ambience\Ambience_Spaceship\Ambience_Spaceship_Non-Streaming.fsb
-A:res\audio\NDAudio\Ambience\Ambience_Spaceship\Ambience_Spaceship_2_Non-Streaming.fsb
-A:res\audio\NDAudio\VO\default\VO_Streaming.fsb

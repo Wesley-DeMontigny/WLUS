@@ -1,0 +1,7 @@
+{
+  "name": "Serializables Module",
+  "id": "serializables",
+  "description": "Module for various serializable types.",
+  "type": "module",
+  "dependencies": []
+}

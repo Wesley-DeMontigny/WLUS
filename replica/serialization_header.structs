@@ -1,8 +1,0 @@
-[bit]-{False}
-	#[bit]-flag
-		#[object_id]-parent object id
-		#[bit]-???
-	#[bit]-flag
-		#[u16]-count
-			#[u64]-child object id
-#I need to implement this but I'm just gonna be lazy for now

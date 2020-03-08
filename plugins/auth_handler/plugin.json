@@ -1,0 +1,8 @@
+{
+  "name": "Auth Handler",
+  "id": "auth_handler",
+  "description": "This plugin handles auth packets.",
+  "main_file": "auth_handlers",
+  "type": "auth",
+  "dependencies": ["serializables"]
+}

@@ -1,0 +1,1 @@
+python __main__.py char-world 1124 4001 VE_01
