@@ -30,19 +30,26 @@ class Plugin:
         if results is not None:
             user_info = dict(zip(c.column_names, results))
             if (not bool(user_info["banned"]) and
-                    bcrypt.checkpw(login_info.password.encode("utf-8"), user_info["password"].encode("utf-8"))):
+                    bcrypt.checkpw(login_info.password.encode("utf-8"), user_info["password"].encode("utf-8"))
+                    and server.lookup_session_by_username(login_info.username) is None):
                 response.login_return_code = packet_enum.LoginReturnCode.SUCCESS.value
 
                 response.user_key = (str(uuid.uuid4()))[0:20]
                 timestamp = datetime.timestamp(datetime.now())
-                c.execute("DELETE FROM session WHERE username = %s", (login_info.username,))
-                server.db_connection.commit()
-                c.execute("INSERT INTO session (username, user_key, ip_address, login_timestamp)"
-                          "VALUES (%s, %s, %s, %s);",
-                          (login_info.username, response.user_key, str(address), timestamp))
-                server.db_connection.commit()
+
+                server.execute_master_query("""INSERT INTO session(username, user_key, ip_address, login_timestamp, 
+                                            current_instance) VALUES ("%s", "%s", "%s", %s, "%s")""" %
+                                            (login_info.username, response.user_key, str(address[0]), timestamp,
+                                             server.name), do_return=False)
+
                 print(f"Login Succeeded - Created Session with User-key [{response.user_key}] "
                       f"and Timestamp [{timestamp}]")
+                c.execute("UPDATE account SET last_login = %s WHERE username = %s", (timestamp, login_info.username))
+                server.db_connection.commit()
+            elif server.lookup_session_by_username(login_info.username) is not None:
+                response.login_return_code = packet_enum.LoginReturnCode.INVALID_LOGIN_INFO
+                response.custom_error = "This account already has a session running"
+                print("Login Failed")
             else:
                 response.login_return_code = packet_enum.LoginReturnCode.INVALID_LOGIN_INFO.value
                 print("Login Failed")
@@ -50,9 +57,10 @@ class Plugin:
             response.login_return_code = packet_enum.LoginReturnCode.INVALID_LOGIN_INFO.value
             print("Login Failed")
 
-        char_address, char_port = server.redirect_request("instance", "char")
-        response.char_port = char_address
-        response.char_ip = char_port
+        char_address, char_port, name = server.redirect_request("instance", "char")
+        response.char_port = char_port
+        response.char_ip = char_address
+        server.update_session_instance(name, ip_address=address[0])
         packet.write(packet_enum.PacketHeader.LOGIN_RESPONSE.value)
         packet.write(response)
         server.send(packet, address)

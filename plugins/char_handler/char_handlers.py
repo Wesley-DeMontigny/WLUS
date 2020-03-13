@@ -3,7 +3,6 @@ This will handle all of the character related packets.
 """
 from ..serializables import packet_enum, world_to_client, client_to_world, global_packets, misc_serializables
 from pyraknet.bitstream import *
-import os
 
 
 class Plugin:
@@ -19,6 +18,7 @@ class Plugin:
     def handle_handshake(cls, data: bytes, address, server):
         """
         Handles initial connection between server and client.
+        Changes current instance of the session
         """
         stream = ReadStream(data)
         client_handshake = stream.read(global_packets.HandshakePacket)
@@ -26,7 +26,6 @@ class Plugin:
 
         server_handshake = global_packets.HandshakePacket()
         server_handshake.remote_connection_type = 4
-        server_handshake.process_id = os.getpid()
         packet = WriteStream()
         packet.write(packet_enum.PacketHeader.HANDSHAKE.value)
         packet.write(server_handshake)
@@ -35,9 +34,8 @@ class Plugin:
     @classmethod
     def handle_minifigure_creation(cls, data: bytes, address, server):
         c = server.db_connection.cursor()
-        c.execute("SELECT * FROM wlus.session WHERE ip_address = %s", (str(address),))
-        session = c.fetchone()
-        c.execute("SELECT account_id FROM wlus.account WHERE username = %s", (session[1],))
+        session = server.lookup_session_by_ip(address[0])
+        c.execute("SELECT account_id FROM wlus.account WHERE username = %s", (session["username"],))
         account_id = c.fetchone()[0]
 
         stream = ReadStream(data)
@@ -90,11 +88,9 @@ class Plugin:
         stream = ReadStream(data)
         session_info = stream.read(client_to_world.UserSessionInfoPacket)
         c = server.db_connection.cursor()
-        c.execute("SELECT * FROM wlus.session WHERE username = %s", (session_info.username,))
-        results = c.fetchall()
-        if results is not None:
-            sessions = [dict(zip(c.column_names, result)) for result in results]
-            if sessions[0]["user_key"] == session_info.user_key:
+        session = server.lookup_session_by_username(session_info.username)
+        if session:
+            if session["user_key"] == session_info.user_key:
                 packet = WriteStream()
 
                 c.execute("SELECT account_id FROM account WHERE username = %s", (session_info.username,))
@@ -144,14 +140,8 @@ class Plugin:
             else:
                 disconnect = global_packets.DisconnectNotifyPacket()
                 disconnect.disconnect_id = packet_enum.DisconnectionNotify.INVALID_SESSION_KEY.value
-                disconnect_packet = WriteStream()
-                disconnect_packet.write(packet_enum.PacketHeader.DISCONNECT_NOTIFY.value)
-                disconnect_packet.write(disconnect)
-                server.send(disconnect_packet, address)
+                disconnect.send(server, address)
         else:
             disconnect = global_packets.DisconnectNotifyPacket()
             disconnect.disconnect_id = packet_enum.DisconnectionNotify.INVALID_SESSION_KEY.value
-            disconnect_packet = WriteStream()
-            disconnect_packet.write(packet_enum.PacketHeader.DISCONNECT_NOTIFY.value)
-            disconnect_packet.write(disconnect)
-            server.send(disconnect_packet, address)
+            disconnect.send(server, address)

@@ -1,0 +1,1 @@
+Insert the entire res folder of your lego universe client in here

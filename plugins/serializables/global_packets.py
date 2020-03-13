@@ -53,6 +53,13 @@ class DisconnectNotifyPacket(bitstream.Serializable):
         packet.disconnect_id = stream.read(bitstream.c_uint32)
         return packet
 
+    def send(self, generic_game_server, address):
+        disconnect_packet = bitstream.WriteStream()
+        disconnect_packet.write(b"S\x00\x00\x01\x00\x00\x00\x00")
+        disconnect_packet.write(self)
+        generic_game_server.send(disconnect_packet, address)
+        generic_game_server.delete_session(ip_address=address[0])
+
 
 class GeneralNotifyPacket(bitstream.Serializable):
     """
