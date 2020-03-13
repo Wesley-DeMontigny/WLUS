@@ -1,3 +1,4 @@
 bcrypt
 mysql-connector-python
+sqlite3
 hg+https://bitbucket.org/lcdr/pyraknet@4251284791e1476f29e51bbda44986e38a448aed
