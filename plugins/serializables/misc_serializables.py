@@ -18,6 +18,91 @@ class CString(bitstream.Serializable):
         return stream.read(bytes, allocated_length=self.allocated_length, length_type=self.length_type).decode('latin1')
 
 
+class Vector3(bitstream.Serializable):
+    def __init__(self):
+        self.x: float = 0.0
+        self.y: float = 0.0
+        self.z: float = 0.0
+
+    def __add__(self, other):
+        result = Vector3()
+        result.x = self.x + other.x
+        result.y = self.y + other.y
+        result.z = self.z + other.z
+        return result
+
+    def __sub__(self, other):
+        result = Vector3()
+        result.x = self.x - other.x
+        result.y = self.y - other.y
+        result.z = self.z - other.z
+        return result
+
+    def __eq__(self, other):
+        if self.x == other.x and self.y == other.y and self.z == other.z:
+            return True
+        else:
+            return False
+
+    @classmethod
+    def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
+        result = Vector3()
+        result.x = stream.read(bitstream.c_float)
+        result.y = stream.read(bitstream.c_float)
+        result.z = stream.read(bitstream.c_float)
+        return result
+
+    def serialize(self, stream: bitstream.WriteStream) -> None:
+        stream.write(bitstream.c_float(self.x))
+        stream.write(bitstream.c_float(self.y))
+        stream.write(bitstream.c_float(self.z))
+
+
+class Vector4(bitstream.Serializable):
+    def __init__(self):
+        self.x: float = 0.0
+        self.y: float = 0.0
+        self.z: float = 0.0
+        self.w: float = 0.0
+
+    def __add__(self, other):
+        result = Vector3()
+        result.x = self.x + other.x
+        result.y = self.y + other.y
+        result.z = self.z + other.z
+        result.w = self.w + other.w
+        return result
+
+    def __sub__(self, other):
+        result = Vector3()
+        result.x = self.x - other.x
+        result.y = self.y - other.y
+        result.z = self.z - other.z
+        result.w = self.w - other.w
+        return result
+
+    def __eq__(self, other):
+        if self.x == other.x and self.y == other.y and self.z == other.z and self.w == other.w:
+            return True
+        else:
+            return False
+
+    @classmethod
+    def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
+        result = Vector3()
+        result.x = stream.read(bitstream.c_float)
+        result.y = stream.read(bitstream.c_float)
+        result.z = stream.read(bitstream.c_float)
+        result.w = stream.read(bitstream.c_float)
+        return result
+
+    def serialize(self, stream: bitstream.WriteStream) -> None:
+        stream.write(bitstream.c_float(self.x))
+        stream.write(bitstream.c_float(self.y))
+        stream.write(bitstream.c_float(self.z))
+        stream.write(bitstream.c_float(self.w))
+
+
 class LwoObjID:
     """
     This is the data type that object ids are made out of.
@@ -189,4 +274,17 @@ class LoginCharacter(bitstream.Serializable):
             item_id = LwoObjID.gen_lwoobjid()
             c.execute("INSERT INTO wlus.inventory (object_id, lot, slot, equipped, linked, quantity, player_id)"
                       "VALUES (%s, %s, %s, 1, 1, 1, %s)", (item_id, self.equipped_items[i], i, self.object_id))
+            """
+            c.execute('INSERT INTO `wlus`.`character_info` (`player_id`,`position`,`rotation`,`health`,`max_health`,'
+                      '`armor`,`max_armor`,`imagination`,`max_imagination`,`backpack_space`,`currency`,`universe_score`'
+                      ',`level`) VALUES (%s,"0,0,0","0,0,0,0",4,4,0,0,0,0,20,0,0,0);', (self.object_id,))
+            c.execute('INSERT INTO `wlus`.`character_stats`(`currency_collected`,`bricks_collected`,'
+                      '`smashables_smashed`,`quick_builds_done`,`enemies_smashed`,`rockets_used`,`pets_tamed`,'
+                      '`imagination_collected`,`health_collected`,`armor_collected`,`distance_traveled`,`times_died`,'
+                      '`damage_taken`,`damage_healed`,`armor_repaired`,`imagination_restored`,`imagination_used`,'
+                      '`distance_driven`,`time_airborne_in_car`,`racing_imagination_collected`,'
+                      '`racing_imagination_crates_smashed`,`race_car_boosts`,`car_wrecks`,`racing_smashables_smashed`,'
+                      '`races_finished`,`races_won`,`player_id`) VALUES '
+                      '(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,%s);', (self.object_id,))
+            """
         connection.commit()

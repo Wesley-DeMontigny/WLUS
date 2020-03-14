@@ -13,6 +13,10 @@ class Plugin:
                                 packet_enum.PacketHeader.CLIENT_USER_SESSION_INFO.value)
         parent.register_handler(Plugin.handle_minifigure_creation,
                                 packet_enum.PacketHeader.CLIENT_MINIFIGURE_CREATE_REQUEST.value)
+        parent.register_handler(Plugin.handle_load_world,
+                                packet_enum.PacketHeader.CLIENT_ENTER_WORLD.value)
+        parent.register_handler(Plugin.handle_minifigure_delete,
+                                packet_enum.PacketHeader.CLIENT_DELETE_MINIFIGURE_REQUEST.value)
 
     @classmethod
     def handle_handshake(cls, data: bytes, address, server):
@@ -30,6 +34,35 @@ class Plugin:
         packet.write(packet_enum.PacketHeader.HANDSHAKE.value)
         packet.write(server_handshake)
         server.send(packet, address)
+
+    @classmethod
+    def handle_load_world(cls, data: bytes, address, server):
+        """
+        Handles when the user hits the play button.
+        """
+        pass
+
+    @classmethod
+    def handle_minifigure_delete(cls, data: bytes, address, server):
+        """
+        Handles when the user deletes a minifigure.
+        """
+        stream = ReadStream(data)
+        character_id = stream.read(client_to_world.CharacterDeleteRequestPacket).object_id
+        c = server.db_connection.cursor()
+        session = server.lookup_session_by_ip(address[0])
+        c.execute("SELECT account_id FROM wlus.account WHERE username = %s", (session["username"],))
+        account_id = c.fetchone()[0]
+        c.execute("SELECT * FROM wlus.character WHERE account_id = %s AND character_id = %s",
+                  (account_id, int(character_id)))
+        data = c.fetchone()
+        if data:
+            c.execute("DELETE FROM wlus.character WHERE account_id = %s AND character_id = %s",
+                      (account_id, int(character_id)))
+            c.execute("DELETE FROM wlus.inventory WHERE player_id = %s", (int(character_id),))
+            c.execute("DELETE FROM wlus.character_stats WHERE player_id = %s", (int(character_id),))
+            c.execute("DELETE FROM wlus.character_info WHERE player_id = %s", (int(character_id),))
+            server.db_connection.commit()
 
     @classmethod
     def handle_minifigure_creation(cls, data: bytes, address, server):
