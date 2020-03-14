@@ -1,5 +1,5 @@
 CREATE TABLE `character_info` (
-  `player_id` int(11) NOT NULL,
+  `player_id` bigint(20) NOT NULL,
   `position` varchar(45) DEFAULT NULL,
   `rotation` varchar(45) DEFAULT NULL,
   `health` int(11) DEFAULT NULL,

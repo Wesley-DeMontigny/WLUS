@@ -25,6 +25,6 @@ CREATE TABLE `character_stats` (
   `racing_smashables_smashed` int(11) DEFAULT NULL,
   `races_finished` int(11) DEFAULT NULL,
   `races_won` int(11) DEFAULT NULL,
-  `player_id` int(11) NOT NULL,
+  `player_id` bigint(20) NOT NULL,
   PRIMARY KEY (`player_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
