@@ -1,4 +1,5 @@
 CREATE TABLE `character_stats` (
+  `player_id` bigint(20) NOT NULL,
   `currency_collected` int(11) DEFAULT NULL,
   `bricks_collected` int(11) DEFAULT NULL,
   `smashables_smashed` int(11) DEFAULT NULL,
@@ -25,6 +26,5 @@ CREATE TABLE `character_stats` (
   `racing_smashables_smashed` int(11) DEFAULT NULL,
   `races_finished` int(11) DEFAULT NULL,
   `races_won` int(11) DEFAULT NULL,
-  `player_id` bigint(20) NOT NULL,
   PRIMARY KEY (`player_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

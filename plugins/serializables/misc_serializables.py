@@ -270,21 +270,20 @@ class LoginCharacter(bitstream.Serializable):
                                                           self.legs, self.hair_style, self.hair_color, self.left_hand,
                                                           self.right_hand, self.eyebrows_style, self.eyes_style,
                                                           self.mouth_style, account_id))
+        c.execute('INSERT INTO `wlus`.`character_info` (`player_id`,`position`,`rotation`,`health`,`max_health`,'
+                  '`armor`,`max_armor`,`imagination`,`max_imagination`,`backpack_space`,`currency`,`universe_score`'
+                  ',`level`) VALUES (%s,"0,0,0","0,0,0,0",4,4,0,0,0,0,20,0,0,0);', (self.object_id,))
+        c.execute('INSERT INTO `wlus`.`character_stats`(`currency_collected`,`bricks_collected`,'
+                  '`smashables_smashed`,`quick_builds_done`,`enemies_smashed`,`rockets_used`,`pets_tamed`,'
+                  '`imagination_collected`,`health_collected`,`armor_collected`,`distance_traveled`,`times_died`,'
+                  '`damage_taken`,`damage_healed`,`armor_repaired`,`imagination_restored`,`imagination_used`,'
+                  '`distance_driven`,`time_airborne_in_car`,`racing_imagination_collected`,'
+                  '`racing_imagination_crates_smashed`,`race_car_boosts`,`car_wrecks`,`racing_smashables_smashed`,'
+                  '`races_finished`,`races_won`,`player_id`) VALUES '
+                  '(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,%s);', (self.object_id,))
+
         for i in range(len(self.equipped_items)):
             item_id = LwoObjID.gen_lwoobjid()
             c.execute("INSERT INTO wlus.inventory (object_id, lot, slot, equipped, linked, quantity, player_id)"
                       "VALUES (%s, %s, %s, 1, 1, 1, %s)", (item_id, self.equipped_items[i], i, self.object_id))
-            """
-            c.execute('INSERT INTO `wlus`.`character_info` (`player_id`,`position`,`rotation`,`health`,`max_health`,'
-                      '`armor`,`max_armor`,`imagination`,`max_imagination`,`backpack_space`,`currency`,`universe_score`'
-                      ',`level`) VALUES (%s,"0,0,0","0,0,0,0",4,4,0,0,0,0,20,0,0,0);', (self.object_id,))
-            c.execute('INSERT INTO `wlus`.`character_stats`(`currency_collected`,`bricks_collected`,'
-                      '`smashables_smashed`,`quick_builds_done`,`enemies_smashed`,`rockets_used`,`pets_tamed`,'
-                      '`imagination_collected`,`health_collected`,`armor_collected`,`distance_traveled`,`times_died`,'
-                      '`damage_taken`,`damage_healed`,`armor_repaired`,`imagination_restored`,`imagination_used`,'
-                      '`distance_driven`,`time_airborne_in_car`,`racing_imagination_collected`,'
-                      '`racing_imagination_crates_smashed`,`race_car_boosts`,`car_wrecks`,`racing_smashables_smashed`,'
-                      '`races_finished`,`races_won`,`player_id`) VALUES '
-                      '(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,%s);', (self.object_id,))
-            """
         connection.commit()
