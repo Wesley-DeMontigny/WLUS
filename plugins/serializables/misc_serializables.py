@@ -1,7 +1,60 @@
 from pyraknet import bitstream
 import random
-import sqlite3
+from plugins.easy_cdclient.cdclient_objects import GameObject
+from plugins.easy_cdclient.cdclient_tables import MinifigComponentTable
 from xml.etree import ElementTree
+
+
+class LUZScene(bitstream.Serializable):
+    def __init__(self):
+        self.filename = ""
+        self.id = 0
+        self.name = ""
+
+    def serialize(self, stream: bitstream.WriteStream) -> None:
+        raise Exception("This struct cannot be serialized")
+
+    @classmethod
+    def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
+        luz_scene = LUZScene()
+        luz_scene.filename = CString(length_type=bitstream.c_uint8).deserialize(stream)
+        luz_scene.id = stream.read(bitstream.c_uint8)
+        stream.read(bytes, length=3)
+        stream.read(bitstream.c_uint8)
+        stream.read(bytes, length=3)
+        luz_scene.name = CString(length_type=bitstream.c_uint8).deserialize(stream)
+        stream.read(bytes, length=3)
+        return luz_scene
+
+
+class LUZ(bitstream.Serializable):
+    def __init__(self):
+        self.version = 0
+        self.world_id = 0
+        self.spawnpoint_position = Vector3()
+        self.spawnpoint_rotation = Vector4()
+        self.scenes = []
+
+    def serialize(self, stream: bitstream.WriteStream) -> None:
+        raise Exception("This struct cannot be serialized")
+
+    @classmethod
+    def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
+        luz = LUZ()
+        luz.version = stream.read(bitstream.c_ulong)
+        if luz.version >= 0x24:
+            stream.read(bitstream.c_ulong)
+        luz.world_id = stream.read(bitstream.c_ulong)
+        if luz.version >= 0x26:
+            luz.spawnpoint_position = stream.read(Vector3)
+            luz.spawnpoint_rotation = stream.read(Vector4)
+        if luz.version < 0x25:
+            scene_count = stream.read(bitstream.c_uint8)
+        else:
+            scene_count = stream.read(bitstream.c_ulong)
+        for _ in range(scene_count):
+            luz.scenes.append(stream.read(LUZScene))
+        return luz
 
 
 class CString(bitstream.Serializable):
@@ -37,6 +90,9 @@ class Vector3(bitstream.Serializable):
         result.y = self.y - other.y
         result.z = self.z - other.z
         return result
+
+    def __str__(self):
+        return str(self.x) + "," + str(self.y) + "," + str(self.z)
 
     def __eq__(self, other):
         if self.x == other.x and self.y == other.y and self.z == other.z:
@@ -80,6 +136,9 @@ class Vector4(bitstream.Serializable):
         result.z = self.z - other.z
         result.w = self.w - other.w
         return result
+
+    def __str__(self):
+        return str(self.x) + "," + str(self.y) + "," + str(self.z) + "," + str(self.w)
 
     def __eq__(self, other):
         if self.x == other.x and self.y == other.y and self.z == other.z and self.w == other.w:
@@ -228,48 +287,40 @@ class LoginCharacter(bitstream.Serializable):
     @classmethod
     def from_cdclient(cls, lot: int):
         char = LoginCharacter()
-        conn = sqlite3.connect("./res/cdclient.sqlite")
-        c = conn.cursor()
-        c.execute("SELECT displayName FROM Objects WHERE id = ?", (lot,))
-        char.current_name = c.fetchone()[0].split("-")[0]
-        c.execute("SELECT component_type, component_id FROM ComponentsRegistry WHERE id = ?", (lot,))
-        components = c.fetchall()
-        for comp in components:
-            if comp[0] == 17:
-                c.execute("SELECT itemid FROM InventoryComponent WHERE id = ?", (comp[1],))
-                items = c.fetchall()
-                equipped = []
-                for i in items:
-                    equipped.append(i[0])
-                char.equipped_items = equipped
-            elif comp[0] == 35:
-                c.execute("SELECT * FROM MinifigComponent WHERE id = ?", (comp[1],))
-                minifig_comp = c.fetchone()
-                char.head = minifig_comp[1]
-                char.chest_color = minifig_comp[6]
-                char.legs = minifig_comp[3]
-                char.hair_style = minifig_comp[4]
-                char.hair_color = minifig_comp[5]
-                char.chest = minifig_comp[2]
-                char.head_color = minifig_comp[7]
-                char.left_hand = minifig_comp[8]
-                char.right_hand = minifig_comp[9]
-                char.eyebrows_style = minifig_comp[10]
-                char.eyes_style = minifig_comp[11]
-                char.mouth_style = minifig_comp[12]
-        conn.close()
+        minifig_object = GameObject(lot)
+        char.current_name = str(minifig_object.object_data.displayName).split("-")[0]
+        if 17 in minifig_object.components:
+            equipped = []
+            for item in minifig_object.components[17]:
+                if item.equip == 1:
+                    equipped.append(item.itemid)
+            char.equipped_items = equipped
+        if 35 in minifig_object.components:
+            minifig_comp: MinifigComponentTable = minifig_object.components[35]
+            char.head = minifig_comp.head
+            char.chest_color = minifig_comp.chestdecal
+            char.legs = minifig_comp.legs
+            char.hair_style = minifig_comp.hairstyle
+            char.hair_color = minifig_comp.haircolor
+            char.chest = minifig_comp.chest
+            char.head_color = minifig_comp.headcolor
+            char.left_hand = minifig_comp.lefthand
+            char.right_hand = minifig_comp.righthand
+            char.eyebrows_style = minifig_comp.eyebrowstyle
+            char.eyes_style = minifig_comp.eyesstyle
+            char.mouth_style = minifig_comp.mouthstyle
+        char.object_id = LwoObjID.gen_lwoobjid(persistent=True, character=True)
         return char
 
     def save_to_db(self, account_id, connection):
         c = connection.cursor()
         c.execute("INSERT INTO wlus.character (character_id, current_name, requested_name, head_color,"
                   " head, chest_color, chest, legs, hair_style, hair_color, left_hand, right_hand,"
-                  " eyebrow_style, eye_style, mouth_style, account_id) VALUES (%s, %s, %s, %s, %s, %s, %s, "
-                  "%s, %s, %s, %s, %s, %s, %s, %s, %s)", (self.object_id, self.current_name, self.unapproved_name,
-                                                          self.head_color, self.head, self.chest_color, self.chest,
-                                                          self.legs, self.hair_style, self.hair_color, self.left_hand,
-                                                          self.right_hand, self.eyebrows_style, self.eyes_style,
-                                                          self.mouth_style, account_id))
+                  " eyebrow_style, eye_style, mouth_style, account_id, zone) VALUES (%s, %s, %s, %s, %s, %s, %s, "
+                  "%s, %s, %s, %s, %s, %s, %s, %s, %s, 0)",
+                  (self.object_id, self.current_name, self.unapproved_name,self.head_color, self.head, self.chest_color,
+                   self.chest, self.legs, self.hair_style, self.hair_color, self.left_hand, self.right_hand,
+                   self.eyebrows_style, self.eyes_style, self.mouth_style, account_id))
         c.execute('INSERT INTO `wlus`.`character_info` (`player_id`,`position`,`rotation`,`health`,`max_health`,'
                   '`armor`,`max_armor`,`imagination`,`max_imagination`,`backpack_space`,`currency`,`universe_score`'
                   ',`level`) VALUES (%s,"0,0,0","0,0,0,0",4,4,0,0,0,0,20,0,0,0);', (self.object_id,))
@@ -287,3 +338,5 @@ class LoginCharacter(bitstream.Serializable):
             c.execute("INSERT INTO wlus.inventory (object_id, lot, slot, equipped, linked, quantity, player_id)"
                       "VALUES (%s, %s, %s, 1, 1, 1, %s)", (item_id, self.equipped_items[i], i, self.object_id))
         connection.commit()
+
+

@@ -22,7 +22,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 5 and str(sys.argv[1]).lower() != "master":
         config = configparser.ConfigParser()
         config.read("config.ini")
-        generic_game_server.GameServer((config["GENERAL"]["bind_address"], int(sys.argv[2])), max_connections=5,
+        generic_game_server.GameServer((config["GENERAL"]["bind_address"], int(sys.argv[2])), max_connections=15,
                                        incoming_password=b"3.25 ND1", server_type=str(sys.argv[1]).lower(),
                                        zone=eval(sys.argv[3]), name=sys.argv[4])
         print(f"Started WLUS Instance '{sys.argv[4]}'\n   Type: [{sys.argv[1].lower()}]\n   Port: [{sys.argv[2]}]\n"

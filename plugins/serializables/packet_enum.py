@@ -29,6 +29,7 @@ class PacketHeader(Enum):
     CLIENT_CHAT_MESSAGE = b'S\x04\x00\x0e\x00\x00\x00\x00'
     CLIENT_WHITELIST_REQUEST = b'S\x04\x00\x19\x00\x00\x00\x00'
     CHAT_MODERATION_RESPONSE = b'S\x05\x00\x3b\x00\x00\x00\x00'
+    REDIRECT_TO_NEW_SERVER = b'S\x05\x00\x0e\x00\x00\x00\x00'
 
 
 class DisconnectionNotify(IntEnum):

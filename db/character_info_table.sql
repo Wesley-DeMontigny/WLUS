@@ -1,7 +1,7 @@
 CREATE TABLE `character_info` (
   `player_id` bigint(20) NOT NULL,
-  `position` varchar(45) DEFAULT NULL,
-  `rotation` varchar(45) DEFAULT NULL,
+  `position` longtext,
+  `rotation` longtext,
   `health` int(11) DEFAULT NULL,
   `max_health` int(11) DEFAULT NULL,
   `armor` int(11) DEFAULT NULL,

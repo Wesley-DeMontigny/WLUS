@@ -3,5 +3,5 @@
   "id": "serializables",
   "description": "Module for various serializable types.",
   "type": "module",
-  "dependencies": []
+  "dependencies": ["easy_cdclient"]
 }

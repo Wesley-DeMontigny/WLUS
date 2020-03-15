@@ -2,6 +2,8 @@
 Contains all the packets that the world/char server would send to the client
 """
 from pyraknet import bitstream
+from plugins.serializables.misc_serializables import CString, Vector3, LUZ
+from plugins.easy_cdclient.cdclient_objects import Zone
 
 
 class MinfigureListPacket(bitstream.Serializable):
@@ -56,10 +58,56 @@ class RedirectiontoNewServerPacket(bitstream.Serializable):
         self.redirect_port = 1124
         self.is_mythran_dimension_shift = False
 
+    @classmethod
     def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
         raise Exception("This packet cannot be deserialized")
 
     def serialize(self, stream: bitstream.WriteStream) -> None:
-        stream.write(self.redirect_ip, allocated_length=33)
+        stream.write(CString(self.redirect_ip, allocated_length=33))
         stream.write(bitstream.c_uint16(self.redirect_port))
         stream.write(bitstream.c_bool(self.is_mythran_dimension_shift))
+
+
+class WorldInfoPacket(bitstream.Serializable):
+    """
+    [53-05-00-02]
+    This packet tells the client what zone to load.
+    """
+
+    def __init__(self):
+        self.zone_id = 0
+        self.map_instance = 0
+        self.map_clone = 0
+        self.map_checksum = 0
+        self.editor_enabled = False
+        self.editor_level = 0
+        self.player_position = Vector3()
+        self.is_in_battle = 0  # If in battle put 4??
+
+    @classmethod
+    def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
+        raise Exception("This packet cannot be deserialized")
+
+    def serialize(self, stream: bitstream.WriteStream) -> None:
+        stream.write(bitstream.c_uint16(self.zone_id))
+        stream.write(bitstream.c_uint16(self.map_instance))
+        stream.write(bitstream.c_uint32(self.map_clone))
+        stream.write(bitstream.c_uint32(self.map_checksum))
+        stream.write(bitstream.c_bool(self.editor_enabled))
+        stream.write(bitstream.c_uint8(self.editor_level))
+        stream.write(self.player_position)
+        stream.write(bitstream.c_uint32(self.is_in_battle))
+
+    @classmethod
+    def from_cdclient(cls, zone_id, default_spawn=False) -> "WorldInfoPacket":
+        generated_zone = Zone(zone_id)
+        world_info = WorldInfoPacket()
+        world_info.zone_id = zone_id
+        world_info.map_checksum = generated_zone.checksum
+        if default_spawn:
+            file = "./res/maps/" + str(generated_zone.zone_data.zoneName)
+            luz_file = open(file, "rb")
+            stream = bitstream.ReadStream(luz_file.read())
+            luz = stream.read(LUZ)
+            world_info.player_position = luz.spawnpoint_position
+        return world_info

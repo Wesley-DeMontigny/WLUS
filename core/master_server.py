@@ -58,6 +58,15 @@ class MasterServer:
             d[col[0]] = row[idx]
         return d
 
+    def is_instance_full(self, instance: str):
+        c = self._db.cursor()
+        c.execute("SELECT * FROM session WHERE current_instance = ?", (instance,))
+        active_sessions = c.fetchall()
+        if len(active_sessions) >= int(self._connections[instance]["max_connections"]):
+            return True
+        else:
+            return False
+
     def _run(self):
         print("Starting Master Server")
         while True:
@@ -72,7 +81,7 @@ class MasterServer:
                     data[2] = None
                 print(f"Registered Server With Data: {data}")
                 self._connections[data[3]] = {"instance_type": data[0], "port": data[1], "zone": data[2],
-                                              "address": address}
+                                              "address": address, "max_connections": data[4]}
                 client_socket.send(b"Registered")
                 threading.Thread(target=self._client_thread, args=(client_socket, address)).start()
             else:
@@ -116,13 +125,14 @@ class MasterServer:
                         if redirect_data[0] == "instance":
                             response = b"None"
                             for conn in self._connections:
-                                if self._connections[conn]["instance_type"] == redirect_data[1]:
+                                if self._connections[conn]["instance_type"] == redirect_data[1] and\
+                                        not self.is_instance_full(conn):
                                     response = (str(self._connections[conn]["address"][0]) + "$" +
                                                 str(self._connections[conn]["port"]) + "$" + conn).encode("UTF-8")
                                     break
                             client_socket.send(response)
                         elif redirect_data[0] == "name":
-                            if redirect_data[1] in self._connections:
+                            if redirect_data[1] in self._connections and not self.is_instance_full(redirect_data[1]):
                                 client_socket.send((str(self._connections[redirect_data[1]]["address"][0]) + "$" +
                                                     str(self._connections[redirect_data[1]]["port"]) + "$" +
                                                     redirect_data[1]).encode("UTF-8"))
@@ -131,7 +141,8 @@ class MasterServer:
                         elif redirect_data[0] == "zone":
                             response = b"None"
                             for conn in self._connections:
-                                if self._connections[conn]["zone"] == redirect_data[1]:
+                                if self._connections[conn]["zone"] == redirect_data[1] and \
+                                        not self.is_instance_full(conn):
                                     response = (str(self._connections[conn]["address"][0]) + "$" +
                                                 str(self._connections[conn]["port"]) + "$" + conn).encode("UTF-8")
                                     break

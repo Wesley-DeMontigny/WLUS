@@ -32,8 +32,8 @@ class GameServer(pyraknet.server.Server):
         self.master_server.send(str(self.config["GENERAL"]["master_server_password"]).encode("UTF-8"))
         if self.master_server.recv(2048) == b"Accepted":
             print("Successfully Logged Into Master Server")
-            self.master_server.send((str(server_type) + "$" + str(address[1]) + "$" + str(zone) + "$" + str(self.name))
-                                    .encode("UTF-8"))
+            self.master_server.send((str(server_type) + "$" + str(address[1]) + "$" + str(zone) + "$" + str(self.name)
+                                     + "$" + str(max_connections)).encode("UTF-8"))
             if self.master_server.recv(2048) == b"Registered":
                 print("Successfully Registered Server")
             else:
@@ -64,12 +64,20 @@ class GameServer(pyraknet.server.Server):
                 print("Deleted session for %s" % str(address))
 
     def redirect_request(self, method: str, identifier: str):
+        """
+        :param method: What you want to select the new server by. Either instance (for instance type),
+         zone (for zone_id), or name (for the name of the instance)
+        :param identifier: The actual value you are looking up
+        :return: Returns ip_address, port, and name of the instance
+        """
         self.master_server.send(b"r")
         if self.master_server.recv(2048) == b"Redirect Acknowledged":
             self.master_server.send((method + "$" + identifier).encode("UTF-8"))
             data = self.master_server.recv(2048).decode("UTF-8")
-            data = data.split("$")
-            return data[0], int(data[1]), data[2]
+            if data != "None":
+                data = data.split("$")
+                return data[0], int(data[1]), data[2]
+        return None
 
     def lookup_session_by_ip(self, ip_address: str):
         data = self.execute_master_query("""SELECT * FROM session WHERE ip_address = "%s";""" % ip_address)
@@ -85,6 +93,18 @@ class GameServer(pyraknet.server.Server):
         else:
             return None
 
+    def lookup_player_by_ip(self, ip_address):
+        session = self.lookup_session_by_ip(ip_address)
+        if session is not None:
+            data = self.execute_master_query("""SELECT * FROM online_players WHERE session_id = "%s";"""
+                                             % session["id"])
+            if data:
+                return data[0]
+            else:
+                return None
+        else:
+            return None
+
     def update_session_instance(self, instance: str, username: str = None, ip_address: str = None):
         if username is not None:
             self.execute_master_query("""UPDATE session SET current_instance = "%s" WHERE username = "%s";""" %
@@ -95,11 +115,19 @@ class GameServer(pyraknet.server.Server):
 
     def delete_session(self, username: str = None, ip_address: str = None):
         if username is not None:
-            self.execute_master_query("""DELETE FROM WHERE username = "%s";""" %
+            session = self.lookup_session_by_username(username)
+            if session is not None:
+                self.execute_master_query("""DELETE FROM online_players WHERE session_id = "%s";""" %
+                                          session["id"], do_return=False)
+            self.execute_master_query("""DELETE FROM session WHERE username = "%s";""" %
                                       username, do_return=False)
         elif ip_address is not None:
+            session = self.lookup_session_by_ip(username)
+            if session is not None:
+                self.execute_master_query("""DELETE FROM online_players WHERE session_id = "%s";""" %
+                                          session["id"], do_return=False)
             self.execute_master_query("""DELETE FROM session WHERE ip_address = "%s";""" %
-                                      ip_address)
+                                      ip_address, do_return=False)
 
     def execute_master_query(self, query: str, do_return=True):
         if do_return:

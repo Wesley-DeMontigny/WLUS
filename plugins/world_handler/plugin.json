@@ -1,0 +1,8 @@
+{
+  "name": "World Handler",
+  "id": "world_handler",
+  "description": "This plugin handles both the character packets and world packets/game messages",
+  "main_file": "world_handlers",
+  "type": "world",
+  "dependencies": ["serializables", "char_handler"]
+}
