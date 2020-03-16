@@ -12,7 +12,7 @@ class HandshakePacket(bitstream.Serializable):
     """
     def __init__(self):
         self.game_version = 171022
-        self.unknown_0 = 0x93
+        self.unknown_0 = 0
         self.remote_connection_type = 0  # For auth this is 1, otherwise it is 4
         self.process_id = 1124
         self.local_port = 0xff

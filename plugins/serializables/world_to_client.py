@@ -2,8 +2,9 @@
 Contains all the packets that the world/char server would send to the client
 """
 from pyraknet import bitstream
-from plugins.serializables.misc_serializables import CString, Vector3, LUZ
+from plugins.serializables.misc_serializables import CString, Vector3, LUZ, LDF
 from plugins.easy_cdclient.cdclient_objects import Zone
+import zlib
 
 
 class MinfigureListPacket(bitstream.Serializable):
@@ -82,7 +83,7 @@ class WorldInfoPacket(bitstream.Serializable):
         self.editor_enabled = False
         self.editor_level = 0
         self.player_position = Vector3()
-        self.is_in_battle = 0  # If in battle put 4??
+        self.activity = 0  # If in battle put 4??
 
     @classmethod
     def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
@@ -96,7 +97,7 @@ class WorldInfoPacket(bitstream.Serializable):
         stream.write(bitstream.c_bool(self.editor_enabled))
         stream.write(bitstream.c_uint8(self.editor_level))
         stream.write(self.player_position)
-        stream.write(bitstream.c_uint32(self.is_in_battle))
+        stream.write(bitstream.c_uint32(self.activity))
 
     @classmethod
     def from_cdclient(cls, zone_id, default_spawn=False) -> "WorldInfoPacket":
@@ -111,3 +112,28 @@ class WorldInfoPacket(bitstream.Serializable):
             luz = stream.read(LUZ)
             world_info.player_position = luz.spawnpoint_position
         return world_info
+
+
+class DetailedUserInfoPacket(bitstream.Serializable):
+    """
+    [53-05-00-04]
+    Send after client load complete packet
+    """
+
+    def __init__(self):
+        self.ldf = LDF()
+
+    @classmethod
+    def deserialize(cls, stream: bitstream.ReadStream) -> bitstream.Serializable:
+        raise Exception("This packet cannot be deserialized")
+
+    def serialize(self, stream: bitstream.WriteStream) -> None:
+        temp_stream = bitstream.WriteStream()
+        temp_stream.write(self.ldf)
+        temp_bytes = temp_stream.__bytes__()
+        compressed_bytes = zlib.compress(temp_bytes)
+        stream.write(bitstream.c_ulong(len(compressed_bytes) + 9))
+        stream.write(bitstream.c_bool(True))
+        stream.write(bitstream.c_ulong(len(temp_bytes)))
+        stream.write(bitstream.c_ulong(len(compressed_bytes)))
+        stream.write(compressed_bytes)

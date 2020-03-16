@@ -3,6 +3,7 @@ This will handle all of the character related packets.
 """
 from ..serializables import packet_enum, world_to_client, client_to_world, global_packets, misc_serializables
 from pyraknet.bitstream import *
+import os
 
 
 class Plugin:
@@ -43,19 +44,20 @@ class Plugin:
         stream = ReadStream(data)
         player_id = stream.read(client_to_world.JoinWorldPacket).object_id
         c = server.db_connection.cursor()
-        c.execute("SELECT zone FROM wlus.character WHERE character_id = %s", (player_id,))
-        zone_id = c.fetchone()[0]
+        c.execute("SELECT zone, current_name FROM wlus.character WHERE character_id = %s", (player_id,))
+        char_data = c.fetchone()
         session = server.lookup_session_by_ip(address[0])
+        zone_id = char_data[0]
         if zone_id == 0:
             zone_id = 1000
 
         player = server.lookup_player_by_ip(address[0])
         if player is None:
             server.execute_master_query("""INSERT INTO online_players(id, session_id, current_zone, name)
-            VALUES (%s, %s, %s, "%s")""" % (player_id, session["id"], zone_id, session["username"]), do_return=False)
+            VALUES (%s, %s, %s, "%s")""" % (player_id, session["id"], zone_id, char_data[1]), do_return=False)
         else:
             server.execute_master_query("""UPDATE online_players SET id = %s, zone_id = %s, name = "%s"
-             WHERE session_id = %s""" % (player_id, zone_id, session["username"], player["session_id"]), do_return=False)
+             WHERE session_id = %s""" % (player_id, zone_id, char_data[1], player["session_id"]), do_return=False)
 
         if zone_id != server.zone:
             ip_address, port, instance_name = server.redirect_request("zone", str(zone_id))

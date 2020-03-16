@@ -6,6 +6,7 @@ CREATE TABLE `character_stats` (
   `quick_builds_done` int(11) DEFAULT NULL,
   `enemies_smashed` int(11) DEFAULT NULL,
   `rockets_used` int(11) DEFAULT NULL,
+  `missions_completed` int(11) DEFAULT NULL,
   `pets_tamed` int(11) DEFAULT NULL,
   `imagination_collected` int(11) DEFAULT NULL,
   `health_collected` int(11) DEFAULT NULL,

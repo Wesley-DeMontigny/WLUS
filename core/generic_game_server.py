@@ -21,6 +21,8 @@ class GameServer(pyraknet.server.Server):
         self.add_handler(pyraknet.server.Event.UserPacket, self.handle_packet)
         self.add_handler(pyraknet.server.Event.Disconnect, self.handle_disconnect)
 
+        self.additional_config = {}
+        self.address = address
         self.name = name
         self.zone = zone
         self.config = configparser.ConfigParser()
